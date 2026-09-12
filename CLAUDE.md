@@ -27,6 +27,8 @@ src/printing3d/
 tests/
   test_*.py                 tests for the shared modules
   <project>/test_*.py       tests for one project
+docs/                       how the system behaves, indexed by docs/README.md
+.claude/skills/             project skills, invoked by name
 ```
 
 ## Commands
@@ -110,11 +112,12 @@ Notes:
 
 ## Dependency management
 
-`pyproject.toml` declares constraints; `uv.lock` pins the exact versions
-installed. Both are generated — never hand-edit either.
+`pyproject.toml` declares constraints; `uv.lock` pins exact versions. Both are
+generated — **never hand-edit either**, and never edit a `LOCKED.txt` to get a
+test to pass.
 
 ```sh
-uv add <package>                    # runtime dependency
+uv add <package>                    # runtime dependency — ask first
 uv add --dev <package>              # dev dependency
 uv remove <package>
 uv lock --upgrade                   # upgrade everything
@@ -122,45 +125,40 @@ uv lock --upgrade-package <package> # upgrade one
 uv tree --outdated --depth 1        # what newer versions exist
 ```
 
-Ask before adding a runtime dependency; this repo deliberately has one.
+After any dependency change: `uv sync`, then run the gates.
 
-### Why upgrades need their own check
+### The cycle
 
-CI runs `uv sync --locked`, so it installs exactly what `uv.lock` pins. That
-hermeticity is what makes the STLs reproducible — and it means CI can never
-notice that a newer release exists. Two things cover the gap:
+CI installs strictly from the lock, so it cannot see new releases. Two things
+watch from outside, and each produces work of a different shape:
 
-- **Dependabot** opens PRs. They go through the normal gate, so a bump that
-  changes an STL fails the golden master and cannot merge.
-- **The upgrade canary** (`.github/workflows/upgrade-canary.yml`) runs weekly,
-  resolves the newest versions the constraints allow, and runs every check. It
-  commits nothing. It exists because Dependabot may open no PR at all when a
-  new release already satisfies a `>=` constraint — a silent gap.
+**A bot pull request is open.** Rebase it if it is behind or conflicted, then
+read the result. Green — merge it. Red — the failing gate names the category;
+fix the cause or close the PR with a reason. Never widen a constraint or
+re-lock a part just to turn it green.
 
-Neither names a package. Both derive the list from `pyproject.toml`, so a new
-dependency is covered the moment it is added. To probe one package on demand:
-`gh workflow run "Upgrade canary" -f packages=<package>`.
+**The scheduled upgrade check is red.** This one commits nothing, so there is
+nothing to merge; it is a decision. Either **accept** (move the lock in a PR,
+re-lock anything whose bytes changed, and say in the PR what changed about the
+shape and why that is acceptable) or **hold** (tighten the constraint in
+`pyproject.toml` with a comment giving the reason). Never let it drift
+unnoticed.
 
-### Reading a red canary
+Warnings are errors in the test suite, so a dependency's deprecation warning
+fails the run. That is signal, not breakage: act on it while the removal is
+still in the future.
 
-A red canary is a decision, not a build to fix. The failing **step** names the
-category:
+Full behavior: [docs/automation/dependencies.md](docs/automation/dependencies.md).
 
-| Failing step | Means |
-|---|---|
-| `Tests`, golden master only (profile tests pass) | A geometry library changed how it meshes. Your geometry is untouched. |
-| `Tests`, profile *and* golden master | The geometry itself moved. Investigate before accepting anything. |
-| `Format` | A formatter release restyles the code. Reformat in its own `chore/` PR. |
-| `Lint` / `Types` | A newer linter or type checker sees something new. |
+## Documentation
 
-Then choose deliberately, in a PR:
+**Before any documentation work — writing, updating, restructuring, or
+reviewing a doc — use the `maintaining-docs` skill.** It owns the framework;
+this file only routes to it, so the rules have exactly one home.
 
-- **Accept** — upgrade the lock, re-lock any changed STL, and say in the PR
-  that the shape changed and why that is acceptable.
-- **Hold** — tighten the constraint in `pyproject.toml` with a comment giving
-  the reason.
-
-Never let it drift unnoticed, and never re-lock an STL just to get to green.
+Docs live in `docs/`, indexed by [docs/README.md](docs/README.md). They
+describe behavior, never implementation, which is why a refactor that preserves
+behavior must not touch them.
 
 ## Adding a new 3D-printing project
 
@@ -173,6 +171,8 @@ Never let it drift unnoticed, and never re-lock an STL just to get to green.
 5. Add `tests/<new_project>/`.
 6. Write a `README.md` in the project folder covering print settings and
    assembly. Reference images and source meshes go in `<project>/reference/`.
+7. If it introduces behavior the existing docs do not cover, add a doc under
+   `docs/` and link it from the index — using the `maintaining-docs` skill.
 
 The package name must be a legal Python identifier (`fishing_rod_mounts`),
 while the project's public name — its output folder and CLI argument — is
@@ -203,20 +203,29 @@ version bump unchanged.
 ## Testing
 
 Tests are behavioral and named as sentences:
-`test_the_countersink_opens_out_on_the_front_face`. Three layers, in order of
+`test_the_countersink_opens_out_on_the_front_face`. Four layers, in order of
 how specifically they localise a failure:
 
-1. **Unit tests** on derived values — assert the *property*, not a magic
-   number. The wedge test checks the line is genuinely tangent to the crescent,
-   rather than pinning `32.60°`.
+1. **Property tests** on derived values — assert the *relationship*, not a
+   magic number. The wedge test checks the line is genuinely tangent to the
+   crescent, rather than pinning `32.60°`.
 2. **Profile characterization** — vertex-count, area, and a vertex digest for
    each shipped 2D profile, so a geometry change names the profile that moved.
-3. **Golden master** — the STL bytes.
+3. **Golden master** — the STL bytes, against `LOCKED.txt`.
+4. **Command tests** — the installed console scripts run as subprocesses and
+   compared against the library. Keep these free of project names: they own
+   "the command matches the library", while the golden master owns "the library
+   matches the lock".
+
+Warnings are errors (`filterwarnings`), so a dependency's deprecation warning
+fails the suite. Don't silence one — act on it.
 
 `uv run verify` is a separate tool from the test suite: it measures the built
 solids for physical soundness (does the rod lift out, is it trapped sideways,
 are the bores countersunk on the right face) and prints the measurements. Run
 it before printing.
+
+Full behavior: [docs/quality/testing.md](docs/quality/testing.md).
 
 ## Code style
 
@@ -237,3 +246,5 @@ it before printing.
 - Don't add a dependency without asking; this repo deliberately has one.
 - Don't commit `.venv/`, caches, or slicer project files.
 - Don't move or rename generated STLs by hand — `uv run build` owns `output/`.
+- Don't touch `docs/` in a refactor that preserves behavior. If a doc needs
+  editing, it was coupled to the code — fix the doc, not the refactor.

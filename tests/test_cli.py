@@ -1,14 +1,53 @@
-"""The `build` and `verify` commands."""
+"""The `build` and `verify` commands.
+
+Two levels. Most tests call the entry points in-process, which is fast and
+covers argument handling through to the written files. A couple run the
+*installed* console scripts as real subprocesses, because that wiring is what a
+user actually invokes and nothing else exercises it.
+"""
+
+import os
+import shutil
+import subprocess
 
 import pytest
 
 from printing3d.cli import PROJECTS, build, verify
+from tests.support import sha256_of
+
+SOME_PROJECT = sorted(PROJECTS)[0]
 
 
 @pytest.fixture(autouse=True)
 def _isolated_output(monkeypatch, tmp_path):
     """Never let the CLI tests write over the committed STLs."""
     monkeypatch.setenv("PRINTING3D_OUTPUT", str(tmp_path))
+
+
+def stl_hashes(root):
+    """Every STL under `root`, as {path relative to root: sha256}."""
+    return {
+        str(path.relative_to(root)): sha256_of(path)
+        for path in sorted(root.rglob("*.stl"))
+    }
+
+
+def run_installed(name, output_dir):
+    """Run an installed console script, writing its STLs to `output_dir`."""
+    script = shutil.which(name)
+    if script is None:
+        pytest.skip(f"console script {name!r} is not installed; run `uv sync`")
+    return subprocess.run(
+        [script],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PRINTING3D_OUTPUT": str(output_dir)},
+    )
+
+
+# ---------------------------------------------------------------------------
+# In-process
+# ---------------------------------------------------------------------------
 
 
 def test_every_registered_project_can_be_looked_up():
@@ -22,22 +61,56 @@ def test_building_with_no_arguments_builds_every_project(tmp_path):
 
 
 def test_building_one_project_by_name(tmp_path):
-    assert build(["fishing-rod-mounts"]) == 0
-    assert [p.name for p in tmp_path.iterdir()] == ["fishing-rod-mounts"]
+    assert build([SOME_PROJECT]) == 0
+    assert [p.name for p in tmp_path.iterdir()] == [SOME_PROJECT]
 
 
 def test_the_build_reports_where_the_files_went(capsys, tmp_path):
-    build(["fishing-rod-mounts"])
-    assert str(tmp_path / "fishing-rod-mounts") in capsys.readouterr().out
+    build([SOME_PROJECT])
+    assert str(tmp_path / SOME_PROJECT) in capsys.readouterr().out
 
 
 def test_verifying_runs_every_projects_checks(capsys):
     assert verify([]) == 0
-    assert "ALL CHECKS PASSED" in capsys.readouterr().out
+    reported = capsys.readouterr().out
+    for name in PROJECTS:
+        assert f"=== {name} ===" in reported
 
 
 def test_an_unknown_project_is_rejected_with_the_valid_names(capsys):
     with pytest.raises(SystemExit) as exit_info:
         build(["no-such-project"])
     assert exit_info.value.code == 2
-    assert "fishing-rod-mounts" in capsys.readouterr().err
+    assert SOME_PROJECT in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# The installed commands
+#
+# These own one claim: the shipped command does what the library does. The
+# golden master separately owns "the library produces the locked bytes", so the
+# two together say the command produces the locked bytes -- without this test
+# knowing anything about a lockfile.
+# ---------------------------------------------------------------------------
+
+
+def test_the_installed_command_produces_what_the_library_produces(
+    tmp_path, monkeypatch
+):
+    via_command = tmp_path / "command"
+    via_library = tmp_path / "library"
+
+    result = run_installed("build", via_command)
+    assert result.returncode == 0, result.stderr
+
+    monkeypatch.setenv("PRINTING3D_OUTPUT", str(via_library))
+    assert build([]) == 0
+
+    produced = stl_hashes(via_command)
+    assert produced, "the installed command produced no STLs"
+    assert produced == stl_hashes(via_library)
+
+
+def test_the_installed_verify_command_reports_success(tmp_path):
+    result = run_installed("verify", tmp_path)
+    assert result.returncode == 0, result.stderr
