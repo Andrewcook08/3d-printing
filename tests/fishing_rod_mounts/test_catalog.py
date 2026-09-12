@@ -3,17 +3,13 @@
 import pytest
 
 from printing3d.fishing_rod_mounts.catalog import (
-    PROJECT,
     RODS,
     WEDGE,
     MountStyle,
     Rod,
-    build_all,
     parts,
     standoff_line,
 )
-from printing3d.fishing_rod_mounts.verify import verify_all
-from printing3d.parts import output_dir
 
 
 @pytest.fixture
@@ -50,24 +46,3 @@ def test_the_standoff_line_reports_both_derived_depths():
     assert "butt" in line
     assert "4.62 mm" in line  # material between wall and grip
     assert "35.38 mm" in line  # projection from the wall
-
-
-def test_building_writes_the_catalog_to_the_projects_output_dir(monkeypatch, tmp_path):
-    monkeypatch.setenv("PRINTING3D_OUTPUT", str(tmp_path))
-    assert build_all()
-    written = sorted(p.name for p in (tmp_path / PROJECT).iterdir())
-    assert written == [
-        "spinning-85in-butt-26.15mm-v3.stl",
-        "spinning-85in-tip-5.80mm-v3.stl",
-    ]
-
-
-def test_the_project_writes_under_its_own_name():
-    assert output_dir(PROJECT).name == "fishing-rod-mounts"
-
-
-def test_every_geometric_check_passes(capsys):
-    """The pre-print checks in verify.py, run as part of the suite so a broken
-    mount cannot reach `uv run build` unnoticed."""
-    assert verify_all()
-    assert "ALL CHECKS PASSED" in capsys.readouterr().out

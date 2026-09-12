@@ -25,8 +25,8 @@ actually gets printed. See README.md for printing and hanging instructions.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from pathlib import Path
 
+from printing3d.fishing_rod_mounts import LOCKED, NAME  # noqa: F401  re-exported
 from printing3d.fishing_rod_mounts.geometry import (
     ARM_AND_GUSSET,
     WEDGE,
@@ -35,10 +35,6 @@ from printing3d.fishing_rod_mounts.geometry import (
     build,
 )
 from printing3d.parts import Part, build_project
-
-PROJECT = "fishing-rod-mounts"
-LOCKED = Path(__file__).parent / "LOCKED.txt"
-
 
 # ---------------------------------------------------------------------------
 # MEASURE THESE FOR EACH ROD
@@ -138,5 +134,5 @@ def build_all() -> bool:
     all_sound = True
     for rod in RODS:
         print(f"\n{rod.name}   grip {rod.butt_dia:.2f} mm / blank {rod.tip_dia:.2f} mm")
-        all_sound &= build_project(PROJECT, parts([rod]), announce=standoff_line)
+        all_sound &= build_project(NAME, parts([rod]), announce=standoff_line)
     return all_sound

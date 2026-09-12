@@ -12,6 +12,7 @@ import math
 
 import manifold3d as m
 
+from printing3d.checks import CheckRunner
 from printing3d.fishing_rod_mounts.catalog import RODS, parts
 from printing3d.fishing_rod_mounts.geometry import (
     AXIS_U,
@@ -21,12 +22,17 @@ from printing3d.fishing_rod_mounts.geometry import (
     RIB,
     WEDGE,
     profile,
-    signed_area,
+)
+from printing3d.probes import (
+    TOUCHING,
+    enclosed_void_count,
+    has_material_at,
+    highest_point_between,
+    overlap,
+    straight_edge_angles,
+    surface_height_below,
 )
 
-PROBE_SIZE = 0.6  # side of the test cube used to ask "material here?"
-FINE_PROBE_SIZE = 0.05  # for locating a surface, not just sampling
-TOUCHING = 1e-6  # volumes below this count as no contact at all
 NUDGE = 1.0  # how far the rod is pushed to test its retention
 BITE = 1.0  # mm3 of interference that counts as a real stop
 LIFT_HEIGHT = 200.0  # far enough that the rod is clear of everything
@@ -40,35 +46,9 @@ MIN_WALL_CLEARANCE = 0.5  # mm of air between the rod and the wall
 PLATE_ABOVE_SCREW = 1.5  # mm of plate that must remain above a countersink
 
 
-class CheckRunner:
-    """Runs named checks, prints each result, and remembers the failures."""
-
-    def __init__(self):
-        self.failures = []
-
-    def section(self, title):
-        print(f"\n{title}")
-
-    def check(self, name, passed, detail=""):
-        mark = "PASS" if passed else "FAIL"
-        print(f"  [{mark}] {name}{'  -- ' + detail if detail else ''}")
-        if not passed:
-            self.failures.append(name)
-
-    @property
-    def all_passed(self):
-        return not self.failures
-
-
 # ---------------------------------------------------------------------------
 # Probes: questions asked of a finished solid
 # ---------------------------------------------------------------------------
-
-
-def has_material_at(solid, u, v, w, size=PROBE_SIZE):
-    """Is there material at this point? (tiny cube intersection)"""
-    cube = m.Manifold.cube((size, size, size), True).translate((u, v, w))
-    return (solid ^ cube).volume() > TOUCHING
 
 
 def rod_at(spec, du=0.0, dv=0.0):
@@ -90,57 +70,14 @@ def lift_sweep(spec):
     return (disc + chute).extrude(spec.width)
 
 
-def overlap(solid, other):
-    return (solid ^ other).volume()
-
-
 def seat_height(solid, spec):
     """Cradle floor + rod radius, measured off the solid.
 
-    Scans DOWN the cradle centerline from the nominal axis: scanning up from
-    v=0 would be wrong, since the tip mount's underside is open air below the
-    part.
+    Scans DOWN the cradle centerline: scanning up from v=0 would be wrong,
+    since the tip mount's underside is open air below the part.
     """
-
-    def material(v):
-        return has_material_at(solid, AXIS_U, v, spec.width / 2.0, size=FINE_PROBE_SIZE)
-
-    air, floor = _first_material_below(material, AXIS_V)
-    for _ in range(40):
-        midpoint = (air + floor) / 2.0
-        if material(midpoint):
-            floor = midpoint
-        else:
-            air = midpoint
-    return (air + floor) / 2.0 + spec.rod_dia / 2.0
-
-
-def _first_material_below(material, start_v, step=0.25, limit=-5.0):
-    """Bracket the cradle floor: the last known air height and the first
-    height at which the probe hits material."""
-    air, v = start_v, start_v
-    while v > limit:
-        if material(v):
-            return air, v
-        air, v = v, v - step
-    raise AssertionError("no cradle floor found")
-
-
-def straight_edge_angles(cross_section, min_len=MIN_EDGE_LENGTH):
-    """Angles of the straight edges in a profile, longest first.
-
-    Used to check that the two diagonals really are parallel, rather than
-    trusting that the same slope constant was used in both places.
-    """
-    edges = []
-    for contour in cross_section.to_polygons():
-        for i in range(len(contour)):
-            (u0, v0), (u1, v1) = contour[i], contour[(i + 1) % len(contour)]
-            length = math.hypot(u1 - u0, v1 - v0)
-            if length >= min_len:
-                angle = math.degrees(math.atan2(v1 - v0, u1 - u0)) % 180.0
-                edges.append((length, angle))
-    return sorted(edges, reverse=True)
+    floor = surface_height_below(solid, AXIS_U, spec.width / 2.0, AXIS_V)
+    return floor + spec.rod_dia / 2.0
 
 
 def cradle_wall_tops(cross_section, cradle_radius):
@@ -149,19 +86,7 @@ def cradle_wall_tops(cross_section, cradle_radius):
         (AXIS_U - cradle_radius - RIB, AXIS_U - cradle_radius),
         (AXIS_U + cradle_radius, AXIS_U + cradle_radius + RIB),
     )
-    tops = []
-    for u0, u1 in walls:
-        column = cross_section ^ m.CrossSection.square(
-            (u1 - u0, 300.0), False
-        ).translate((u0, 0.0))
-        tops.append(
-            max(point[1] for contour in column.to_polygons() for point in contour)
-        )
-    return tops
-
-
-def enclosed_void_count(cross_section):
-    return sum(1 for contour in cross_section.to_polygons() if signed_area(contour) < 0)
+    return [highest_point_between(cross_section, u0, u1) for u0, u1 in walls]
 
 
 # ---------------------------------------------------------------------------
@@ -256,7 +181,9 @@ def check_derived_angles(runner, part):
     spec = part.spec
     cross_section = profile(spec)
     if spec.support is WEDGE:
-        longest = [angle for _, angle in straight_edge_angles(cross_section)][:4]
+        longest = [
+            angle for _, angle in straight_edge_angles(cross_section, MIN_EDGE_LENGTH)
+        ][:4]
         diagonals = sorted(a for a in longest if 5.0 < a < 85.0)
         spread = abs(diagonals[0] - diagonals[-1]) if len(diagonals) >= 2 else None
         runner.check(
@@ -300,7 +227,4 @@ def verify_all():
             check_part(runner, part)
         runner.section(f"cross-part alignment: {rod.name}")
         check_pair_seats_rod_level(runner, pair)
-    print(
-        "\nALL CHECKS PASSED" if runner.all_passed else f"\nFAILURES: {runner.failures}"
-    )
-    return runner.all_passed
+    return runner.report()

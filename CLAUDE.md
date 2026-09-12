@@ -19,10 +19,14 @@ subtraction.
 ```
 pyproject.toml              one package, one lockfile, one dependency set
 output/<project>/           generated STLs, committed
-src/printing3d/
-  stl.py                    binary STL writer (shared)
-  parts.py                  what a Part is, where its file lands (shared)
-  cli.py                    `build` / `verify` commands + project registry
+src/printing3d/            the shared kit -- never imports a project
+  shapes.py                 2D construction (rect, polygon, fill, rounding)
+  probes.py                 measuring built solids and profiles
+  checks.py                 the pass/fail runner
+  stl.py                    binary STL writer
+  parts.py                  what a Part is, where its file lands
+  registry.py               the Project contract + discovery
+  cli.py                    `build` / `verify`
   <project>/                one folder per 3D-printing project
 tests/
   test_*.py                 tests for the shared modules
@@ -162,22 +166,42 @@ behavior must not touch them.
 
 ## Adding a new 3D-printing project
 
-1. `mkdir src/printing3d/<new_project>` with an `__init__.py`.
-2. Write the geometry. Put shape construction in its own module (`geometry.py`)
-   and the catalog of what actually gets printed in another (`catalog.py`).
-   The catalog yields `printing3d.parts.Part` objects.
-3. Give it a `build_all()` that calls `printing3d.parts.build_project(...)`.
-4. Register it in `PROJECTS` in `src/printing3d/cli.py` — one entry.
-5. Add `tests/<new_project>/`.
-6. Write a `README.md` in the project folder covering print settings and
-   assembly. Reference images and source meshes go in `<project>/reference/`.
-7. If it introduces behavior the existing docs do not cover, add a doc under
-   `docs/` and link it from the index — using the `maintaining-docs` skill.
+Projects are **discovered, not registered** — never edit a shared file to add
+one. Everything goes in `src/printing3d/<new_project>/`:
 
-The package name must be a legal Python identifier (`fishing_rod_mounts`),
-while the project's public name — its output folder and CLI argument — is
-kebab-case (`fishing-rod-mounts`). Keep both in sync via the `PROJECT`
-constant in the project's catalog module.
+1. `__init__.py` declares the project: its name (kebab-case), a one-line
+   summary, its lock file, and callables for parts/build/verify. Import the
+   heavy modules *inside* those callables, so listing projects stays cheap.
+2. `geometry.py` — the shape. Reuse `printing3d.shapes` rather than
+   re-implementing 2D construction.
+3. `catalog.py` — what actually gets printed, yielding `printing3d.parts.Part`.
+4. `verify.py` — physical checks, using `printing3d.checks.CheckRunner` and
+   `printing3d.probes`. **Required**: the contract fails a project without them.
+5. `LOCKED.txt` — generate it once the shape is settled.
+6. `tests/<new_project>/` — only what is specific to this project. The contract
+   suite already covers building, locking, soundness and verification.
+7. A `README.md` covering print settings and assembly; reference images and
+   source meshes in `<project>/reference/`.
+
+The package name must be a legal Python identifier (`fishing_rod_mounts`); the
+project's public name is kebab-case (`fishing-rod-mounts`).
+
+Behavior: [docs/build/project-contract.md](docs/build/project-contract.md).
+
+## Growing the shared kit
+
+A helper starts **in the project that needs it**. When a *second* project needs
+the same thing, promote it into the kit — a pure move, behavior unchanged, docs
+untouched.
+
+- Only **domain-free** utilities are eligible. Anything shaped around what a
+  project makes stays with that project; generalising from one example is
+  guessing what the second needs.
+- **The kit never imports a project.** Enforced by a test, so don't work around
+  it — if shared code needs a project's knowledge, it isn't shared code.
+- Promoted code must arrive with its own tests.
+
+Don't pre-build abstractions for projects that don't exist yet.
 
 ## Rules specific to generated geometry
 
@@ -203,22 +227,27 @@ version bump unchanged.
 ## Testing
 
 Tests are behavioral and named as sentences:
-`test_the_countersink_opens_out_on_the_front_face`. Four layers, in order of
+`test_the_countersink_opens_out_on_the_front_face`. Five layers, in order of
 how specifically they localise a failure:
 
-1. **Property tests** on derived values — assert the *relationship*, not a
+1. **Contract tests** (`tests/test_project_contract.py`) — run over every
+   discovered project. Never add project-specific assertions here, and never
+   copy them into a project: a new project is covered by existing.
+2. **Property tests** on derived values — assert the *relationship*, not a
    magic number. The wedge test checks the line is genuinely tangent to the
    crescent, rather than pinning `32.60°`.
-2. **Profile characterization** — vertex-count, area, and a vertex digest for
+3. **Profile characterization** — vertex-count, area, and a vertex digest for
    each shipped 2D profile, so a geometry change names the profile that moved.
-3. **Golden master** — the STL bytes, against `LOCKED.txt`.
-4. **Command tests** — the installed console scripts run as subprocesses and
+4. **Golden master** — the STL bytes, against `LOCKED.txt`. Lives in the
+   contract suite, so every project gets it.
+5. **Command tests** — the installed console scripts run as subprocesses and
    compared against the library. Keep these free of project names: they own
    "the command matches the library", while the golden master owns "the library
    matches the lock".
 
-Warnings are errors (`filterwarnings`), so a dependency's deprecation warning
-fails the suite. Don't silence one — act on it.
+`tests/test_architecture.py` enforces that the shared kit never imports a
+project. Warnings are errors (`filterwarnings`), so a dependency's deprecation
+warning fails the suite. Don't silence one — act on it.
 
 `uv run verify` is a separate tool from the test suite: it measures the built
 solids for physical soundness (does the rod lift out, is it trapped sideways,

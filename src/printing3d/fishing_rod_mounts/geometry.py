@@ -19,6 +19,13 @@ from typing import Protocol
 
 import manifold3d as m
 
+from printing3d.shapes import (
+    polygon,
+    rect,
+    rounded_convex_corners,
+    without_enclosed_voids,
+)
+
 # ---------------------------------------------------------------------------
 # Shared anchors -- every mount agrees on these, so every mount interchanges
 # ---------------------------------------------------------------------------
@@ -52,8 +59,6 @@ CSINK_INCLUDED = 90.0
 # Tuning that only affects tessellation and the size of throwaway cutting
 # bodies -- named so the geometry above reads as design intent, not arithmetic.
 CIRCLE_SEGMENTS = 192  # facets around the cradle and the rib
-FILLET_SEGMENTS = 64  # facets around a filleted corner
-MITER_LIMIT = 2.0  # offset() join limit; unused for round joins
 CLIP_MARGIN = 1.0  # overshoot when halving the rib's annulus
 CHANNEL_OVERSHOOT = 20.0  # how far the lift-out channel runs past the plate
 MIN_GUSSET_HEIGHT = 2.0  # below this the arm reaches the bottom edge anyway
@@ -62,27 +67,6 @@ BORE_START_U = -5.0  # screw bores start behind the wall face...
 BORE_LENGTH = 60.0  # ...and run well past the front of any mount
 CSINK_OVERCUT = 4.0  # countersink cone continues past the front face
 BORE_SEGMENTS = 64  # facets around a screw bore
-
-
-def rect(u0, v0, u1, v1):
-    """An axis-aligned rectangle from corner (u0, v0) to corner (u1, v1)."""
-    return m.CrossSection.square((u1 - u0, v1 - v0), False).translate((u0, v0))
-
-
-def polygon(points):
-    """A closed shape through `points`, in order."""
-    return filled([points])
-
-
-def filled(contours):
-    """A CrossSection from plain (u, v) tuples, filled by winding direction.
-
-    manifold3d's stubs ask for numpy arrays here, but the runtime takes
-    sequences of tuples -- which is what the geometry below is written in, and
-    far more readable. Routing every construction through this one place keeps
-    that mismatch from spreading across the file.
-    """
-    return m.CrossSection(contours, m.FillRule.Positive)
 
 
 # ---------------------------------------------------------------------------
@@ -254,7 +238,7 @@ def profile(spec):
         part = part + piece
     part = part - _rod_space_and_lift_channel(cradle, spec.plate_h)
     part = part - _lip_lead_in(cradle, spec.lip_rise)
-    return _rounded_convex_corners(_without_enclosed_voids(part))
+    return rounded_convex_corners(without_enclosed_voids(part), FILLET)
 
 
 def _crescent(cradle, lip_rise):
@@ -304,39 +288,6 @@ def _lip_lead_in(cradle, lip_rise):
             (outer_u + leg, lip_top),
             (outer_u, lip_top - leg),
         ]
-    )
-
-
-def _without_enclosed_voids(part):
-    """Drop negative-winding contours, closing any fully enclosed pocket.
-
-    On the butt mount the crescent bulges past the plate face and curves back,
-    leaving a small triangular void where the two meet -- an air pocket the
-    slicer would wall in for no benefit.
-    """
-    solid_contours = [
-        [tuple(point) for point in contour]
-        for contour in part.to_polygons()
-        if signed_area(contour) > 0
-    ]
-    return filled(solid_contours)
-
-
-def signed_area(contour):
-    """Twice the signed area of a closed contour; negative means a void."""
-    total = 0.0
-    for i in range(len(contour)):
-        u0, v0 = contour[i]
-        u1, v1 = contour[(i + 1) % len(contour)]
-        total += u0 * v1 - u1 * v0
-    return total
-
-
-def _rounded_convex_corners(part):
-    """Soften convex corners by eroding then dilating with round joins.
-    Concave features such as the cradle arc come back unchanged."""
-    return part.offset(-FILLET, m.JoinType.Round, MITER_LIMIT, FILLET_SEGMENTS).offset(
-        FILLET, m.JoinType.Round, MITER_LIMIT, FILLET_SEGMENTS
     )
 
 

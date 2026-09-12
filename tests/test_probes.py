@@ -1,0 +1,87 @@
+"""Shared interrogation of built solids and profiles."""
+
+import pytest
+from manifold3d import Manifold
+
+from printing3d.probes import (
+    FINE_PROBE_SIZE,
+    enclosed_void_count,
+    has_material_at,
+    highest_point_between,
+    overlap,
+    straight_edge_angles,
+    surface_height_below,
+)
+from printing3d.shapes import polygon, rect
+
+
+@pytest.fixture
+def cube():
+    """A 10mm cube with its near corner at the origin."""
+    return Manifold.cube((10.0, 10.0, 10.0), False)
+
+
+def test_material_is_found_inside_the_solid(cube):
+    assert has_material_at(cube, 5.0, 5.0, 5.0)
+
+
+def test_no_material_is_found_outside_the_solid(cube):
+    assert not has_material_at(cube, 50.0, 5.0, 5.0)
+
+
+def test_overlap_is_zero_for_separated_solids(cube):
+    assert overlap(cube, cube.translate((100.0, 0.0, 0.0))) == 0.0
+
+
+def test_overlap_measures_the_shared_volume(cube):
+    half = cube.translate((5.0, 0.0, 0.0))
+    assert overlap(cube, half) == pytest.approx(5.0 * 10.0 * 10.0)
+
+
+def test_the_surface_below_is_the_top_face(cube):
+    """Scanning down from above the cube finds its top at v=10.
+
+    Within half a probe width: the sampling cube is centred on the point, so it
+    touches the surface fractionally before its centre reaches it.
+    """
+    assert surface_height_below(cube, 5.0, 5.0, 20.0) == pytest.approx(
+        10.0, abs=FINE_PROBE_SIZE
+    )
+
+
+def test_scanning_where_there_is_nothing_raises(cube):
+    with pytest.raises(AssertionError, match="no surface"):
+        surface_height_below(cube, 50.0, 5.0, 20.0)
+
+
+def test_a_solid_profile_has_no_enclosed_voids():
+    assert enclosed_void_count(rect(0.0, 0.0, 10.0, 10.0)) == 0
+
+
+def test_a_punched_profile_reports_its_pocket():
+    assert (
+        enclosed_void_count(rect(0.0, 0.0, 10.0, 10.0) - rect(3.0, 3.0, 7.0, 7.0)) == 1
+    )
+
+
+def test_edge_angles_come_back_longest_first():
+    lengths = [
+        length for length, _ in straight_edge_angles(rect(0.0, 0.0, 8.0, 3.0), 1.0)
+    ]
+    assert lengths == sorted(lengths, reverse=True)
+
+
+def test_a_right_triangle_reports_its_slope():
+    ramp = polygon([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])
+    angles = [angle for _, angle in straight_edge_angles(ramp, 1.0)]
+    assert any(angle == pytest.approx(45.0) for angle in angles)
+
+
+def test_short_edges_are_ignored():
+    assert straight_edge_angles(rect(0.0, 0.0, 1.0, 1.0), min_len=5.0) == []
+
+
+def test_the_highest_point_is_found_within_the_slice():
+    stepped = rect(0.0, 0.0, 5.0, 2.0) + rect(5.0, 0.0, 10.0, 8.0)
+    assert highest_point_between(stepped, 0.0, 5.0) == pytest.approx(2.0)
+    assert highest_point_between(stepped, 5.0, 10.0) == pytest.approx(8.0)

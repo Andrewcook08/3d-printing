@@ -20,11 +20,10 @@ from printing3d.fishing_rod_mounts.geometry import (
     MountSpec,
     build,
     profile,
-    rect,
     screw_cut,
-    signed_area,
     tangent_slope_from_corner,
 )
+from printing3d.shapes import signed_area
 from tests.support import contour_digest
 
 BUTT_DIA = 26.15
@@ -138,14 +137,6 @@ def test_the_wedge_passes_below_the_rod():
 # ---------------------------------------------------------------------------
 
 
-def test_a_counterclockwise_contour_is_solid():
-    assert signed_area([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]) > 0
-
-
-def test_a_clockwise_contour_is_a_void():
-    assert signed_area([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)]) < 0
-
-
 @SHIPPED_SPECS
 def test_no_shipped_profile_encloses_a_pocket(spec):
     assert [c for c in profile(spec).to_polygons() if signed_area(c) < 0] == []
@@ -154,10 +145,6 @@ def test_no_shipped_profile_encloses_a_pocket(spec):
 @SHIPPED_SPECS
 def test_the_profile_is_one_connected_outline(spec):
     assert len(profile(spec).to_polygons()) == 1
-
-
-def test_the_rectangle_covers_exactly_the_given_corners():
-    assert rect(1.0, 2.0, 4.0, 6.0).bounds() == (1.0, 2.0, 4.0, 6.0)
 
 
 # Vertex-level characterization, so a geometry change names itself here before

@@ -9,12 +9,18 @@ something changes, the narrowest layer that noticed tells you what moved.
 
 | Layer | Asserts | Catches |
 |---|---|---|
+| **Contract** | What every project must guarantee, for every project | A project that ships unverified, unlocked, or unsound parts |
 | **Properties** | Relationships that must hold for *any* input | A design that is geometrically wrong, including for sizes never built before |
 | **Characterization** | The exact vertices of each shipped cross-section | A change to a part's outline, naming which part moved |
 | **Golden master** | The exact bytes of each shipped file | Any change at all to a printable artifact |
 | **Command** | The installed commands behave like the library | Broken entry-point wiring that library tests cannot see |
 
 ## Guarantees
+
+**The contract layer applies itself.** It runs over whatever projects exist, so
+a new project is covered by existing rather than by copying tests, and a
+failure names the project it belongs to. See
+[project contract](../build/project-contract.md).
 
 **Properties assert intent, not history.** Where a value is forced by geometry,
 the test asserts the *relationship* — that a line is genuinely tangent to a
@@ -51,6 +57,7 @@ object.
 | Properties pass, characterization fails | A part's outline moved. Usually an intended design change. |
 | Properties fail | The design itself is wrong. Investigate before anything else. |
 | Command test alone fails | The library is fine; the installed entry point is broken. |
+| Contract test fails, named for one project | That project's declaration or output is wrong; others are unaffected. |
 | A deprecation warning fails the run | A dependency is signalling a future removal. |
 
 ## Where they run
