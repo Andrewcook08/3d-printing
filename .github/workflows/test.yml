@@ -1,4 +1,4 @@
-name: Test
+name: Pull request checks
 
 # Pull requests only. main takes no direct pushes, so a push trigger would just
 # re-run the same checks a second time on every PR branch.
@@ -10,10 +10,12 @@ permissions:
   contents: read
 
 jobs:
-  # Keep this job id as `test`: it is the status check the branch ruleset
-  # requires. Renaming it, or moving these steps into a reusable workflow that
-  # would rename the check to `test / <job>`, blocks every merge.
-  test:
+  # This job's display name IS the status check the branch ruleset requires.
+  # Renaming it, or moving these steps into a reusable workflow (which would
+  # rename the check to `<job> / <called job>`), blocks every merge until the
+  # ruleset is updated to match.
+  gates:
+    name: lint, types, and tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

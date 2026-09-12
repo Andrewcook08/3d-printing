@@ -26,6 +26,11 @@ experiments generate parts without touching the committed ones.
 on any machine. That is not incidental — it is the property everything below
 depends on.
 
+Because the lock is written on a developer's machine and re-checked by
+automation running a different operating system, a passing check is also
+evidence of that "on any machine" claim: the two would disagree the moment the
+output became platform-dependent.
+
 **Each project is hash-locked.** A project keeps a `LOCKED.txt` recording the
 sha256 of every STL it has shipped. The test suite regenerates the parts and
 compares. Anything that moves a single vertex fails immediately.
