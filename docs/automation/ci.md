@@ -27,8 +27,12 @@ concern it covers:
 | Types | A type error is detectable statically |
 | Tests | Behavior changed — see [testing](../quality/testing.md) |
 
-They run independently, so one failure does not hide the others. **The failing
-gate's name is the diagnosis** — that is the point of separating them.
+They run independently: a failure in one does not stop the rest, so a single
+run reports every category that is broken rather than only the first.
+
+They arrive as one check, not four. **The failing gate's name is the
+diagnosis**, and you read it in the run's log, where each gate is its own
+labelled group.
 
 ## Guarantees
 
