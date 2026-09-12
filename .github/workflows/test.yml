@@ -1,5 +1,9 @@
 name: Test
-on: [push, pull_request]
+# Pull requests only. main takes no direct pushes, so a push trigger would
+# just re-run the same checks a second time on every PR branch.
+on:
+  pull_request:
+    branches: [main]
 jobs:
   test:
     runs-on: ubuntu-latest
