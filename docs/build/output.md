@@ -58,8 +58,12 @@ Changing its bytes silently means the next print no longer matches it.
 
 ## How it fails
 
+The checks that assert *relationships* are the discriminator: while those pass,
+the design is still correct however much the bytes moved.
+
 | Symptom | Meaning |
 |---|---|
-| Hash mismatch, shape checks still passing | Something below the geometry changed how the solid is meshed. The design is untouched. |
-| Hash mismatch, shape checks also failing | The geometry itself moved. Investigate before accepting anything. |
+| Hash mismatch, everything else passing | Something below the geometry changed how the solid is meshed. The design is untouched. |
+| Hash mismatch, the pinned outline also failing, relationships still holding | The outline's vertices moved but the design holds — typically a change in how finely curves are divided, or an intended reshape. |
+| Hash mismatch, a relationship failing | The design itself is wrong. Investigate before accepting anything. |
 | A locked file is missing | The output was never generated, or was redirected. |
