@@ -55,6 +55,59 @@ ruff and the test suite on every commit, so a commit that changes an STL's
 bytes is blocked before it lands. `ty check` is CI-only — it is the one check
 the hooks do not cover.
 
+All four run again in CI, where they gate every pull request. See
+[Branching and pull requests](#branching-and-pull-requests) below: `main`
+takes no direct pushes.
+
+## Branching and pull requests
+
+**`main` is protected and rejects direct pushes, including from the repo
+owner.** Every change goes through a branch and a PR whose CI has passed.
+
+Before making any edit, check you are not on `main`:
+
+```sh
+git branch --show-current
+```
+
+If you are, create a branch first. Name it `<type>/<short-description>` in
+kebab-case:
+
+| Type | For |
+|---|---|
+| `part/` | A new 3D-printing project |
+| `feat/` | New capability in an existing project or the shared code |
+| `fix/` | Correcting something that is wrong |
+| `refactor/` | Restructuring with no change to any STL |
+| `docs/` | Documentation only |
+| `test/` | Tests only |
+| `chore/` | Dependencies, tooling, CI |
+
+A `refactor/` branch must leave every `LOCKED.txt` check passing. If a refactor
+changes an STL, it was not a refactor — either fix it or rename the branch.
+
+The full cycle:
+
+```sh
+git switch -c fix/tip-mount-lip
+# ...work...
+git commit                          # pre-commit hooks run here
+git push -u origin fix/tip-mount-lip
+gh pr create --fill
+gh pr merge --squash --auto         # merges once CI is green
+```
+
+Notes:
+
+- **No reviewer approval is required.** You can merge your own PR once `test`
+  passes. Do not ask for a reviewer.
+- The branch must be up to date with `main` before merging; if `main` has moved,
+  rebase or merge it in and push again.
+- Branches are deleted automatically on merge. Afterwards, `git switch main &&
+  git pull`.
+- Never use `--no-verify` or force-push to `main`; both are blocked server-side
+  anyway.
+
 ## Adding a new 3D-printing project
 
 1. `mkdir src/printing3d/<new_project>` with an `__init__.py`.
@@ -126,6 +179,7 @@ it before printing.
 
 ## Don't
 
+- Don't commit to `main`, or open a PR without checking `git branch --show-current` first.
 - Don't add a dependency without asking; this repo deliberately has one.
 - Don't commit `.venv/`, caches, or slicer project files.
 - Don't move or rename generated STLs by hand — `uv run build` owns `output/`.

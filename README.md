@@ -40,6 +40,32 @@ checks.
 
 ## Development
 
+`main` is protected: it takes no direct pushes. Every change goes through a
+branch and a pull request, and CI must pass before the PR can merge. No
+reviewer approval is required, so you can merge your own work once it is green.
+
+```sh
+git switch -c fix/tip-mount-lip     # branch as <type>/<description>
+# ...work, commit...
+git push -u origin fix/tip-mount-lip
+gh pr create --fill
+gh pr merge --squash --auto         # merges itself once CI is green
+```
+
+Branch names are `<type>/<short-description>`, kebab-case:
+
+| Type | For |
+|---|---|
+| `part/` | A new 3D-printing project |
+| `feat/` | New capability in an existing project or the shared code |
+| `fix/` | Correcting something that is wrong |
+| `refactor/` | Restructuring with no change to any STL |
+| `docs/` | Documentation only |
+| `test/` | Tests only |
+| `chore/` | Dependencies, tooling, CI |
+
+The local checks:
+
 ```sh
 uv run pytest              # tests
 uv run ruff check --fix .  # lint
