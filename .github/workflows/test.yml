@@ -1,19 +1,20 @@
 name: Test
-# Pull requests only. main takes no direct pushes, so a push trigger would
-# just re-run the same checks a second time on every PR branch.
+
+# Pull requests only. main takes no direct pushes, so a push trigger would just
+# re-run the same checks a second time on every PR branch.
 on:
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
+
 jobs:
+  # Keep this job id as `test`: it is the status check the branch ruleset
+  # requires. Renaming it, or moving these steps into a reusable workflow that
+  # would rename the check to `test / <job>`, blocks every merge.
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - run: uv sync --locked
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run ty check
-      - run: uv run pytest
+      - uses: ./.github/actions/checks

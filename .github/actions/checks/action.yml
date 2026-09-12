@@ -1,0 +1,85 @@
+name: Checks
+description: Install the project and run every quality gate.
+
+# The single definition of "is this repo healthy?". Both the pull request
+# workflow and the upgrade canary use it, so the canary can never drift into
+# checking something different from CI.
+#
+# The only difference between the two is which versions get installed, which is
+# what `upgrade` selects. No dependency is named here -- pyproject.toml and
+# uv.lock own that list, and uv derives everything else from them.
+
+inputs:
+  upgrade:
+    description: >-
+      Resolve the newest versions pyproject.toml allows, instead of the versions
+      uv.lock pins. CI wants false (hermetic); the canary wants true.
+    default: "false"
+  packages:
+    description: >-
+      Space-separated packages to upgrade. Empty upgrades all of them. Only
+      meaningful when upgrade is true.
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+
+    - name: Resolve dependencies
+      shell: bash
+      env:
+        UPGRADE: ${{ inputs.upgrade }}
+        PACKAGES: ${{ inputs.packages }}
+      run: |
+        set -euo pipefail
+
+        if [ "$UPGRADE" != "true" ]; then
+          uv sync --locked
+          exit 0
+        fi
+
+        # uv logs to stderr, so redirect before capturing what moved.
+        if [ -n "$PACKAGES" ]; then
+          targets=()
+          for package in $PACKAGES; do
+            targets+=(--upgrade-package "$package")
+          done
+          uv lock "${targets[@]}" 2>&1 | tee /tmp/resolve.log
+        else
+          uv lock --upgrade 2>&1 | tee /tmp/resolve.log
+        fi
+        uv sync
+
+        {
+          echo "### Dependencies resolved"
+          echo
+          echo '```'
+          grep -E '^(Updated|Added|Removed) ' /tmp/resolve.log \
+            || echo "No changes: every dependency is already at its newest allowed version."
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    # One concern per step, so a failure names its own category. This is what
+    # lets a red canary be read without knowing which package moved.
+    - name: Lint
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: uv run ruff check .
+
+    - name: Format
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: uv run ruff format --check .
+
+    - name: Types
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: uv run ty check
+
+    - name: Tests
+      if: ${{ !cancelled() }}
+      shell: bash
+      run: uv run pytest
