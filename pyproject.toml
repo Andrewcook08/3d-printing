@@ -1,0 +1,47 @@
+[project]
+name = "printing3d"
+version = "0.1.0"
+description = "Parametric 3D-printable parts, generated as STL"
+readme = "README.md"
+authors = [
+    { name = "Andrew Cook" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "manifold3d>=3.5.2",
+]
+
+[project.scripts]
+build = "printing3d.cli:build"
+verify = "printing3d.cli:verify"
+
+[build-system]
+requires = ["uv_build>=0.8.10,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.7",
+    "ty>=0.0.80",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = ["--strict-markers", "--strict-config"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ty.environment]
+root = ["./src", "."]
