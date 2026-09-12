@@ -108,6 +108,33 @@ Notes:
 - Never use `--no-verify` or force-push to `main`; both are blocked server-side
   anyway.
 
+## Dependencies and the upgrade canary
+
+`pyproject.toml` sets a floor (`manifold3d>=3.5.2`); `uv.lock` pins the exact
+version actually installed. CI runs `uv sync --locked`, so it is hermetic: a
+new manifold3d release cannot affect a build until the lock is bumped. That is
+deliberate, and it is why the STLs are reproducible.
+
+Two things keep the lock from going stale:
+
+- **Dependabot** opens weekly PRs. They go through the normal gate, so a bump
+  that changes an STL fails the golden master and cannot merge.
+- **`.github/workflows/upgrade-canary.yml`** runs weekly, upgrades manifold3d
+  in a throwaway lockfile, and runs the suite. It commits nothing. It exists
+  because CI cannot see past the lock, and because Dependabot will not open a
+  PR at all when a new release already satisfies the `>=` range.
+
+A red canary is a decision, not a build to fix. Read the failure pattern:
+
+| Profile tests | STL hash | Means |
+|---|---|---|
+| pass | fail | The library changed how it meshes. Your geometry is untouched. |
+| fail | fail | Your geometry moved. Something else is wrong — investigate. |
+
+For the first case, choose deliberately: accept the new mesh (upgrade the lock,
+re-print or re-lock and say so in the PR), or hold the current version by
+tightening the floor in `pyproject.toml`. Never let it drift unnoticed.
+
 ## Adding a new 3D-printing project
 
 1. `mkdir src/printing3d/<new_project>` with an `__init__.py`.

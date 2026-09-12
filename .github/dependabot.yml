@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # Routine bumps, gated by the normal PR checks. If a bump changes an STL,
+  # the golden master fails and the PR cannot merge.
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "chore"
