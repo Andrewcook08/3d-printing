@@ -108,32 +108,59 @@ Notes:
 - Never use `--no-verify` or force-push to `main`; both are blocked server-side
   anyway.
 
-## Dependencies and the upgrade canary
+## Dependency management
 
-`pyproject.toml` sets a floor (`manifold3d>=3.5.2`); `uv.lock` pins the exact
-version actually installed. CI runs `uv sync --locked`, so it is hermetic: a
-new manifold3d release cannot affect a build until the lock is bumped. That is
-deliberate, and it is why the STLs are reproducible.
+`pyproject.toml` declares constraints; `uv.lock` pins the exact versions
+installed. Both are generated — never hand-edit either.
 
-Two things keep the lock from going stale:
+```sh
+uv add <package>                    # runtime dependency
+uv add --dev <package>              # dev dependency
+uv remove <package>
+uv lock --upgrade                   # upgrade everything
+uv lock --upgrade-package <package> # upgrade one
+uv tree --outdated --depth 1        # what newer versions exist
+```
 
-- **Dependabot** opens weekly PRs. They go through the normal gate, so a bump
-  that changes an STL fails the golden master and cannot merge.
-- **`.github/workflows/upgrade-canary.yml`** runs weekly, upgrades manifold3d
-  in a throwaway lockfile, and runs the suite. It commits nothing. It exists
-  because CI cannot see past the lock, and because Dependabot will not open a
-  PR at all when a new release already satisfies the `>=` range.
+Ask before adding a runtime dependency; this repo deliberately has one.
 
-A red canary is a decision, not a build to fix. Read the failure pattern:
+### Why upgrades need their own check
 
-| Profile tests | STL hash | Means |
-|---|---|---|
-| pass | fail | The library changed how it meshes. Your geometry is untouched. |
-| fail | fail | Your geometry moved. Something else is wrong — investigate. |
+CI runs `uv sync --locked`, so it installs exactly what `uv.lock` pins. That
+hermeticity is what makes the STLs reproducible — and it means CI can never
+notice that a newer release exists. Two things cover the gap:
 
-For the first case, choose deliberately: accept the new mesh (upgrade the lock,
-re-print or re-lock and say so in the PR), or hold the current version by
-tightening the floor in `pyproject.toml`. Never let it drift unnoticed.
+- **Dependabot** opens PRs. They go through the normal gate, so a bump that
+  changes an STL fails the golden master and cannot merge.
+- **The upgrade canary** (`.github/workflows/upgrade-canary.yml`) runs weekly,
+  resolves the newest versions the constraints allow, and runs every check. It
+  commits nothing. It exists because Dependabot may open no PR at all when a
+  new release already satisfies a `>=` constraint — a silent gap.
+
+Neither names a package. Both derive the list from `pyproject.toml`, so a new
+dependency is covered the moment it is added. To probe one package on demand:
+`gh workflow run "Upgrade canary" -f packages=<package>`.
+
+### Reading a red canary
+
+A red canary is a decision, not a build to fix. The failing **step** names the
+category:
+
+| Failing step | Means |
+|---|---|
+| `Tests`, golden master only (profile tests pass) | A geometry library changed how it meshes. Your geometry is untouched. |
+| `Tests`, profile *and* golden master | The geometry itself moved. Investigate before accepting anything. |
+| `Format` | A formatter release restyles the code. Reformat in its own `chore/` PR. |
+| `Lint` / `Types` | A newer linter or type checker sees something new. |
+
+Then choose deliberately, in a PR:
+
+- **Accept** — upgrade the lock, re-lock any changed STL, and say in the PR
+  that the shape changed and why that is acceptable.
+- **Hold** — tighten the constraint in `pyproject.toml` with a comment giving
+  the reason.
+
+Never let it drift unnoticed, and never re-lock an STL just to get to green.
 
 ## Adding a new 3D-printing project
 

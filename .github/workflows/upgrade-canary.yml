@@ -1,59 +1,40 @@
 name: Upgrade canary
 
-# CI installs exactly what uv.lock pins, so it can never notice a new
-# manifold3d release. This asks the question it cannot: would upgrading change
-# the parts? Nothing is committed and nothing merges -- it only reports, so a
-# red canary is a decision to make, not a build to fix.
+# CI installs exactly what uv.lock pins, so it can never notice a new release of
+# anything. This asks the question it cannot: would upgrading change the parts?
+# Nothing is committed and nothing merges -- it only reports, so a red canary is
+# a decision to make, not a build to fix. See CLAUDE.md for how to read one.
 on:
   schedule:
     - cron: "0 6 * * 1" # Mondays, 06:00 UTC
   workflow_dispatch:
+    inputs:
+      packages:
+        description: "Packages to upgrade, space separated. Empty upgrades all."
+        default: ""
 
 permissions:
   contents: read
 
 jobs:
-  manifold3d:
+  canary:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v7
+
+      - uses: ./.github/actions/checks
         with:
-          enable-cache: true
+          upgrade: "true"
+          packages: ${{ inputs.packages }}
 
-      - name: Upgrade manifold3d in the lockfile
-        id: upgrade
+      - name: What else is available
+        if: ${{ !cancelled() }}
+        shell: bash
         run: |
-          locked_version() {
-            grep -A1 'name = "manifold3d"' uv.lock | grep version | head -1 \
-              | sed 's/.*"\(.*\)".*/\1/'
-          }
-          before=$(locked_version)
-          uv lock --upgrade-package manifold3d
-          after=$(locked_version)
-          echo "before=$before" >> "$GITHUB_OUTPUT"
-          echo "after=$after" >> "$GITHUB_OUTPUT"
-          if [ "$before" = "$after" ]; then
-            echo "manifold3d $before is already the newest release." \
-              >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "manifold3d $before -> $after" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Do the parts still come out byte-identical?
-        run: uv run pytest -q
-
-      - name: Verdict
-        if: always()
-        run: |
-          if [ "${{ steps.upgrade.outputs.before }}" = "${{ steps.upgrade.outputs.after }}" ]; then
-            echo "Nothing to decide: no newer manifold3d." >> "$GITHUB_STEP_SUMMARY"
-          elif [ "${{ job.status }}" = "success" ]; then
-            echo "Safe to upgrade: the STLs are unchanged on ${{ steps.upgrade.outputs.after }}." \
-              >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "**Upgrading to ${{ steps.upgrade.outputs.after }} would change the parts.**" \
-              >> "$GITHUB_STEP_SUMMARY"
-            echo "If the profile tests passed and only the STL hash failed, the library changed how it meshes, not your geometry." \
-              >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "### Direct dependencies"
+            echo
+            echo '```'
+            uv tree --outdated --depth 1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
