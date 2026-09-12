@@ -58,7 +58,7 @@ CSINK_INCLUDED = 90.0
 
 # Tuning that only affects tessellation and the size of throwaway cutting
 # bodies -- named so the geometry above reads as design intent, not arithmetic.
-CIRCLE_SEGMENTS = 192  # facets around the cradle and the rib
+CIRCLE_SEGMENTS = 160  # facets around the cradle and the rib
 CLIP_MARGIN = 1.0  # overshoot when halving the rib's annulus
 CHANNEL_OVERSHOOT = 20.0  # how far the lift-out channel runs past the plate
 MIN_GUSSET_HEIGHT = 2.0  # below this the arm reaches the bottom edge anyway
