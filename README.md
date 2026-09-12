@@ -4,6 +4,9 @@ Parametric 3D-printable parts, written as Python and exported as STL. Geometry
 is built with [manifold3d](https://github.com/elalish/manifold); every project
 writes its STLs into `output/<project>/`, ready to drop into a slicer.
 
+**[How it works](docs/README.md)** — a map of the system: how parts are
+generated, what the checks guarantee, and how the automation fits together.
+
 ## Projects
 
 | Project | What it is |
