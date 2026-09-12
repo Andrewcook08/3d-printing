@@ -117,13 +117,18 @@ shasum -a 256 output/fishing-rod-mounts/*.stl \
 
 | File | What lives there |
 |---|---|
+| `__init__.py` | Declares this project so the repo discovers it |
 | `catalog.py` | The rods, the two mount styles, and what gets printed |
 | `geometry.py` | The parametric shape: the cradle, the supports, the profile |
 | `verify.py` | Geometric checks against the built solids |
+| `LOCKED.txt` | Hashes of the STLs this project has shipped |
 | `reference/` | The original wall hook the shape follows, and a photo of the pair |
 
-Binary STL writing and output paths are shared across the repo and live in
-`printing3d/stl.py` and `printing3d/parts.py`.
+Everything else is shared and lives one level up: 2D construction, solid
+probing, the check runner, STL writing and output paths. Building, locking and
+verification are covered by the repo-wide contract, so this project writes no
+test boilerplate of its own — see
+[docs/build/project-contract.md](../../../docs/build/project-contract.md).
 
 ## How it works
 

@@ -24,6 +24,8 @@ Three properties hold the whole thing together:
 - **Dimensions are derived, never restated.** A measurement is entered once;
   everything geometric follows from it.
 - **Nothing reaches the default branch unchecked.**
+- **Projects are found, not listed.** Adding one touches only its own files,
+  and enrols it in every check automatically.
 
 ## The components
 
@@ -31,6 +33,7 @@ Three properties hold the whole thing together:
 
 | Doc | Covers |
 |---|---|
+| [Project contract](build/project-contract.md) | What a project must declare, and what it inherits for free |
 | [Build pipeline](build/pipeline.md) | A declared part becoming an STL file, and what building reports |
 | [Geometry model](build/geometry.md) | How a part's shape is expressed, and why it prints without supports |
 | [Output and locking](build/output.md) | Where files land, determinism, and the hash lock |

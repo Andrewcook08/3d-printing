@@ -13,6 +13,10 @@ generated, what the checks guarantee, and how the automation fits together.
 |---|---|
 | [`fishing-rod-mounts`](src/printing3d/fishing_rod_mounts/README.md) | Low-profile wall mounts for horizontal fishing rod storage |
 
+Adding one? See the [project contract](docs/build/project-contract.md) — a
+project is discovered by declaring itself, and inherits building, locking and
+verification without writing test code.
+
 ## Getting started
 
 You need [uv](https://docs.astral.sh/uv/). Everything else is handled for you:

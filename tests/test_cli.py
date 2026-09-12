@@ -12,9 +12,11 @@ import subprocess
 
 import pytest
 
-from printing3d.cli import PROJECTS, build, verify
+from printing3d.cli import build, verify
+from printing3d.registry import discover
 from tests.support import sha256_of
 
+PROJECTS = discover()
 SOME_PROJECT = sorted(PROJECTS)[0]
 
 
@@ -50,9 +52,9 @@ def run_installed(name, output_dir):
 # ---------------------------------------------------------------------------
 
 
-def test_every_registered_project_can_be_looked_up():
-    for name, load in PROJECTS.items():
-        assert load().name == name
+def test_every_discovered_project_is_keyed_by_its_own_name():
+    for name, project in PROJECTS.items():
+        assert project.name == name
 
 
 def test_building_with_no_arguments_builds_every_project(tmp_path):
