@@ -158,7 +158,9 @@ Full behavior: [docs/automation/dependencies.md](docs/automation/dependencies.md
 
 **Before any documentation work — writing, updating, restructuring, or
 reviewing a doc — use the `maintaining-docs` skill.** It owns the framework;
-this file only routes to it, so the rules have exactly one home.
+this file only routes to it, so the rules have exactly one home. It also settles
+where a given piece of writing belongs — `docs/`, a project README, or a
+comment — and that there is no fourth place.
 
 Docs live in `docs/`, indexed by [docs/README.md](docs/README.md). They
 describe behavior, never implementation, which is why a refactor that preserves
@@ -182,8 +184,9 @@ one. Everything goes in `src/printing3d/<new_project>/`:
    suite already covers building, locking, soundness and verification.
    Before writing a helper of your own, run the grep in
    [Growing the shared kit](#growing-the-shared-kit).
-7. A `README.md` covering print settings and assembly; reference images and
-   source meshes in `<project>/reference/`.
+7. A `README.md` — this project's design document, not only its print sheet:
+   what the part solves, what forced each dimension, print settings, assembly.
+   Reference images and source meshes in `<project>/reference/`.
 
 The package name must be a legal Python identifier (`fishing_rod_mounts`); the
 project's public name is kebab-case (`fishing-rod-mounts`).
