@@ -9,5 +9,7 @@ c987e603ae2cd3d222ce7237d0e55233b9030110fb6446b07362e522dd57941c  output/hue-tv-
 d157f8d52a3af71b1f283099c37ce247c0dffef85b7b0e4992fe87dda32a9446  output/hue-tv-brackets/trial-corner-65deg-r68-v1.stl
 638b337a7a4138fbb9c6f82cd33d89e72beca613f67864e0b111943952527faf  output/hue-tv-brackets/trial-corner-70deg-r160-v1.stl
 560de79ecd261b5ad728fdf7ab161172a84472f0c47e0b5f468a47f3b36c44cc  output/hue-tv-brackets/trial-corner-70deg-r41-v1.stl
+9cd17500c6e8f19ed7386bc20a444a77b4eb7fc9d738be58230f083d012ed78e  output/hue-tv-brackets/trial-corner-70deg-r55-v1.stl
+1219ec86d4e157e3b6663102b72758676b04c6c04ac881ae093cf7000dae7f62  output/hue-tv-brackets/trial-corner-70deg-r82-v1.stl
 c9e2c9ccb54e07993dca8b11cb32a2f73d35a67de8741a3895ab0362ade4c2ae  output/hue-tv-brackets/trial-straight-65deg-25.4mm-v1.stl
 26f1b73bbe5876b209329d86761e47009fe7271eeba9017c169db47fe0ef372b  output/hue-tv-brackets/trial-straight-70deg-25.4mm-v1.stl
