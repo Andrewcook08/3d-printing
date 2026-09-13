@@ -24,9 +24,11 @@ name the parts being asked for.
 [[straight]]      # one entry per part, named and dimensioned
 ```
 
-Both projects follow this, and a project reading another project's file should
-find nothing surprising in it. A part entry may override a value from `[design]`
-for itself alone, which is how one bracket leans differently from the rest.
+What the entries are called is the project's own business — one asks for
+straights and corners, another for rods and the styles each is held in. What
+they share is the shape: design numbers in one table, repeated entries for what
+is being asked for. A part entry may override a value from `[design]` for itself
+alone, which is how one bracket leans differently from the rest.
 
 ## The boundary
 
@@ -41,9 +43,10 @@ by hand fails the moment the file is read.
 
 ## Guarantees
 
-**What the file says is what gets built.** There is no path by which a part
-appears in the output without an entry behind it, and none by which an entry is
-silently skipped.
+**What the file says is what gets built.** Every part in the output is
+described by the file, and nothing in the file is silently skipped. A project
+may turn its entries into parts however it likes — one each, or a rod against
+every style it is held in — but nothing appears that the file did not ask for.
 
 **Anything unrecognised is refused.** A misspelled key fails with the file, the
 key, and the keys it could have been. It never becomes a value quietly left at
@@ -68,7 +71,7 @@ file aside; see [output and locking](output.md).
 |---|---|
 | Reads | `parts.toml` beside the project's code, and any further files the project chooses |
 | Declares | One config file, the one the contract checks. A project reading more keeps the others its own business — no project has yet needed two the contract must know about. |
-| Produces | One part per entry, built from the values in the file |
+| Produces | Parts described by the file, built from the values in it |
 | Fails on | An unknown key, a missing required value, a value of the wrong type, a field asking for something config cannot express, or a file that is not valid TOML |
 | Never | Writes to either file, or to the hash lock |
 

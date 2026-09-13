@@ -136,7 +136,7 @@ test boilerplate of its own — see
 
 ## How it works
 
-Parameterized on the **rod's centerline**, not on the standoff. `AXIS_U = 18.0`
+Parameterized on the **rod's centerline**, not on the standoff. the centerline distance in `parts.toml`
 puts the centerline 18 mm from the wall in *both* mounts; each cradle's depth
 is whatever it takes to get there.
 
@@ -154,8 +154,8 @@ Three constraints shape the rest:
 **The plate can't be thicker than 4 mm.** The rod is a long cylinder, so it
 can't dodge an obstruction — anything above the cradle sitting further from the
 wall than the rod's near surface blocks it from lifting out, anywhere along its
-length. `AXIS_U` is set so a uniform 4 mm plate clears the rod by ~0.9 mm,
-which is also just enough to countersink a flat head properly.
+length. The centerline distance is set so a uniform 4 mm plate clears the rod
+by ~0.9 mm, which is also just enough to countersink a flat head properly.
 
 **The screws have to be above the rod.** A weight hanging out from the wall
 always tries to peel the *top* of the plate off, pivoting about the bottom

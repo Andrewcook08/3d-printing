@@ -4,51 +4,59 @@ How a part's shape is expressed, and the properties that fall out of it.
 
 ## What it does
 
-A part is described as a **two-dimensional cross-section, extruded sideways**,
-with fastener holes cut afterwards. The whole shape is therefore decided in a
-flat profile before it ever becomes a solid.
+A part is described as a **two-dimensional cross-section**, and the solid is
+that profile swept — along a line for a straight part, around an axis for a
+curved one. The whole shape is decided in a flat profile before it ever becomes
+a solid, and holes are cut afterwards where a part needs them.
 
-## Why that shape
+One consequence is worth stating on its own: two parts swept from the *same*
+profile cannot disagree about anything the profile describes. Where a project
+needs a straight part and a curved one to match, that is how it is guaranteed
+rather than checked.
 
-The extrusion direction is the print orientation, and it buys three things at
-once:
+## Why a profile
 
-- **No overhangs.** Every face is either vertical or horizontal in the print,
-  so no supports are needed and nothing has to be cleaned out of an interior.
-- **Layer lines across the load.** The layers run across the direction a load
-  would try to split the part, not along it.
-- **Exported ready to print.** Files come out already lying in that
-  orientation. Rotating them in a slicer undoes both benefits.
+Deciding the shape in two dimensions is what makes the rest tractable:
+
+- **The print orientation is chosen with the shape, not after it.** Files are
+  exported already lying the way they print. Rotating them in a slicer discards
+  that choice.
+- **Layer lines can be aimed.** The sweep direction decides whether layers run
+  across the direction a load would split the part, or along it.
+- **Overhangs are a property of the profile**, so they are known before
+  anything is built. Whether a project has none, or has some it has decided to
+  live with, is a fact about its profile that it can state — and measure.
 
 ## Guarantees
 
-**Measurements are entered once.** A part is parameterised on what it holds —
-its measured size — and every other dimension derives from that. Two parts
-built for very different sizes still position what they hold identically,
-because they share the same anchor points rather than each being tuned.
+**Measurements are entered once.** A part is parameterised on what it holds and
+on the numbers in its [config file](configuration.md); every other dimension
+derives from those. Parts built for very different sizes still agree about
+whatever they share, because they share anchors rather than each being tuned.
 
-**Forced angles are computed, not chosen.** Where geometry fully determines an
-angle — a face that must be tangent to a curve while staying parallel to
-another — it is solved for. No such value is typed in as a number, so it stays
-correct when a measurement changes.
+**Forced values are computed, not chosen.** Where geometry fully determines a
+value — an angle that must be tangent to a curve while staying parallel to
+another, a height that must rest one feature on another — it is solved for.
+None is typed in as a number, so it stays correct when a measurement changes.
 
-**Interchangeable support structures.** How a part is carried out from its
-mounting surface varies with the situation, and the alternatives are
-substitutable. Which one a part uses is part of its declaration, not a branch
-in the shape logic.
+**Interchangeable structure.** How a part is carried, braced or swept varies
+with the situation, and the alternatives are substitutable. Which one a part
+uses comes from its configuration, not from a branch in the shape logic.
 
-**The held object's space is subtracted last.** The clearance it needs, and the
-channel it travels through to come out, are removed after everything else is
-assembled. So they are correct no matter what was added above them, rather than
-depending on every added piece having been careful.
+**Assembly order is deliberate.** Union is not associative in the resulting
+mesh, so the order pieces are combined is fixed on purpose: re-ordering them
+re-tessellates every part built from that profile, changing bytes without
+changing the shape. Where a space has to be kept clear — the room an object
+needs, the channel it travels through to come out — it is subtracted after
+everything else is assembled, so it is correct however much was added above it.
 
 ## Contract
 
 | | |
 |---|---|
-| Input | The measured size of what the part holds, plus its style |
+| Input | The values in the project's config file, and which part to build |
 | Output | A solid, ready to export |
-| Invariant | Same input, same solid, every time |
+| Invariant | Same input, same solid, every time — byte for byte |
 
 ## How it fails
 

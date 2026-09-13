@@ -17,25 +17,27 @@ mistake anywhere between a dimension and the exported shape still shows up.
 
 ## Guarantees
 
-For each part, that the object it holds:
+**Every check measures the built solid**, not the numbers it was built from. A
+mistake anywhere between a dimension and the exported shape still shows up,
+because nothing is read back from the parameters that produced it.
 
-- **Seats without interference** — it fits where it is supposed to sit.
-- **Comes straight out** — nothing above the cradle blocks removal along the
-  whole length of a long object that cannot dodge sideways.
-- **Is trapped in both directions** — it can neither roll back toward the
-  mounting surface nor forward out of the cradle.
-- **Clears the mounting surface** — there is air between it and the wall.
+**Every check is measured against what the project asked for.** The numbers a
+check compares against come from the project's [config file](../build/configuration.md),
+so what is confirmed is that the machine produced the part that was specified.
+Whether the specification is *right* for the object it has to hold is a
+different question, and one a project can only answer by checking the built
+shape against a measurement of that object.
 
-For each fastener, that its hole is **open through the part** and
-**countersunk on the front face only**, leaving the back a flat unbroken pad;
-and that it sits clear of the cradle with enough material above it.
+**Every check reports its measurement, not just its verdict.** A near miss is
+visible before it becomes a failure.
 
-For a matched pair, that both parts **place what they hold at the same
-height**, within a tolerance tight enough that a long object spans them without
-a visible tilt.
+**Every check can fail.** Each is exercised against something deliberately
+wrong, so a check that has quietly stopped measuring anything is itself caught.
 
-Each project defines its own checks. These are the ones that are easy to break
-and hard to spot by eye.
+**What is checked is a project's own business.** One project asks whether a rod
+seats, lifts out and is trapped sideways; another asks whether a channel necks
+down to a clip, aims where it should, and turns a full corner. What they share
+is the shape of the guarantee above, not a list of questions.
 
 ## Contract
 

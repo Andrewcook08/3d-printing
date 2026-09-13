@@ -59,9 +59,11 @@ Run `ruff check`, `ruff format`, `ty check`, and `pytest` before claiming work
 is done. CI runs all four.
 
 Git hooks (`uvx pre-commit install`, already set up in this working copy) run
-ruff and the test suite on every commit, so a commit that changes an STL's
-bytes is blocked before it lands. `ty check` is CI-only — it is the one check
-the hooks do not cover.
+ruff and the test suite on **every** commit — not only ones touching Python.
+That matters: since a project's numbers moved into config, the ordinary way to
+change a part is to edit a `.toml` and rebuild, which stages no Python at all.
+A commit that changes an STL's bytes is stopped before it lands. `ty check` is
+CI-only — it is the one check the hooks do not cover.
 
 All four run again in CI, where they gate every pull request. See
 [Branching and pull requests](#branching-and-pull-requests) below: `main`

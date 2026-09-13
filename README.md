@@ -89,8 +89,8 @@ uvx pre-commit install
 
 They run ruff, a few file-hygiene checks, and the test suite before each
 commit. If a hook reformats a file the commit stops and the fix is left
-unstaged — `git add` and commit again. Use `git commit --no-verify` to skip
-them for a one-off, or `uvx pre-commit uninstall` to remove them.
+unstaged — `git add` and commit again. To stop running them entirely, `uvx
+pre-commit uninstall` to remove them.
 
 Every project hash-locks its shipped STLs in a `LOCKED.txt`, and the test suite
 rebuilds the parts and compares. A failure there means the exported shape

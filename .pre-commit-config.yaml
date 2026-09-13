@@ -18,12 +18,15 @@ repos:
         args: [--maxkb=5000]
 
   # The golden master lives in the test suite: it is what catches an STL whose
-  # bytes changed. Worth paying for on every commit while the suite is fast.
+  # bytes changed. Worth paying for on every commit while the suite is fast --
+  # and it has to be EVERY commit, not only ones touching Python. Since a
+  # project's numbers moved into config, the ordinary way to change a part is
+  # to edit a .toml and rebuild, which stages no Python at all.
   - repo: local
     hooks:
       - id: pytest
         name: pytest
         entry: uv run pytest -q
         language: system
-        types: [python]
+        always_run: true
         pass_filenames: false
