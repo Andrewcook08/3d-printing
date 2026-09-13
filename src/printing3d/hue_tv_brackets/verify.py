@@ -18,20 +18,26 @@ from printing3d.hue_tv_brackets.geometry import (
     BLOCK_W,
     CHANNEL_D,
     CHANNEL_W,
-    FLOOR_HEIGHT,
     LIP_REACH,
     LIP_RISE,
     MOUTH_W,
     QUARTER_TURN,
     TILT,
+    floor_height,
 )
 from printing3d.probes import enclosed_void_count
 from printing3d.shapes import rect
 
-# Where the slot floor ends up once the channel is leaned. Stated from the
-# design's intent rather than computed by the code that does the leaning: a
-# check that asks the drawing code where it drew is not a check.
-LEANED_FLOOR_ANGLE = (-TILT) % 180.0
+
+def leaned_floor_angle(tilt):
+    """Where the slot floor ends up once the channel is leaned.
+
+    Stated from the design's intent rather than computed by the code that does
+    the leaning: a check that asks the drawing code where it drew is not a
+    check.
+    """
+    return (-tilt) % 180.0
+
 
 # Half-thickness of the sliver used to read a width off the profile. Small
 # enough that the lip's taper does not smear the reading, wide enough to
@@ -75,12 +81,12 @@ def corner_section(part):
     return turned.translate((-part.radius, 0.0))
 
 
-def in_channel_frame(section):
+def in_channel_frame(section, tilt):
     """The section turned back upright, so the channel is axis-aligned."""
-    return section.translate((0.0, -FLOOR_HEIGHT)).rotate(TILT)
+    return section.translate((0.0, -floor_height(tilt))).rotate(tilt)
 
 
-def slot_width_at(section, up):
+def slot_width_at(section, up, tilt=TILT):
     """The gap between the channel's walls, `up` from the slot floor.
 
     The gap straddling the channel's centre is what a strip has to pass, so
@@ -89,7 +95,7 @@ def slot_width_at(section, up):
     sliver = rect(-BLOCK_W, up - PROBE_BAND, BLOCK_W, up + PROBE_BAND)
     spans = [
         (min(x for x, _ in contour), max(x for x, _ in contour))
-        for contour in (in_channel_frame(section) ^ sliver).to_polygons()
+        for contour in (in_channel_frame(section, tilt) ^ sliver).to_polygons()
     ]
     left = max((high for _, high in spans if high <= 0.0), default=None)
     right = min((low for low, _ in spans if low >= 0.0), default=None)
@@ -150,11 +156,11 @@ def longest_face_at(section, angle):
     return 0.0
 
 
-def check_channel_clips(runner, section):
+def check_channel_clips(runner, section, tilt):
     """A mouth wider than its bed is a trough: the strip would lift straight
     back out, which is the whole failure this bracket exists to prevent."""
-    bed = slot_width_at(section, PROBE_BAND)
-    mouth = slot_width_at(section, CHANNEL_D - PROBE_BAND)
+    bed = slot_width_at(section, PROBE_BAND, tilt)
+    mouth = slot_width_at(section, CHANNEL_D - PROBE_BAND, tilt)
     runner.check(
         "the channel necks down to a clip",
         mouth < bed,
@@ -172,13 +178,14 @@ def check_channel_clips(runner, section):
     )
 
 
-def check_channel_aims_out(runner, section):
+def check_channel_aims_out(runner, section, tilt):
     """The lean is what throws light along the wall instead of at it."""
-    length = longest_face_at(section, LEANED_FLOOR_ANGLE)
+    angle = leaned_floor_angle(tilt)
+    length = longest_face_at(section, angle)
     runner.check(
-        f"the channel still lies at {TILT:.0f} degrees",
+        f"the channel still lies at {tilt:.0f} degrees",
         abs(length - CHANNEL_W) < MAX_EDGE_ERROR,
-        f"floor edge {length:.2f} mm at {LEANED_FLOOR_ANGLE:.1f} deg in the profile",
+        f"floor edge {length:.2f} mm at {angle:.1f} deg in the profile",
     )
 
 
@@ -205,10 +212,10 @@ def check_profile_is_solid(runner, section):
     runner.check("the profile encloses no pockets", pockets == 0, f"{pockets} found")
 
 
-def check_the_channel(runner, section):
+def check_the_channel(runner, section, tilt):
     """Every check that reads the profile, which both shapes share."""
-    check_channel_clips(runner, section)
-    check_channel_aims_out(runner, section)
+    check_channel_clips(runner, section, tilt)
+    check_channel_aims_out(runner, section, tilt)
     check_base_is_flat(runner, section)
     check_profile_is_solid(runner, section)
 
@@ -250,15 +257,21 @@ def verify_all():
         return runner.report()
     for part in runs:
         runner.section(part.name)
-        check_the_channel(runner, straight_section(part))
+        check_the_channel(runner, straight_section(part), part.tilt)
 
-    # Any straight will do as the reference: the claim under test is that every
-    # bracket here is the same bracket, so they must all agree anyway.
-    reference = straight_section(runs[0])
+    # A corner is compared against a straight at its OWN lean: "the same
+    # bracket bent" only means anything between two brackets aimed alike.
+    references = {part.tilt: straight_section(part) for part in runs}
     for part in corners(brackets):
         runner.section(part.name)
         section = corner_section(part)
-        check_the_channel(runner, section)
+        check_the_channel(runner, section, part.tilt)
         check_corner_turns_a_quarter(runner, part)
-        check_corner_matches_the_straight(runner, section, reference)
+        reference = references.get(part.tilt)
+        runner.check(
+            f"a {part.tilt:g}-degree straight ships to compare it against",
+            reference is not None,
+        )
+        if reference is not None:
+            check_corner_matches_the_straight(runner, section, reference)
     return runner.report()

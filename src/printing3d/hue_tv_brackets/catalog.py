@@ -19,10 +19,11 @@ from printing3d.hue_tv_brackets import LOCKED, NAME  # noqa: F401  re-exported
 from printing3d.hue_tv_brackets.geometry import (
     BASE_DEPTH,
     QUARTER_TURN,
-    TO_OUTERMOST,
-    TO_TAB_EDGE,
+    TILT,
     corner,
     straight,
+    to_outermost,
+    to_tab_edge,
 )
 from printing3d.parts import Part, build_project
 
@@ -37,6 +38,19 @@ STRAIGHT_LENGTHS = [125.0]
 # re-locked.
 LADDER_RADII = [30.0, 40.0, 55.0]
 
+# TEMPORARY -- trial parts, to be deleted once a configuration is chosen.
+#
+# The 45-degree ladder above bound solid: a corner at that lean forces the strip
+# to bend in its own plane, which flat strips refuse. Rolling the channel up
+# cuts that demand, and these ask the strip for 1.5% edge strain against the
+# 9.0% the R55 demanded. Both trials sit at the same strain, so the only thing
+# that differs between them is the angle the light is thrown at.
+TRIAL_CORNERS = [(65.0, 197.0), (70.0, 160.0)]
+
+# A one-inch sample of each lean, to feel the twist from a 45-degree straight.
+TRIAL_STRAIGHT_LENGTH = 25.4
+TRIAL_LEANS = [65.0, 70.0]
+
 
 @dataclass(frozen=True)
 class Bracket(Part):
@@ -49,9 +63,10 @@ class Bracket(Part):
 
 @dataclass(frozen=True)
 class StraightBracket(Bracket):
-    """A straight run, carrying the length it was built from."""
+    """A straight run, carrying the length and lean it was built from."""
 
     length: float
+    tilt: float = TILT
 
     def footprint_line(self) -> str:
         """The adhesive pad this lands on the TV, and the strip it covers."""
@@ -61,19 +76,20 @@ class StraightBracket(Bracket):
 
 @dataclass(frozen=True)
 class CornerBracket(Bracket):
-    """A quarter turn, carrying the radius it was built from."""
+    """A quarter turn, carrying the radius and lean it was built from."""
 
     radius: float
+    tilt: float = TILT
 
     @property
     def inner_radius(self) -> float:
         """Where the tab edge sweeps -- the innermost material."""
-        return self.radius - TO_TAB_EDGE
+        return self.radius - to_tab_edge(self.tilt)
 
     @property
     def outer_radius(self) -> float:
         """Where the arm's outer edge sweeps."""
-        return self.radius + TO_OUTERMOST
+        return self.radius + to_outermost(self.tilt)
 
     @property
     def strip_spent(self) -> float:
@@ -102,6 +118,20 @@ def parts() -> Iterator[Bracket]:
             name=f"corner-r{radius:g}{VERSION_SUFFIX}",
             solid=corner(radius),
             radius=radius,
+        )
+    for tilt, radius in TRIAL_CORNERS:
+        yield CornerBracket(
+            name=f"trial-corner-{tilt:g}deg-r{radius:g}{VERSION_SUFFIX}",
+            solid=corner(radius, tilt),
+            radius=radius,
+            tilt=tilt,
+        )
+    for tilt in TRIAL_LEANS:
+        yield StraightBracket(
+            name=f"trial-straight-{tilt:g}deg-{TRIAL_STRAIGHT_LENGTH:g}mm{VERSION_SUFFIX}",
+            solid=straight(TRIAL_STRAIGHT_LENGTH, tilt),
+            length=TRIAL_STRAIGHT_LENGTH,
+            tilt=tilt,
         )
 
 

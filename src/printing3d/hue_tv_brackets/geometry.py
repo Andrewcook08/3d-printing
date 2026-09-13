@@ -101,14 +101,40 @@ def leaned(across, up, tilt=TILT):
 # Outboard is positive, measured from the centre of the slot floor -- the datum
 # a corner's radius is quoted to. The plate runs inboard from the block's
 # outboard-bottom corner; the arm's wall drops from its inboard-bottom one.
-TO_BASE_EDGE = leaned(BLOCK_W / 2, -FLOOR_THK).u
-TO_OUTERMOST = leaned(BLOCK_W / 2, CHANNEL_D).u
-TO_TAB_EDGE = BASE_DEPTH - TO_BASE_EDGE
-ARM_APEX = leaned(-BLOCK_W / 2, -FLOOR_THK)
+# Each is a function of the lean, with a constant for the lean we ship.
 
-# Below this the tab edge reaches the revolve axis and the wedge folds through
-# itself: a turn cannot be made by a part reaching past its own centre.
-MIN_CORNER_RADIUS = TO_TAB_EDGE
+
+def to_base_edge(tilt):
+    """Where the plate's outboard edge sits: under the block's resting corner."""
+    return leaned(BLOCK_W / 2, -FLOOR_THK, tilt).u
+
+
+def to_outermost(tilt):
+    """The furthest outboard the part reaches, at the block's top corner."""
+    return leaned(BLOCK_W / 2, CHANNEL_D, tilt).u
+
+
+def to_tab_edge(tilt):
+    """How far inboard the plate runs -- the innermost material."""
+    return BASE_DEPTH - to_base_edge(tilt)
+
+
+def arm_apex(tilt):
+    """Where the arm's wall meets the block, at its inboard-bottom corner."""
+    return leaned(-BLOCK_W / 2, -FLOOR_THK, tilt)
+
+
+def min_corner_radius(tilt):
+    """Below this the tab edge reaches the revolve axis and the wedge folds
+    through itself: a turn cannot be made by a part reaching past its centre."""
+    return to_tab_edge(tilt)
+
+
+TO_BASE_EDGE = to_base_edge(TILT)
+TO_OUTERMOST = to_outermost(TILT)
+TO_TAB_EDGE = to_tab_edge(TILT)
+ARM_APEX = arm_apex(TILT)
+MIN_CORNER_RADIUS = min_corner_radius(TILT)
 
 
 # ---------------------------------------------------------------------------
@@ -116,31 +142,32 @@ MIN_CORNER_RADIUS = TO_TAB_EDGE
 # ---------------------------------------------------------------------------
 
 
-def profile():
+def profile(tilt=TILT):
     """The 2D cross-section every bracket is swept from."""
     # Union order is fixed deliberately. Union is not associative in the output
     # mesh, so re-ordering these would re-tessellate every shipped part.
-    part = _plate()
-    part = part + _arm()
-    part = part + _channel_block()
+    part = _plate(tilt)
+    part = part + _arm(tilt)
+    part = part + _channel_block(tilt)
     return part
 
 
-def _plate():
+def _plate(tilt):
     """The flat pad the adhesive holds, running inboard from under the arm."""
-    return rect(-TO_TAB_EDGE, 0.0, TO_BASE_EDGE, PLATE_THK)
+    return rect(-to_tab_edge(tilt), 0.0, to_base_edge(tilt), PLATE_THK)
 
 
-def _arm():
+def _arm(tilt):
     """The wedge carrying the channel up off the plate.
 
     Its hypotenuse is the channel block's own underside, so the arm meets the
     block flush however the block is dimensioned.
     """
-    return polygon([(TO_BASE_EDGE, 0.0), ARM_APEX, (ARM_APEX.u, 0.0)])
+    apex = arm_apex(tilt)
+    return polygon([(to_base_edge(tilt), 0.0), apex, (apex.u, 0.0)])
 
 
-def _channel_block():
+def _channel_block(tilt):
     """The slot and its two lips, described square and then leaned."""
     lip_shoulder = CHANNEL_D - LIP_RISE
     slot = polygon(
@@ -156,7 +183,7 @@ def _channel_block():
         ]
     )
     block = rect(-BLOCK_W / 2, -FLOOR_THK, BLOCK_W / 2, CHANNEL_D) - slot
-    return block.rotate(-TILT).translate((0.0, FLOOR_HEIGHT))
+    return block.rotate(-tilt).translate((0.0, floor_height(tilt)))
 
 
 # ---------------------------------------------------------------------------
@@ -164,25 +191,26 @@ def _channel_block():
 # ---------------------------------------------------------------------------
 
 
-def straight(length):
+def straight(length, tilt=TILT):
     """A straight run of bracket, `length` along the strip."""
-    upright = profile().extrude(length)
+    upright = profile(tilt).extrude(length)
     # Exported lying on its base, which is how it prints and how the corner
     # comes out of the revolve. The profile is authored standing up.
     return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
 
 
-def corner(radius):
+def corner(radius, tilt=TILT):
     """A quarter turn, `radius` measured to the centre of the slot floor."""
-    if radius <= MIN_CORNER_RADIUS:
+    floor = min_corner_radius(tilt)
+    if radius <= floor:
         raise ValueError(
             f"radius {radius} reaches the revolve axis: the profile extends "
-            f"{MIN_CORNER_RADIUS:.2f} mm inboard of the channel, so a corner "
+            f"{floor:.2f} mm inboard of the channel, so a corner "
             f"must be wider than that"
         )
     # revolve() spins a profile about its own Y axis and takes no axis
     # argument, so the radius is applied by moving the profile out to it.
-    return profile().translate((radius, 0.0)).revolve(CORNER_SEGMENTS, QUARTER_TURN)
+    return profile(tilt).translate((radius, 0.0)).revolve(CORNER_SEGMENTS, QUARTER_TURN)
 
 
 def chord_inset(radius):
