@@ -56,10 +56,21 @@ PLATE_THK = 2.0
 # adhesive off the TV.
 BASE_DEPTH = 22.0
 
-# Height of the channel above the TV back. Forced, not chosen: it is what rests
-# the block's outboard-bottom corner ON the base plane. Every dimension below
-# follows from it, which is why none of them is measured off the reference.
-FLOOR_HEIGHT = (BLOCK_W / 2 + FLOOR_THK) * math.sin(math.radians(TILT))
+
+def floor_height(tilt):
+    """How high the slot floor's centre sits above the TV back.
+
+    Forced, not chosen: it is what rests the block's outboard-bottom corner ON
+    the base plane, and every dimension below follows from it. Half the block
+    leans up by the sine while the floor's own thickness leans by the cosine --
+    two different terms, equal only at 45 degrees. Writing it as one of them
+    doubled would be right at the angle we ship and wrong at every other.
+    """
+    lean = math.radians(tilt)
+    return (BLOCK_W / 2) * math.sin(lean) + FLOOR_THK * math.cos(lean)
+
+
+FLOOR_HEIGHT = floor_height(TILT)
 
 QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
@@ -72,7 +83,7 @@ class Point(NamedTuple):
     v: float
 
 
-def leaned(across, up):
+def leaned(across, up, tilt=TILT):
     """A point of the channel's own frame, placed in the profile's frame.
 
     The channel is described square -- `across` the slot from its centre,
@@ -80,10 +91,10 @@ def leaned(across, up):
     the plate need to meet is a point of the channel, so they ask for it here
     rather than restating it at an angle.
     """
-    lean = math.radians(TILT)
+    lean = math.radians(tilt)
     return Point(
         u=across * math.cos(lean) + up * math.sin(lean),
-        v=-across * math.sin(lean) + up * math.cos(lean) + FLOOR_HEIGHT,
+        v=-across * math.sin(lean) + up * math.cos(lean) + floor_height(tilt),
     )
 
 

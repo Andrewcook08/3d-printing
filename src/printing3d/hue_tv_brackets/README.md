@@ -170,8 +170,11 @@ brackets exist to prevent.
 
 ## Changing the numbers
 
-The channel block and the lean live at the top of `geometry.py`; what gets
-printed lives in `catalog.py`:
+Every dimension is an independent knob. The channel block and the lean live at
+the top of `geometry.py`: the slot's width and depth set what strip fits, the
+lip's reach sets how hard it clips, the base depth sets the adhesive pad, and
+the lean sets how far out the light is thrown. What gets printed lives in
+`catalog.py`:
 
 ```python
 STRAIGHT_LENGTHS = [125.0]
@@ -185,6 +188,15 @@ uv run build hue-tv-brackets   # regenerate STLs into output/
 uv run verify                  # check geometry before printing
 uv run pytest                  # check the code
 ```
+
+**Changing the lean is a trade, not a free choice.** A shallower lean makes the
+bracket sit lower and reach less far past its pad — 3.0 mm at 30° against
+4.2 mm at 45° — and it eases the lip's overhang, from 8° off the bed to 23°.
+But the lean is also what buys corner relief, and that falls with it: at 30° the
+relief is 1.155× instead of 1.414×, so an R30 corner would bend the strip like
+an in-plane R34.6 rather than R42.4. Tilting down 15° costs about what tightening
+R30 to R24 would. Less light reaches the wall, too, which was the point of the
+lean to begin with.
 
 A corner tighter than 17.05 mm is refused rather than built: below that the
 pad's inner edge reaches the revolve axis and the part would fold through

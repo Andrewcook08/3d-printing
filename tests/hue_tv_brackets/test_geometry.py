@@ -12,6 +12,7 @@ from printing3d.hue_tv_brackets.geometry import (
     FLOOR_THK,
     MIN_CORNER_RADIUS,
     MOUTH_W,
+    TILT,
     TO_BASE_EDGE,
     TO_OUTERMOST,
     TO_TAB_EDGE,
@@ -58,10 +59,15 @@ def test_the_lips_are_what_narrow_it():
 # ---------------------------------------------------------------------------
 
 
-def test_the_channel_block_rests_on_the_base_plane():
-    """The one constraint the rest of the profile is derived from."""
-    _, resting_height = leaned(BLOCK_W / 2, -FLOOR_THK)
-    assert resting_height == pytest.approx(0.0, abs=1e-9)
+@pytest.mark.parametrize("tilt", (25.0, 30.0, 35.0, TILT, 55.0, 65.0))
+def test_the_channel_block_rests_on_the_base_plane_at_any_lean(tilt):
+    """The one constraint the rest of the profile is derived from.
+
+    Asserted across the range rather than at the angle we ship: the height is a
+    sine term plus a cosine term, and those agree only at 45 degrees, so a
+    version of this that held for the wrong reason would still pass there.
+    """
+    assert leaned(BLOCK_W / 2, -FLOOR_THK, tilt).v == pytest.approx(0.0, abs=1e-9)
 
 
 def test_the_plate_reaches_from_the_tab_edge_to_under_the_block():
