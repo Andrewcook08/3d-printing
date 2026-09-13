@@ -6,6 +6,7 @@ from printing3d.parts import (
     DEFAULT_OUTPUT_DIR,
     OUTPUT_DIR_ENV,
     Part,
+    archive_dir,
     build_project,
     output_dir,
     repo_root,
@@ -61,3 +62,62 @@ def test_a_project_can_announce_its_own_line_per_part(monkeypatch, tmp_path, cap
     monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
     build_project("widgets", [a_part()], announce=lambda part: f"-> {part.name}")
     assert "-> demo-part" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Retiring a part it no longer declares
+# ---------------------------------------------------------------------------
+
+
+def test_the_archive_sits_beside_the_projects_under_the_same_root():
+    assert (
+        archive_dir("widgets")
+        == repo_root() / DEFAULT_OUTPUT_DIR / "archive" / "widgets"
+    )
+
+
+def test_redirecting_the_output_redirects_the_archive_with_it(monkeypatch, tmp_path):
+    """Or a test writing somewhere temporary would litter the real archive."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert archive_dir("widgets") == tmp_path / "archive" / "widgets"
+
+
+def test_a_part_no_longer_declared_is_moved_to_the_archive(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("kept"), a_part("retired")])
+
+    build_project("widgets", [a_part("kept")])
+
+    assert [path.name for path in output_dir("widgets").glob("*.stl")] == ["kept.stl"]
+    assert (archive_dir("widgets") / "retired.stl").is_file()
+
+
+def test_the_archived_bytes_are_the_ones_that_were_built(monkeypatch, tmp_path):
+    """Archiving moves the file rather than regenerating it, so what lands
+    there is what was last printed from."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("retired")])
+    was = (output_dir("widgets") / "retired.stl").read_bytes()
+
+    build_project("widgets", [a_part("kept")])
+
+    assert (archive_dir("widgets") / "retired.stl").read_bytes() == was
+
+
+def test_nothing_is_archived_when_every_part_is_still_declared(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("kept")])
+    build_project("widgets", [a_part("kept")])
+    assert not archive_dir("widgets").exists()
+
+
+def test_the_archive_is_announced_so_a_move_is_never_silent(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("retired")])
+    capsys.readouterr()
+
+    build_project("widgets", [a_part("kept")])
+
+    assert "archived retired.stl" in capsys.readouterr().out

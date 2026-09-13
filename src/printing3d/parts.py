@@ -8,6 +8,7 @@ matter which project produced it.
 from __future__ import annotations
 
 import os
+import shutil
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,6 +19,11 @@ from printing3d.stl import triangle_count, write_stl
 
 OUTPUT_DIR_ENV = "PRINTING3D_OUTPUT"
 DEFAULT_OUTPUT_DIR = "output"
+
+# Parts a project has stopped declaring are moved here rather than deleted,
+# so a shape can be recovered without going through git. Kept inside the
+# output root so that redirecting output redirects the archive with it.
+ARCHIVE_DIR = "archive"
 
 
 @dataclass(frozen=True)
@@ -60,17 +66,29 @@ def repo_root() -> Path:
     raise RuntimeError("no pyproject.toml above printing3d/parts.py")
 
 
-def output_dir(project: str) -> Path:
-    """Where `project` writes its STLs. Override the root with PRINTING3D_OUTPUT."""
+def output_base() -> Path:
+    """The directory every project writes beneath. Override with PRINTING3D_OUTPUT."""
     root = os.environ.get(OUTPUT_DIR_ENV)
-    base = Path(root) if root else repo_root() / DEFAULT_OUTPUT_DIR
-    return base / project
+    return Path(root) if root else repo_root() / DEFAULT_OUTPUT_DIR
+
+
+def output_dir(project: str) -> Path:
+    """Where `project` writes its STLs."""
+    return output_base() / project
+
+
+def archive_dir(project: str) -> Path:
+    """Where `project` keeps parts it has stopped declaring."""
+    return output_base() / ARCHIVE_DIR / project
 
 
 def build_project[P: Part](
     project: str, parts: Iterable[P], announce: Callable[[P], str] | None = None
 ) -> bool:
-    """Write every part to the project's output directory. True if all sound.
+    """Make the project's output directory hold exactly what it declares.
+
+    Everything declared is written; anything left over from a part the project
+    used to declare is archived. True if every solid is sound.
 
     `announce` lets a project print its own line about a part -- a derived
     dimension worth seeing at build time -- just above the standard summary.
@@ -78,13 +96,33 @@ def build_project[P: Part](
     destination = output_dir(project)
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True
+    written = set()
     for part in parts:
         if announce is not None:
             print(announce(part))
         write_stl(part.solid, destination / part.filename, part.name)
         print(part.summary())
         all_sound &= part.is_sound
+        written.add(part.filename)
+    for path in archive_orphans(project, written):
+        print(f"  archived {path.name}")
     return all_sound
+
+
+def archive_orphans(project: str, declared: set[str]) -> list[Path]:
+    """Move the STLs `project` no longer declares out of its output directory.
+
+    The lock is deliberately left alone. A build that could edit its own lock
+    could not be a golden master, so retiring a part leaves the lock describing
+    a file that is gone -- which fails the contract until it is re-locked on
+    purpose, exactly as any other change to a shipped part does.
+    """
+    orphans = [path for path in existing_stls(project) if path.name not in declared]
+    if orphans:
+        archive_dir(project).mkdir(parents=True, exist_ok=True)
+    return [
+        Path(shutil.move(path, archive_dir(project) / path.name)) for path in orphans
+    ]
 
 
 def existing_stls(project: str) -> Iterator[Path]:
