@@ -301,6 +301,17 @@ rules below are only what is specific to this repo. Reach for its siblings when
 the work matches them — `refactoring-patterns` when restructuring existing code,
 `software-design-philosophy` when deciding what a module should hide.
 
+**When the code is written, have a subagent review it against those same skills
+before calling it done.** Fresh context is the point: give it the skills, this
+file, and the existing project as the house style, and have it report findings
+rather than edit anything.
+
+Then judge what comes back — a reviewer that has not run the code can be wrong.
+Verify each finding against the code before acting on it, and say which ones you
+are rejecting and why. Two things this catches often enough to expect: a fix
+that would change a hash-locked STL, and a finding whose repair turns up
+something more interesting than the finding did.
+
 - Line length 88, double quotes, enforced by `ruff format`. Don't hand-align
   trailing comments in columns — the formatter strips the alignment. Multi-line
   explanations go *above* the definition, not trailing after it.
