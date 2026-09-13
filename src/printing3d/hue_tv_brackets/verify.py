@@ -144,7 +144,10 @@ def _turns_at(before, point, after):
 
 
 def longest_face_at(section, angle):
-    """Length of the longest flat face lying at `angle`, or zero if none does."""
+    """Length of the longest flat face lying at `angle`, or zero if none does.
+
+    Promotable: domain-free measurement, currently only hue-tv-brackets.
+    """
     for length, found in straight_runs(section, MAX_EDGE_ERROR):
         if abs(found - angle) < MAX_ANGLE_ERROR:
             return length

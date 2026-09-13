@@ -241,8 +241,8 @@ is the entire inventory — there is no list to keep in step, because the marker
 lives on the thing it describes:
 
 ```python
-def radial_section(solid, degrees):
-    """The cross-section of `solid` at `degrees` about the Z axis.
+def upright_section(solid, degrees=0.0):
+    """The cross-section of `solid` on the vertical plane `degrees` about Z.
 
     Promotable: domain-free measurement, currently only <project>.
     """
@@ -251,6 +251,12 @@ def radial_section(solid, degrees):
 Mark a helper when you **write** it, not when you promote it. The marker records
 the judgement that it carries no project's assumptions — which you are making
 right then, and will not remember later.
+
+Because that depends on remembering, it is also checked rather than trusted: the
+`finding-promotions` skill enumerates the helpers a change added and classifies
+each, and it is one of the reviews run before work is finished. It catches the
+two things the test cannot — a domain-free helper nobody marked, and a second
+project that wrote the same thing under a different name.
 
 If two projects end up defining the same helper name, the test suite fails and
 names both. That is the promotion trigger firing: move it into the kit, or
@@ -338,17 +344,6 @@ rules below are only what is specific to this repo. Reach for its siblings when
 the work matches them — `refactoring-patterns` when restructuring existing code,
 `software-design-philosophy` when deciding what a module should hide.
 
-**When the code is written, have a subagent review it against those same skills
-before calling it done.** Fresh context is the point: give it the skills, this
-file, and the existing project as the house style, and have it report findings
-rather than edit anything.
-
-Then judge what comes back — a reviewer that has not run the code can be wrong.
-Verify each finding against the code before acting on it, and say which ones you
-are rejecting and why. Two things this catches often enough to expect: a fix
-that would change a hash-locked STL, and a finding whose repair turns up
-something more interesting than the finding did.
-
 - Line length 88, double quotes, enforced by `ruff format`. Don't hand-align
   trailing comments in columns — the formatter strips the alignment. Multi-line
   explanations go *above* the definition, not trailing after it.
@@ -359,6 +354,32 @@ something more interesting than the finding did.
 - Prefer named constants over literals, and derive dimensions from each other
   rather than restating them. If a value is forced by geometry, compute it and
   say so — don't hardcode the result.
+
+## Review
+
+**Before work is called finished, three subagents review it.** Fresh context is
+the point — each is given the skills it needs, this file, and the existing
+projects as the house style, and each **reports findings rather than editing**.
+
+| Review | Rubric | Looking for |
+|---|---|---|
+| The code | `code-craftsmanship:clean-code`, plus `software-design-philosophy` and `refactoring-patterns` where the work restructures | Naming, function size, duplication, error handling, tests that cannot fail, anything over-built for the projects that exist |
+| The documentation | the `maintaining-docs` skill | Every claim traced to its source, every reference live, the framework followed, the rename test applied to each doc |
+| Promotions | the `finding-promotions` skill | A helper that belongs in the shared kit, enumerated rather than remembered |
+
+The documentation one is not covered by the documentation tests. Those check
+that references resolve; whether a claim is still *true* is a question only a
+reader can settle, and the tests have already passed over a wrong measurement, a
+contradicted count and a missing project.
+
+**Then judge what comes back.** A reviewer that has not run the code can be
+wrong, and has been — including once where the recommended fix would have
+shipped a silent dispatch bug. Verify each finding against the code before
+acting on it, and say which ones you are rejecting and why.
+
+Three things this catches often enough to expect: a fix that would change a
+hash-locked STL; a finding whose repair turns up something more interesting than
+the finding did; and a finding already fixed since the reviewer read the tree.
 
 ## Don't
 
