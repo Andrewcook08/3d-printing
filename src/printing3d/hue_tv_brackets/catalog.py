@@ -42,10 +42,24 @@ LADDER_RADII = [30.0, 40.0, 55.0]
 #
 # The 45-degree ladder above bound solid: a corner at that lean forces the strip
 # to bend in its own plane, which flat strips refuse. Rolling the channel up
-# cuts that demand, and these ask the strip for 1.5% edge strain against the
-# 9.0% the R55 demanded. Both trials sit at the same strain, so the only thing
-# that differs between them is the angle the light is thrown at.
-TRIAL_CORNERS = [(65.0, 197.0), (70.0, 160.0)]
+# cuts that demand, since it falls with the cosine of the lean.
+#
+# Listed sharpest first, which is also cheapest first -- a tighter corner is a
+# smaller print. Print in this order and stop at the first that threads: that
+# radius is the answer, and the gentler ones never need making. The strains run
+# 6.0 / 4.5 / 3.0 / 2.0 / 1.54%, against the 9.0% that bound.
+#
+# The last pair sit at the same 1.54% at different leans. If those two behave
+# alike, strain really is the only thing that matters and the winning value can
+# be spent at whatever lean looks best.
+TRIAL_CORNERS = [
+    (65.0, 51.0),
+    (65.0, 68.0),
+    (65.0, 101.0),
+    (65.0, 152.0),
+    (65.0, 197.0),
+    (70.0, 160.0),
+]
 
 # A one-inch sample of each lean, to feel the twist from a 45-degree straight.
 TRIAL_STRAIGHT_LENGTH = 25.4
