@@ -180,6 +180,8 @@ one. Everything goes in `src/printing3d/<new_project>/`:
 5. `LOCKED.txt` — generate it once the shape is settled.
 6. `tests/<new_project>/` — only what is specific to this project. The contract
    suite already covers building, locking, soundness and verification.
+   Before writing a helper of your own, run the grep in
+   [Growing the shared kit](#growing-the-shared-kit).
 7. A `README.md` covering print settings and assembly; reference images and
    source meshes in `<project>/reference/`.
 
@@ -202,6 +204,35 @@ untouched.
 - Promoted code must arrive with its own tests.
 
 Don't pre-build abstractions for projects that don't exist yet.
+
+### Finding what already exists
+
+Before writing a helper, check whether one of the projects already has it:
+
+```sh
+rg -n "Promotable:" src/printing3d/
+```
+
+A domain-free helper carries one line in its docstring saying so, and that grep
+is the entire inventory — there is no list to keep in step, because the marker
+lives on the thing it describes:
+
+```python
+def radial_section(solid, degrees):
+    """The cross-section of `solid` at `degrees` about the Z axis.
+
+    Promotable: domain-free measurement, currently only <project>.
+    """
+```
+
+Mark a helper when you **write** it, not when you promote it. The marker records
+the judgement that it carries no project's assumptions — which you are making
+right then, and will not remember later.
+
+If two projects end up defining the same helper name, the test suite fails and
+names both. That is the promotion trigger firing: move it into the kit, or
+rename one if they were never the same thing. Names every project is expected to
+define are exempt — those are roles, not duplication.
 
 ## Rules specific to generated geometry
 
@@ -246,8 +277,10 @@ how specifically they localise a failure:
    matches the lock".
 
 `tests/test_architecture.py` enforces that the shared kit never imports a
-project. Warnings are errors (`filterwarnings`), so a dependency's deprecation
-warning fails the suite. Don't silence one — act on it.
+project, and that no helper is defined by two projects at once.
+
+Warnings are errors (`filterwarnings`), so a dependency's deprecation warning
+fails the suite. Don't silence one — act on it.
 
 `uv run verify` is a separate tool from the test suite: it measures the built
 solids for physical soundness (does the rod lift out, is it trapped sideways,
