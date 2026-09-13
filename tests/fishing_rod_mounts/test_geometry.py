@@ -21,7 +21,7 @@ from tests.support import contour_digest
 
 # The shape these tests measure is the one the project ships, so its numbers
 # come from the same place the build gets them.
-DESIGN = catalogue().mount
+DESIGN = catalogue().design
 AXIS_U = DESIGN.axis_from_wall
 AXIS_V = DESIGN.axis_height
 PLATE_THK = DESIGN.plate_thickness

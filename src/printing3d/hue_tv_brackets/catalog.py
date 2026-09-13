@@ -153,18 +153,20 @@ def parts(
     tried = trials() if tried is None else tried
     design = ships.design
     for entry in [*ships.straight, *tried.straight]:
+        leaning = _leaning(design, entry)
         yield StraightBracket(
             name=entry.name,
-            solid=straight(_leaning(design, entry), entry.length),
-            design=_leaning(design, entry),
+            solid=straight(leaning, entry.length),
+            design=leaning,
             note=entry.note,
             length=entry.length,
         )
     for entry in [*ships.corner, *tried.corner]:
+        leaning = _leaning(design, entry)
         yield CornerBracket(
             name=entry.name,
-            solid=corner(_leaning(design, entry), entry.radius),
-            design=_leaning(design, entry),
+            solid=corner(leaning, entry.radius),
+            design=leaning,
             note=entry.note,
             radius=entry.radius,
         )

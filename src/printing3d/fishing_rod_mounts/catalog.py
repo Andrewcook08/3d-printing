@@ -71,7 +71,7 @@ class Catalogue:
     """Everything parts.toml has to say."""
 
     version: str
-    mount: Design
+    design: Design
     rod: list[Rod] = field(default_factory=list)
     style: list[Style] = field(default_factory=list)
 
@@ -104,7 +104,7 @@ def parts(shipping: Catalogue | None = None) -> Iterator[MountPart]:
                 rod_dia=rod.diameter_at(style.kind),
                 support=support_named(style.support),
                 lip_rise=style.lip_rise,
-                design=shipping.mount,
+                design=shipping.design,
             )
             yield MountPart(
                 name=f"{rod.name}-{style.kind}-{spec.rod_dia:.2f}mm-{shipping.version}",

@@ -19,7 +19,7 @@ import tomllib
 from dataclasses import MISSING, fields, is_dataclass
 from pathlib import Path
 from types import UnionType
-from typing import get_args, get_origin, get_type_hints
+from typing import Union, get_args, get_origin, get_type_hints
 
 SCALARS = (bool, int, float, str)
 
@@ -106,7 +106,9 @@ def _refuse_missing(into, table, where):
 
 def _converted(annotation, value, where):
     """`value` as the annotation asks for it, or a failure that names where."""
-    if get_origin(annotation) is UnionType:
+    # Both spellings: `X | None` is a UnionType everywhere, while
+    # `Optional[X]` is only one from 3.14, when Union merged into it.
+    if get_origin(annotation) in (UnionType, Union):
         return _converted(_without_none(annotation, where), value, where)
     if is_dataclass(annotation):
         return _built(annotation, _as_table(value, where), where)

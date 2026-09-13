@@ -8,10 +8,10 @@
 version = "v3"
 
 # ---------------------------------------------------------------------------
-# The mount itself
+# The shape's own numbers
 # ---------------------------------------------------------------------------
 
-[mount]
+[design]
 # Where the rod's centerline sits. Every mount agrees on these two, which is
 # what lets a butt mount and a tip mount hang one rod level and parallel to the
 # wall despite gripping very different diameters.
@@ -33,7 +33,7 @@ rod_clearance = 0.6   # added to rod diameter -> cradle diameter
 fillet = 0.8          # softening on convex corners
 lip_chamfer = 1.2     # 45-degree lead-in so the rod drops in rather than catching
 
-[mount.screw]
+[design.screw]
 # One screw, not two: the second was overkill for this load, and dropping it is
 # what let the backplate come down to 35 mm.
 heights = [27.5]

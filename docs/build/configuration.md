@@ -14,6 +14,20 @@ A project may read more than one file. The one convention worth copying is a
 it retires all of them at once — but that is a project's choice, not something
 the contract provides. What the contract requires is `parts.toml`.
 
+## The shape of a file
+
+One table holds the numbers the shape itself is built from; repeated entries
+name the parts being asked for.
+
+```toml
+[design]          # what the shape is made of — measured or chosen
+[[straight]]      # one entry per part, named and dimensioned
+```
+
+Both projects follow this, and a project reading another project's file should
+find nothing surprising in it. A part entry may override a value from `[design]`
+for itself alone, which is how one bracket leans differently from the rest.
+
 ## The boundary
 
 **A number you measured or chose belongs in the file. A number you computed
@@ -53,6 +67,7 @@ file aside; see [output and locking](output.md).
 | | |
 |---|---|
 | Reads | `parts.toml` beside the project's code, and any further files the project chooses |
+| Declares | One config file, the one the contract checks. A project reading more keeps the others its own business — no project has yet needed two the contract must know about. |
 | Produces | One part per entry, built from the values in the file |
 | Fails on | An unknown key, a missing required value, a value of the wrong type, a field asking for something config cannot express, or a file that is not valid TOML |
 | Never | Writes to either file, or to the hash lock |
