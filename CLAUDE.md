@@ -174,13 +174,26 @@ Projects are **discovered, not registered** — never edit a shared file to add
 one. Everything goes in `src/printing3d/<new_project>/`:
 
 1. `__init__.py` declares the project: its name (kebab-case), a one-line
-   summary, its lock file, and callables for parts/build/verify. Import the
-   heavy modules *inside* those callables, so listing projects stays cheap.
+   summary, its config file, its lock file, and callables for parts/build/verify.
+   Every one is required. Import the heavy modules *inside* those callables, so
+   listing projects stays cheap.
 2. `parts.toml` — every number you measured or chose. **Required**: the
-   contract fails a project without one. Anything derivable from what is
-   already in it is derived in code instead; write it down here and the file is
-   refused. Parts still being tested go in `trials.toml`, which is optional and
-   whose deletion retires all of them at once.
+   contract fails a project without one, and checks that the project actually
+   reads it. Anything derivable from what is already in it is derived in code
+   instead; write it down here and the file is refused.
+
+   Read it with `printing3d.config.read`, handing it a frozen dataclass. **That
+   dataclass is the schema** — its fields name what the file may contain, its
+   annotations say what those must be, its defaults say what may be left out.
+   Put the shape's own numbers with the shape in `geometry.py`, and the parts
+   being asked for with `catalog.py`.
+
+   Optional extra files are read with `read_if_present`. That is how a project
+   keeps parts it is still testing in a `trials.toml` it can delete wholesale,
+   which is a pattern rather than something the contract provides.
+
+   Editing this file is the normal way to change a part, and a golden-master
+   failure is its normal consequence — re-lock deliberately, as below.
 3. `geometry.py` — the shape. Reuse `printing3d.shapes` rather than
    re-implementing 2D construction.
 4. `catalog.py` — how a configured entry becomes a `printing3d.parts.Part`.
@@ -285,7 +298,7 @@ version bump unchanged.
 ## Testing
 
 Tests are behavioral and named as sentences:
-`test_the_countersink_opens_out_on_the_front_face`. Five layers, in order of
+`test_the_countersink_opens_out_on_the_front_face`. The layers, in order of
 how specifically they localise a failure:
 
 1. **Contract tests** (`tests/test_project_contract.py`) — run over every

@@ -9,8 +9,10 @@ code. The build reads that file and produces exactly what it describes. Tuning
 a part — a diameter, a radius, an angle, how many of a thing to make — is an
 edit to that file, and nothing else changes.
 
-A project may also keep `trials.toml`: parts being tested rather than shipped.
-It is optional, and absent means there are none.
+A project may read more than one file. The one convention worth copying is a
+`trials.toml` holding parts being tested rather than shipped, so that deleting
+it retires all of them at once — but that is a project's choice, not something
+the contract provides. What the contract requires is `parts.toml`.
 
 ## The boundary
 
@@ -37,9 +39,11 @@ its default.
 and a whole number is accepted where a decimal is wanted. Nothing is guessed
 from how a value looks.
 
-**Limits are enforced when the file is read**, not when the shape is built. A
-value a project cannot make sense of — a corner tighter than the part reaching
-into it — fails immediately, naming the limit it broke.
+**A value the project cannot build stops the build before it writes anything.**
+Everything is constructed first, so a corner tighter than the part reaching into
+it fails naming the limit it broke, with the output directory untouched rather
+than half rewritten. The reader checks a value's shape; only the project knows
+its limits.
 
 **Retiring a part is deleting its entry.** The next build moves the orphaned
 file aside; see [output and locking](output.md).
@@ -48,9 +52,9 @@ file aside; see [output and locking](output.md).
 
 | | |
 |---|---|
-| Reads | `parts.toml` beside the project's code; `trials.toml` if it exists |
+| Reads | `parts.toml` beside the project's code, and any further files the project chooses |
 | Produces | One part per entry, built from the values in the file |
-| Fails on | An unknown key, a missing required value, a value of the wrong type, a value outside what the project allows, or a file that is not valid TOML |
+| Fails on | An unknown key, a missing required value, a value of the wrong type, a field asking for something config cannot express, or a file that is not valid TOML |
 | Never | Writes to either file, or to the hash lock |
 
 The file is TOML rather than JSON or YAML for two reasons: the reasoning behind
@@ -66,7 +70,8 @@ written.
 | `is missing <key>` | A required value with no sensible default was left out |
 | `should be <type>` | The value is there but is not the kind of thing it must be |
 | `is not valid TOML` | The file is malformed; the parser says where |
-| A project's own limit, naming a bound | The value parsed but the project cannot build it |
+| `asks for <type>, which is not a config shape` | The schema wants something config cannot express, not a bad value |
+| A project's own limit, naming a bound | The value parsed, but the project cannot build it — raised before anything is written |
 
 A change to the file that changes a part's shape will also fail the hash lock,
 which is the intended second line: config says what to build, the lock says what

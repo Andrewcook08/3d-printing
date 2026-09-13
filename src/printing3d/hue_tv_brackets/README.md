@@ -11,10 +11,12 @@ Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
-> **Note.** The design sections below describe the 45° corner, which the
-> printed ladder disproved — every rung bound. The straight runs and the channel
-> are unaffected and still current. The corner's design is unsettled until the
-> leaned trials come back, and this README is rewritten when it is.
+> **Note.** Everything below about **corners** is out of date, including the
+> print list: the 45° ladder it recommends was printed and every rung bound.
+> Those three parts have moved to `trials.toml`, and the leaned trials that
+> replaced them are not described here at all. The straight runs and the channel
+> are unaffected and still current. This README is rewritten once the corner's
+> design is settled.
 
 ## The problem these solve
 
@@ -147,7 +149,7 @@ other number in the part follows from this block and the 45° lean.
 
 The channel block rests **on** the base plane at its outboard-bottom corner.
 That single constraint fixes the channel's height above the TV back (7.78 mm),
-where the arm's wall drops (7.78 mm inboard of the pad's outer edge), the tab
+where the arm's wall drops (7.78 mm inboard of the channel's own datum), the tab
 length (9.27 mm) and the profile's overall depth (26.24 mm) — all four matching
 the reference mesh to under 0.01 mm, with no coordinate transcribed from it.
 

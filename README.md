@@ -12,6 +12,7 @@ generated, what the checks guarantee, and how the automation fits together.
 | Project | What it is |
 |---|---|
 | [`fishing-rod-mounts`](src/printing3d/fishing_rod_mounts/README.md) | Low-profile wall mounts for horizontal fishing rod storage |
+| [`hue-tv-brackets`](src/printing3d/hue_tv_brackets/README.md) | Adhesive-free clip brackets for a Hue gradient lightstrip around a TV |
 
 Adding one? See the [project contract](docs/build/project-contract.md) — a
 project is discovered by declaring itself, and inherits building, locking and
