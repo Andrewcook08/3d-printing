@@ -1,112 +1,119 @@
 """What actually gets printed.
 
 Two shapes, swept from the one profile in geometry.py: straight runs for the
-sides of the TV, and 90-degree corners. Straights are long on purpose -- a
-125 mm section covers what five of the original 25 mm clips would, and the
-brackets are universal, so how many of each a TV needs is the TV's business,
-not this catalog's.
+sides of the TV, and 90-degree corners. The brackets are universal, so how many
+of each a TV needs is the TV's business, not this catalog's.
 
-Corners currently ship as a ladder of three radii. The strip's tolerance for
-bending in its own plane cannot be derived, only measured, so the sharpest
-usable radius is settled by printing all three. See README.md.
+The numbers live in parts.toml, and parts still being tested live in
+trials.toml. A part may lean differently from the shipped design; anything it
+does not say for itself it takes from there. This module only says how a
+configured entry becomes a solid.
+
+See README.md for the design.
 """
 
 import math
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 
+from printing3d import config
 from printing3d.hue_tv_brackets import LOCKED, NAME  # noqa: F401  re-exported
 from printing3d.hue_tv_brackets.geometry import (
-    BASE_DEPTH,
     QUARTER_TURN,
-    TILT,
+    Design,
     corner,
     straight,
-    to_outermost,
-    to_tab_edge,
 )
 from printing3d.parts import Part, build_project
 
-VERSION_SUFFIX = "-v1"
+HERE = Path(__file__).parent
+CONFIG = HERE / "parts.toml"
+TRIALS = HERE / "trials.toml"
 
 MM2_PER_CM2 = 100.0
 
-STRAIGHT_LENGTHS = [125.0]
 
-# Print all three, thread the strip through each, keep the sharpest that does
-# not put it in a bind. The losing rungs are then deleted and the survivors
-# re-locked.
-LADDER_RADII = [30.0, 40.0, 55.0]
+@dataclass(frozen=True, kw_only=True)
+class StraightEntry:
+    """One straight run, as parts.toml describes it."""
 
-# TEMPORARY -- trial parts, to be deleted once a configuration is chosen.
-#
-# The 45-degree ladder above bound solid: a corner at that lean forces the strip
-# to bend in its own plane, which flat strips refuse. Rolling the channel up
-# cuts that demand, since it falls with the cosine of the lean.
-#
-# Listed sharpest first, which is also cheapest first -- a tighter corner is a
-# smaller print. Print in this order and stop at the first that threads: that
-# radius is the answer, and the gentler ones never need making. The strains run
-# 6.0 / 4.5 / 3.0 / 2.0 / 1.54%, against the 9.0% that bound.
-#
-# The last pair sit at the same 1.54% at different leans. If those two behave
-# alike, strain really is the only thing that matters and the winning value can
-# be spent at whatever lean looks best.
-TRIAL_CORNERS = [
-    (65.0, 51.0),
-    (70.0, 41.0),
-    (70.0, 55.0),
-    (70.0, 82.0),
-    (65.0, 68.0),
-    (65.0, 101.0),
-    (65.0, 152.0),
-    (65.0, 197.0),
-    (70.0, 160.0),
-]
+    name: str
+    length: float
+    tilt: float | None = None
+    note: str = ""
 
-# A one-inch sample of each lean, to feel the twist from a 45-degree straight.
-TRIAL_STRAIGHT_LENGTH = 25.4
-TRIAL_LEANS = [65.0, 70.0]
+
+@dataclass(frozen=True, kw_only=True)
+class CornerEntry:
+    """One corner, as parts.toml describes it."""
+
+    name: str
+    radius: float
+    tilt: float | None = None
+    note: str = ""
+
+
+@dataclass(frozen=True, kw_only=True)
+class Catalogue:
+    """The parts a config file asks for."""
+
+    straight: list[StraightEntry] = field(default_factory=list)
+    corner: list[CornerEntry] = field(default_factory=list)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Shipping(Catalogue):
+    """The same, plus the design every part is built from."""
+
+    design: Design
 
 
 @dataclass(frozen=True)
 class Bracket(Part):
-    """A printable bracket. Each shape reports its own footprint."""
+    """A printable bracket, carrying the design it was built from so that
+    verify.py can measure the solid against its own intent."""
+
+    design: Design
+    note: str
 
     def footprint_line(self) -> str:
         """One line about what this bracket lands on the TV, for build output."""
         raise NotImplementedError
 
+    def annotated(self, measurements: str) -> str:
+        """A build-output line: what was measured, then why the part exists."""
+        return f"{measurements}{'   -- ' + self.note if self.note else ''}"
+
 
 @dataclass(frozen=True)
 class StraightBracket(Bracket):
-    """A straight run, carrying the length and lean it was built from."""
+    """A straight run, carrying the length it was built from."""
 
     length: float
-    tilt: float = TILT
 
     def footprint_line(self) -> str:
-        """The adhesive pad this lands on the TV, and the strip it covers."""
-        pad = self.length * BASE_DEPTH / MM2_PER_CM2
-        return f"    straight  pad {pad:6.1f} cm2 over {self.length:5.1f} mm of strip"
+        pad = self.length * self.design.base_depth / MM2_PER_CM2
+        return self.annotated(
+            f"    straight  pad {pad:6.1f} cm2 over {self.length:5.1f} mm of strip"
+        )
 
 
 @dataclass(frozen=True)
 class CornerBracket(Bracket):
-    """A quarter turn, carrying the radius and lean it was built from."""
+    """A quarter turn, carrying the radius it was built from."""
 
     radius: float
-    tilt: float = TILT
 
     @property
     def inner_radius(self) -> float:
         """Where the tab edge sweeps -- the innermost material."""
-        return self.radius - to_tab_edge(self.tilt)
+        return self.radius - self.design.to_tab_edge
 
     @property
     def outer_radius(self) -> float:
         """Where the arm's outer edge sweeps."""
-        return self.radius + to_outermost(self.tilt)
+        return self.radius + self.design.to_outermost
 
     @property
     def strip_spent(self) -> float:
@@ -114,42 +121,55 @@ class CornerBracket(Bracket):
         return math.radians(QUARTER_TURN) * self.radius
 
     def footprint_line(self) -> str:
-        """The arc this turns the strip through, and what it costs in strip."""
-        return (
-            f"    corner    r{self.radius:<5.1f} inner {self.inner_radius:5.2f} mm, "
-            f"outer {self.outer_radius:5.2f} mm, spends {self.strip_spent:5.1f} mm "
-            f"of strip"
+        return self.annotated(
+            f"    corner    r{self.radius:<5.1f} {self.design.tilt:.0f} deg, "
+            f"inner {self.inner_radius:5.2f} mm, outer {self.outer_radius:5.2f} mm, "
+            f"spends {self.strip_spent:5.1f} mm"
         )
 
 
-def parts() -> Iterator[Bracket]:
-    """Every bracket this catalog ships, in the order it is listed and printed."""
-    for length in STRAIGHT_LENGTHS:
+def shipping() -> Shipping:
+    """The design and the parts that ship, validated."""
+    return config.read(CONFIG, into=Shipping)
+
+
+def trials() -> Catalogue:
+    """The parts still being tested. Absent means there are none."""
+    return config.read_if_present(TRIALS, into=Catalogue)
+
+
+def parts(
+    ships: Shipping | None = None, tried: Catalogue | None = None
+) -> Iterator[Bracket]:
+    """Every bracket a catalogue describes, in the order it is listed and printed.
+
+    Defaults to the shipped files; a caller may pass its own to see what a
+    different set of entries would produce.
+    """
+    ships = shipping() if ships is None else ships
+    tried = trials() if tried is None else tried
+    design = ships.design
+    for entry in [*ships.straight, *tried.straight]:
         yield StraightBracket(
-            name=f"straight-{length:g}mm{VERSION_SUFFIX}",
-            solid=straight(length),
-            length=length,
+            name=entry.name,
+            solid=straight(_leaning(design, entry), entry.length),
+            design=_leaning(design, entry),
+            note=entry.note,
+            length=entry.length,
         )
-    for radius in LADDER_RADII:
+    for entry in [*ships.corner, *tried.corner]:
         yield CornerBracket(
-            name=f"corner-r{radius:g}{VERSION_SUFFIX}",
-            solid=corner(radius),
-            radius=radius,
+            name=entry.name,
+            solid=corner(_leaning(design, entry), entry.radius),
+            design=_leaning(design, entry),
+            note=entry.note,
+            radius=entry.radius,
         )
-    for tilt, radius in TRIAL_CORNERS:
-        yield CornerBracket(
-            name=f"trial-corner-{tilt:g}deg-r{radius:g}{VERSION_SUFFIX}",
-            solid=corner(radius, tilt),
-            radius=radius,
-            tilt=tilt,
-        )
-    for tilt in TRIAL_LEANS:
-        yield StraightBracket(
-            name=f"trial-straight-{tilt:g}deg-{TRIAL_STRAIGHT_LENGTH:g}mm{VERSION_SUFFIX}",
-            solid=straight(TRIAL_STRAIGHT_LENGTH, tilt),
-            length=TRIAL_STRAIGHT_LENGTH,
-            tilt=tilt,
-        )
+
+
+def _leaning(design: Design, entry) -> Design:
+    """The design as this entry wants it: its own lean, or the shipped one."""
+    return design if entry.tilt is None else replace(design, tilt=entry.tilt)
 
 
 def straights(brackets: list[Bracket]) -> list[StraightBracket]:

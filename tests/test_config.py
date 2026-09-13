@@ -156,3 +156,22 @@ def test_a_list_of_plain_numbers_is_read_and_coerced(tmp_path):
 def test_a_bad_value_inside_a_list_of_numbers_names_its_position(tmp_path):
     with pytest.raises(ConfigError, match=r"heights\[1\]"):
         read(written(tmp_path, 'heights = [27.5, "high"]\n'), into=Screws)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Overridable:
+    tilt: float | None = None
+
+
+def test_an_optional_value_left_out_stays_unset(tmp_path):
+    """A part that does not name its own lean is saying: use the design's."""
+    assert read(written(tmp_path, "# nothing\n"), into=Overridable).tilt is None
+
+
+def test_an_optional_value_supplied_is_converted_like_any_other(tmp_path):
+    assert read(written(tmp_path, "tilt = 65\n"), into=Overridable).tilt == 65.0
+
+
+def test_an_optional_value_of_the_wrong_type_is_still_refused(tmp_path):
+    with pytest.raises(ConfigError, match="tilt"):
+        read(written(tmp_path, 'tilt = "steep"\n'), into=Overridable)

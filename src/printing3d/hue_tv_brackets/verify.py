@@ -13,30 +13,28 @@ import math
 
 from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import corners, parts, straights
-from printing3d.hue_tv_brackets.geometry import (
-    BASE_DEPTH,
-    BLOCK_W,
-    CHANNEL_D,
-    CHANNEL_W,
-    LIP_REACH,
-    LIP_RISE,
-    MOUTH_W,
-    QUARTER_TURN,
-    TILT,
-    floor_height,
-)
+from printing3d.hue_tv_brackets.geometry import QUARTER_TURN
 from printing3d.probes import enclosed_void_count
 from printing3d.shapes import rect
 
 
-def leaned_floor_angle(tilt):
+def lip_taper_slack(design):
+    """How wide the mouth reads when measured a sliver below the block's face.
+
+    The lip has not finished closing there, so the reading runs wide by that
+    much of the taper.
+    """
+    return 2 * PROBE_BAND * design.lip_reach / design.lip_height + MAX_EDGE_ERROR
+
+
+def leaned_floor_angle(design):
     """Where the slot floor ends up once the channel is leaned.
 
     Stated from the design's intent rather than computed by the code that does
     the leaning: a check that asks the drawing code where it drew is not a
     check.
     """
-    return (-tilt) % 180.0
+    return (-design.tilt) % 180.0
 
 
 # Half-thickness of the sliver used to read a width off the profile. Small
@@ -49,10 +47,6 @@ MAX_EDGE_ERROR = 0.05  # mm, on a length read off the built profile
 MAX_ANGLE_ERROR = 0.01  # degrees
 COLLINEAR = 1e-6  # sine of the turn below which two segments are one face
 MAX_SECTION_DRIFT = 1e-6  # mm2 between a corner's section and a straight's
-
-# The mouth is read a sliver below the block's face, where the lip has not
-# finished closing, so the reading runs wide by that much of the taper.
-LIP_TAPER_SLACK = 2 * PROBE_BAND * LIP_REACH / LIP_RISE + MAX_EDGE_ERROR
 
 
 def upright_section(solid, degrees=0.0):
@@ -81,21 +75,22 @@ def corner_section(part):
     return turned.translate((-part.radius, 0.0))
 
 
-def in_channel_frame(section, tilt):
+def in_channel_frame(section, design):
     """The section turned back upright, so the channel is axis-aligned."""
-    return section.translate((0.0, -floor_height(tilt))).rotate(tilt)
+    return section.translate((0.0, -design.floor_height)).rotate(design.tilt)
 
 
-def slot_width_at(section, up, tilt=TILT):
+def slot_width_at(section, up, design):
     """The gap between the channel's walls, `up` from the slot floor.
 
     The gap straddling the channel's centre is what a strip has to pass, so
     that is the one measured -- material further out belongs to the plate.
     """
-    sliver = rect(-BLOCK_W, up - PROBE_BAND, BLOCK_W, up + PROBE_BAND)
+    reach = design.block_width
+    sliver = rect(-reach, up - PROBE_BAND, reach, up + PROBE_BAND)
     spans = [
         (min(x for x, _ in contour), max(x for x, _ in contour))
-        for contour in (in_channel_frame(section, tilt) ^ sliver).to_polygons()
+        for contour in (in_channel_frame(section, design) ^ sliver).to_polygons()
     ]
     left = max((high for _, high in spans if high <= 0.0), default=None)
     right = min((low for low, _ in spans if low >= 0.0), default=None)
@@ -156,11 +151,11 @@ def longest_face_at(section, angle):
     return 0.0
 
 
-def check_channel_clips(runner, section, tilt):
+def check_channel_clips(runner, section, design):
     """A mouth wider than its bed is a trough: the strip would lift straight
     back out, which is the whole failure this bracket exists to prevent."""
-    bed = slot_width_at(section, PROBE_BAND, tilt)
-    mouth = slot_width_at(section, CHANNEL_D - PROBE_BAND, tilt)
+    bed = slot_width_at(section, PROBE_BAND, design)
+    mouth = slot_width_at(section, design.channel_depth - PROBE_BAND, design)
     runner.check(
         "the channel necks down to a clip",
         mouth < bed,
@@ -168,28 +163,28 @@ def check_channel_clips(runner, section, tilt):
     )
     runner.check(
         "the bed is the full channel width",
-        abs(bed - CHANNEL_W) < MAX_EDGE_ERROR,
+        abs(bed - design.channel_width) < MAX_EDGE_ERROR,
         f"{bed:.3f} mm",
     )
     runner.check(
         "the lips close over the bed as drawn",
-        abs(mouth - MOUTH_W) < LIP_TAPER_SLACK,
-        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm at the face",
+        abs(mouth - design.mouth_width) < lip_taper_slack(design),
+        f"{mouth:.3f} mm against {design.mouth_width:.3f} mm at the face",
     )
 
 
-def check_channel_aims_out(runner, section, tilt):
+def check_channel_aims_out(runner, section, design):
     """The lean is what throws light along the wall instead of at it."""
-    angle = leaned_floor_angle(tilt)
+    angle = leaned_floor_angle(design)
     length = longest_face_at(section, angle)
     runner.check(
-        f"the channel still lies at {tilt:.0f} degrees",
-        abs(length - CHANNEL_W) < MAX_EDGE_ERROR,
+        f"the channel still lies at {design.tilt:.0f} degrees",
+        abs(length - design.channel_width) < MAX_EDGE_ERROR,
         f"floor edge {length:.2f} mm at {angle:.1f} deg in the profile",
     )
 
 
-def check_base_is_flat(runner, section):
+def check_base_is_flat(runner, section, design):
     """The adhesive holds on one unbroken pad; a pad that is not flat holds on
     its corners, which is how the strip's own adhesive let go."""
     _, low_v, _, _ = section.bounds()
@@ -201,7 +196,7 @@ def check_base_is_flat(runner, section):
     )
     runner.check(
         "the pad is the full base depth",
-        abs(pad - BASE_DEPTH) < MAX_EDGE_ERROR,
+        abs(pad - design.base_depth) < MAX_EDGE_ERROR,
         f"{pad:.2f} mm",
     )
 
@@ -212,11 +207,11 @@ def check_profile_is_solid(runner, section):
     runner.check("the profile encloses no pockets", pockets == 0, f"{pockets} found")
 
 
-def check_the_channel(runner, section, tilt):
+def check_the_channel(runner, section, design):
     """Every check that reads the profile, which both shapes share."""
-    check_channel_clips(runner, section, tilt)
-    check_channel_aims_out(runner, section, tilt)
-    check_base_is_flat(runner, section)
+    check_channel_clips(runner, section, design)
+    check_channel_aims_out(runner, section, design)
+    check_base_is_flat(runner, section, design)
     check_profile_is_solid(runner, section)
 
 
@@ -257,19 +252,19 @@ def verify_all():
         return runner.report()
     for part in runs:
         runner.section(part.name)
-        check_the_channel(runner, straight_section(part), part.tilt)
+        check_the_channel(runner, straight_section(part), part.design)
 
     # A corner is compared against a straight at its OWN lean: "the same
     # bracket bent" only means anything between two brackets aimed alike.
-    references = {part.tilt: straight_section(part) for part in runs}
+    references = {part.design: straight_section(part) for part in runs}
     for part in corners(brackets):
         runner.section(part.name)
         section = corner_section(part)
-        check_the_channel(runner, section, part.tilt)
+        check_the_channel(runner, section, part.design)
         check_corner_turns_a_quarter(runner, part)
-        reference = references.get(part.tilt)
+        reference = references.get(part.design)
         runner.check(
-            f"a {part.tilt:g}-degree straight ships to compare it against",
+            f"a {part.design.tilt:g}-degree straight ships to compare it against",
             reference is not None,
         )
         if reference is not None:

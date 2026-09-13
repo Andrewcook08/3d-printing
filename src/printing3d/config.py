@@ -18,6 +18,7 @@ absent number.
 import tomllib
 from dataclasses import MISSING, fields, is_dataclass
 from pathlib import Path
+from types import UnionType
 from typing import get_args, get_origin, get_type_hints
 
 SCALARS = (bool, int, float, str)
@@ -92,6 +93,8 @@ def _refuse_missing(into, table, where):
 
 def _converted(annotation, value, where):
     """`value` as the annotation asks for it, or a failure that names where."""
+    if get_origin(annotation) is UnionType:
+        return _converted(_without_none(annotation, where), value, where)
     if is_dataclass(annotation):
         return _built(annotation, _as_table(value, where), where)
     if get_origin(annotation) is list:
@@ -126,6 +129,19 @@ def _scalar(annotation, value, where):
         f"{where} should be {getattr(annotation, '__name__', annotation)}, "
         f"not {_named(value)}"
     )
+
+
+def _without_none(annotation, where):
+    """The real type behind `T | None`.
+
+    An optional field says "the value this belongs to has a sensible answer
+    already" -- a part that does not name its own lean takes the design's.
+    Anything else in a union is a schema nobody should be writing.
+    """
+    offered = [arg for arg in get_args(annotation) if arg is not type(None)]
+    if len(offered) != 1:
+        raise ConfigError(f"{where} asks for {annotation}, which is not a config shape")
+    return offered[0]
 
 
 def _named(value):

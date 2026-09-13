@@ -30,10 +30,14 @@ PROJECT_PACKAGES = {
 CONTRACT_ROLES = frozenset({"project", "parts", "build_all", "verify_all"})
 
 # Words every project uses for the same idea: the shape it describes, the solid
-# it builds from that shape, the checks it runs. Sharing one is the house style
-# -- and `build` is also what the shared command is called, so a project's own
-# build function is expected to sit alongside it rather than clash with it.
-SHARED_VOCABULARY = frozenset({"profile", "build", "verify"})
+# it builds from that shape, the checks it runs, and the two shapes its config
+# file takes -- the measured numbers, and the parts asked for. Sharing one of
+# these is the house style, not duplication: two projects' Designs hold entirely
+# different fields, so there is nothing to promote and nothing being hidden.
+#
+# `build` is also what the shared command is called, so a project's own build
+# function is expected to sit alongside it rather than clash with it.
+SHARED_VOCABULARY = frozenset({"profile", "build", "verify", "Design", "Catalogue"})
 ROLE_PREFIXES = ("check_",)
 
 ROLES = CONTRACT_ROLES | SHARED_VOCABULARY
