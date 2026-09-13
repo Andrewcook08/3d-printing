@@ -54,8 +54,3 @@ def discover() -> dict[str, Project]:
         project = declaration() if callable(declaration) else declaration
         found[project.name] = project
     return dict(sorted(found.items()))
-
-
-def names() -> list[str]:
-    """The names of every declared project, in a stable order."""
-    return list(discover())

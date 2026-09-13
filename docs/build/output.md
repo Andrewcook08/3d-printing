@@ -27,6 +27,11 @@ output/archive/<project>/<part-name>.stl
 The archive is not committed. It exists so a retired shape can be recovered
 without going through version control, which still has it either way.
 
+**Nothing in the archive is overwritten.** A part retired, brought back at a
+different size, and retired again keeps both shapes — the second is set apart by
+what is actually different about it. An identical shape archived twice is kept
+once, since there is nothing to lose by not keeping a second copy.
+
 **The lock is never touched by this.** A retired part leaves the lock describing
 a file that is no longer there, and the conformance tests fail until it is
 re-locked deliberately — the same as any other change to what a project ships. A

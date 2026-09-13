@@ -7,6 +7,7 @@ matter which project produced it.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 from collections.abc import Callable, Iterable, Iterator
@@ -130,8 +131,24 @@ def archive_orphans(project: str, declared: set[str]) -> list[Path]:
     if orphans:
         archive_dir(project).mkdir(parents=True, exist_ok=True)
     return [
-        Path(shutil.move(path, archive_dir(project) / path.name)) for path in orphans
+        Path(shutil.move(path, _archived_as(path, archive_dir(project))))
+        for path in orphans
     ]
+
+
+def _archived_as(path: Path, archive: Path) -> Path:
+    """Where `path` lands in the archive without displacing what is there.
+
+    A part retired, brought back at a different size, and retired again would
+    otherwise overwrite its own earlier shape -- silently losing the one thing
+    the archive exists to keep. An identical shape needs no second copy; a
+    different one is kept apart by what is actually different about it.
+    """
+    settled = archive / path.name
+    if not settled.is_file() or settled.read_bytes() == path.read_bytes():
+        return settled
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:8]
+    return archive / f"{path.stem}-{digest}{path.suffix}"
 
 
 def existing_stls(project: str) -> Iterator[Path]:

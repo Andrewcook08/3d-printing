@@ -169,3 +169,35 @@ def test_building_an_unsound_part_reports_failure(monkeypatch, tmp_path):
 def test_one_unsound_part_condemns_the_whole_build(monkeypatch, tmp_path):
     monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
     assert build_project("widgets", [a_part("fine"), a_broken_part()]) is False
+
+
+def a_bigger_part(name="demo-part"):
+    """The same name, a different shape -- a part brought back resized."""
+    return Part(name=name, solid=Manifold.cube((40.0, 40.0, 40.0), False))
+
+
+def test_retiring_a_part_twice_does_not_destroy_its_earlier_shape(
+    monkeypatch, tmp_path
+):
+    """Retire a part, bring it back at a different size, retire it again. The
+    first shape is the one someone would go to the archive for."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("twice")])
+    build_project("widgets", [])
+    was = (archive_dir("widgets") / "twice.stl").read_bytes()
+
+    build_project("widgets", [a_bigger_part("twice")])
+    build_project("widgets", [])
+
+    archived = {path.read_bytes() for path in archive_dir("widgets").glob("*.stl")}
+    assert was in archived, "the earlier shape was overwritten"
+    assert len(archived) == 2
+
+
+def test_retiring_the_same_shape_twice_keeps_one_copy(monkeypatch, tmp_path):
+    """Nothing is lost by not keeping a second identical file."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    for _ in range(2):
+        build_project("widgets", [a_part("same")])
+        build_project("widgets", [])
+    assert len(list(archive_dir("widgets").glob("*.stl"))) == 1

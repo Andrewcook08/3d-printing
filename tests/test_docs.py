@@ -108,3 +108,17 @@ def test_every_doc_is_reachable_from_the_index():
         if doc != INDEX and doc.resolve() not in linked
     )
     assert not unreachable, f"not linked from docs/README.md: {unreachable}"
+
+
+def test_the_corpus_gives_these_checks_something_to_check():
+    """Each rule above is parameterised per document, so it passes trivially for
+    a document that names no paths and runs no commands. That is fine for one
+    document and meaningless for all of them."""
+    named = sum(len(QUOTED_PATH.findall(doc.read_text())) for doc in documents())
+    promised = sum(
+        len(RUN_COMMAND.findall(block))
+        for doc in documents()
+        for block in FENCED_SHELL.findall(doc.read_text())
+    )
+    assert named, "no document names a repo path; the path rule proves nothing"
+    assert promised, "no document runs a command; the command rule proves nothing"
