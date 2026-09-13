@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from printing3d.hue_tv_brackets import LOCKED, NAME  # noqa: F401  re-exported
 from printing3d.hue_tv_brackets.geometry import (
     BASE_DEPTH,
+    QUARTER_TURN,
     TO_OUTERMOST,
     TO_TAB_EDGE,
     corner,
@@ -49,7 +50,7 @@ class StraightBracket(Part):
 
 @dataclass(frozen=True)
 class CornerBracket(Part):
-    """A 90-degree turn, carrying the radius it was built from."""
+    """A quarter turn, carrying the radius it was built from."""
 
     radius: float
 
@@ -66,7 +67,7 @@ class CornerBracket(Part):
     @property
     def strip_spent(self) -> float:
         """Strip consumed by the turn, which the straight runs then go without."""
-        return math.pi / 2.0 * self.radius
+        return math.radians(QUARTER_TURN) * self.radius
 
     def footprint_line(self) -> str:
         """The arc this turns the strip through, and what it costs in strip."""
@@ -94,6 +95,16 @@ def parts() -> Iterator[Bracket]:
             solid=corner(radius),
             radius=radius,
         )
+
+
+def straights(brackets: list[Bracket]) -> list[StraightBracket]:
+    """The straight runs among `brackets`."""
+    return [part for part in brackets if isinstance(part, StraightBracket)]
+
+
+def corners(brackets: list[Bracket]) -> list[CornerBracket]:
+    """The corners among `brackets`."""
+    return [part for part in brackets if isinstance(part, CornerBracket)]
 
 
 def build_all() -> bool:

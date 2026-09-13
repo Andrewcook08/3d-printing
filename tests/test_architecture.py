@@ -1,12 +1,17 @@
 """Architecture rules about the boundary between the shared kit and projects.
 
-The kit is reusable only as long as it carries no project's assumptions, so it
-may not import one. And a helper that two projects both need belongs in the
-kit rather than in each of them, so the same helper name appearing in two
-projects is read as a promotion that has not happened yet.
+Three rules. The kit is reusable only as long as it carries no project's
+assumptions, so it may not import one. A helper that two projects both need
+belongs in the kit rather than in each of them. And a helper the kit already
+offers should be called, not rewritten beside it.
 
-Both erode silently -- the first with a single import, the second with a
-single forgotten copy -- so both are checked rather than left to discipline.
+All three erode silently -- the first with a single import, the others with a
+single forgotten copy -- so all three are checked rather than left to
+discipline.
+
+Detection is by name, which has a known blind spot: a copy that arrives under a
+different name passes. The docstring marker described in CLAUDE.md is what
+covers that case, and these tests are the backstop for when it is missed.
 """
 
 import ast
@@ -20,13 +25,18 @@ PROJECT_PACKAGES = {
     module.name for module in pkgutil.iter_modules(printing3d.__path__) if module.ispkg
 }
 
-# Names every project is expected to offer: how a project plugs into the build,
-# and the checks it runs. Two projects sharing one of these is the design
-# working, not duplication.
-ROLES = frozenset(
-    {"project", "parts", "profile", "build", "build_all", "verify", "verify_all"}
-)
+# The names the registry wires up. Every project must define these, so two
+# projects sharing one is the contract being met, not duplication.
+CONTRACT_ROLES = frozenset({"project", "parts", "build_all", "verify_all"})
+
+# Words every project uses for the same idea: the shape it describes, the solid
+# it builds from that shape, the checks it runs. Sharing one is the house style
+# -- and `build` is also what the shared command is called, so a project's own
+# build function is expected to sit alongside it rather than clash with it.
+SHARED_VOCABULARY = frozenset({"profile", "build", "verify"})
 ROLE_PREFIXES = ("check_",)
+
+ROLES = CONTRACT_ROLES | SHARED_VOCABULARY
 
 
 def imported_modules(source: Path):
@@ -128,4 +138,26 @@ def test_no_helper_is_defined_by_two_projects():
         + "; ".join(
             f"{name} in {' and '.join(owners)}" for name, owners in duplicated.items()
         )
+    )
+
+
+def kit_helpers():
+    """Helper names the shared kit already offers."""
+    return {name for source in core_modules() for name in public_helpers(source)}
+
+
+def test_the_kit_offers_helpers_to_collide_with():
+    """Guards the rule below from passing because nothing was found."""
+    assert kit_helpers()
+
+
+def test_no_project_rewrites_a_helper_the_kit_already_has():
+    offenders = {
+        f"{package}.{name}"
+        for package, names in helpers_by_project().items()
+        for name in names & kit_helpers()
+    }
+    assert not offenders, (
+        "the shared kit already offers these; call them rather than rewriting "
+        "them beside it: " + ", ".join(sorted(offenders))
     )

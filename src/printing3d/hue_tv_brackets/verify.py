@@ -12,7 +12,7 @@ same bracket, which is the claim the whole design rests on.
 import math
 
 from printing3d.checks import CheckRunner
-from printing3d.hue_tv_brackets.catalog import CornerBracket, parts
+from printing3d.hue_tv_brackets.catalog import corners, parts, straights
 from printing3d.hue_tv_brackets.geometry import (
     BASE_DEPTH,
     BLOCK_W,
@@ -21,13 +21,12 @@ from printing3d.hue_tv_brackets.geometry import (
     FLOOR_HEIGHT,
     LIP_REACH,
     LIP_RISE,
-    MOUTH,
+    MOUTH_W,
+    QUARTER_TURN,
     TILT,
 )
 from printing3d.probes import enclosed_void_count
 from printing3d.shapes import rect
-
-CORNER_TURN = 90.0
 
 # Where the slot floor ends up once the channel is leaned. Stated from the
 # design's intent rather than computed by the code that does the leaning: a
@@ -58,20 +57,22 @@ def upright_section(solid, degrees=0.0):
     return solid.rotate((0.0, 0.0, -degrees)).rotate((-90.0, 0.0, 0.0)).slice(0.0)
 
 
-def midway_section(part):
-    """The bracket's cross-section halfway along its sweep.
-
-    Both shapes are one profile swept, so this is that profile as actually
-    built -- which is what every channel check below measures.
-    """
-    if isinstance(part, CornerBracket):
-        # A corner's section comes out at the radius it was swept to. Bringing
-        # it home to the profile's own frame is what lets it be measured by the
-        # same checks as a straight, and compared against one.
-        turned = upright_section(part.solid, CORNER_TURN / 2.0)
-        return turned.translate((-part.radius, 0.0))
+def straight_section(part):
+    """A straight run's cross-section, taken halfway along it."""
     centred = part.solid.translate((0.0, -part.length / 2.0, 0.0))
     return upright_section(centred, 0.0)
+
+
+def corner_section(part):
+    """A corner's cross-section, taken mid-arc and brought home to the
+    profile's own frame.
+
+    A corner's section comes out at the radius it was swept to. Translating it
+    back is what lets the same checks measure it, and lets it be compared
+    against a straight's.
+    """
+    turned = upright_section(part.solid, QUARTER_TURN / 2.0)
+    return turned.translate((-part.radius, 0.0))
 
 
 def in_channel_frame(section):
@@ -166,8 +167,8 @@ def check_channel_clips(runner, section):
     )
     runner.check(
         "the lips close over the bed as drawn",
-        abs(mouth - MOUTH) < LIP_TAPER_SLACK,
-        f"{mouth:.3f} mm against {MOUTH:.3f} mm at the face",
+        abs(mouth - MOUTH_W) < LIP_TAPER_SLACK,
+        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm at the face",
     )
 
 
@@ -200,10 +201,18 @@ def check_profile_is_solid(runner, section):
     runner.check("the profile encloses no pockets", pockets == 0, f"{pockets} found")
 
 
+def check_the_channel(runner, section):
+    """Every check that reads the profile, which both shapes share."""
+    check_channel_clips(runner, section)
+    check_channel_aims_out(runner, section)
+    check_base_is_flat(runner, section)
+    check_profile_is_solid(runner, section)
+
+
 def check_corner_turns_a_quarter(runner, part):
     """Measured by cutting just inside each end of the arc, and just outside."""
-    inside = [CLEAR_OF_THE_END, CORNER_TURN - CLEAR_OF_THE_END]
-    outside = [-CLEAR_OF_THE_END, CORNER_TURN + CLEAR_OF_THE_END]
+    inside = [CLEAR_OF_THE_END, QUARTER_TURN - CLEAR_OF_THE_END]
+    outside = [-CLEAR_OF_THE_END, QUARTER_TURN + CLEAR_OF_THE_END]
     carries = all(upright_section(part.solid, deg).area() > 0.0 for deg in inside)
     stops = all(upright_section(part.solid, deg).area() == 0.0 for deg in outside)
     runner.check("the corner carries the strip across the quarter", carries)
@@ -231,17 +240,18 @@ def verify_all():
     """Run every check against every bracket. True if all pass."""
     runner = CheckRunner()
     brackets = list(parts())
-    straight_section = next(
-        midway_section(part) for part in brackets if not isinstance(part, CornerBracket)
-    )
-    for part in brackets:
+    runs = straights(brackets)
+    for part in runs:
         runner.section(part.name)
-        section = midway_section(part)
-        check_channel_clips(runner, section)
-        check_channel_aims_out(runner, section)
-        check_base_is_flat(runner, section)
-        check_profile_is_solid(runner, section)
-        if isinstance(part, CornerBracket):
-            check_corner_turns_a_quarter(runner, part)
-            check_corner_matches_the_straight(runner, section, straight_section)
+        check_the_channel(runner, straight_section(part))
+
+    # Any straight will do as the reference: the claim under test is that every
+    # bracket here is the same bracket, so they must all agree anyway.
+    reference = straight_section(runs[0])
+    for part in corners(brackets):
+        runner.section(part.name)
+        section = corner_section(part)
+        check_the_channel(runner, section)
+        check_corner_turns_a_quarter(runner, part)
+        check_corner_matches_the_straight(runner, section, reference)
     return runner.report()

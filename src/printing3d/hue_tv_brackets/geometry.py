@@ -15,6 +15,7 @@ radius ships as a ladder.
 """
 
 import math
+from typing import NamedTuple
 
 from printing3d.shapes import polygon, rect
 
@@ -25,7 +26,7 @@ from printing3d.shapes import polygon, rect
 CHANNEL_W = 15.0  # the strip's bed
 CHANNEL_D = 4.0
 WALL = 1.5  # slot wall, either side
-FLOOR = 2.0  # material under the slot
+FLOOR_THK = 2.0  # material under the slot
 
 # Each lip closes LIP_REACH over the slot while climbing LIP_RISE, leaving a
 # mouth narrower than the bed. That neck is the clip: the strip flexes past it
@@ -33,7 +34,7 @@ FLOOR = 2.0  # material under the slot
 LIP_REACH = 1.5
 LIP_RISE = 2.0
 
-MOUTH = CHANNEL_W - 2 * LIP_REACH
+MOUTH_W = CHANNEL_W - 2 * LIP_REACH
 BLOCK_W = CHANNEL_W + 2 * WALL
 
 # Cut past the block's face so the mouth opens cleanly rather than meeting it
@@ -58,9 +59,17 @@ BASE_DEPTH = 22.0
 # Height of the channel above the TV back. Forced, not chosen: it is what rests
 # the block's outboard-bottom corner ON the base plane. Every dimension below
 # follows from it, which is why none of them is measured off the reference.
-FLOOR_HEIGHT = (BLOCK_W / 2 + FLOOR) * math.sin(math.radians(TILT))
+FLOOR_HEIGHT = (BLOCK_W / 2 + FLOOR_THK) * math.sin(math.radians(TILT))
 
-CORNER_SEGMENTS = 128  # per full turn, so 32 across a 90-degree corner
+QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
+CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
+
+
+class Point(NamedTuple):
+    """A point of the profile: `u` outboard, `v` above the TV back."""
+
+    u: float
+    v: float
 
 
 def leaned(across, up):
@@ -72,19 +81,19 @@ def leaned(across, up):
     rather than restating it at an angle.
     """
     lean = math.radians(TILT)
-    return (
-        across * math.cos(lean) + up * math.sin(lean),
-        -across * math.sin(lean) + up * math.cos(lean) + FLOOR_HEIGHT,
+    return Point(
+        u=across * math.cos(lean) + up * math.sin(lean),
+        v=-across * math.sin(lean) + up * math.cos(lean) + FLOOR_HEIGHT,
     )
 
 
 # Outboard is positive, measured from the centre of the slot floor -- the datum
 # a corner's radius is quoted to. The plate runs inboard from the block's
 # outboard-bottom corner; the arm's wall drops from its inboard-bottom one.
-TO_BASE_EDGE = leaned(BLOCK_W / 2, -FLOOR)[0]
-TO_OUTERMOST = leaned(BLOCK_W / 2, CHANNEL_D)[0]
+TO_BASE_EDGE = leaned(BLOCK_W / 2, -FLOOR_THK).u
+TO_OUTERMOST = leaned(BLOCK_W / 2, CHANNEL_D).u
 TO_TAB_EDGE = BASE_DEPTH - TO_BASE_EDGE
-ARM_APEX = leaned(-BLOCK_W / 2, -FLOOR)
+ARM_APEX = leaned(-BLOCK_W / 2, -FLOOR_THK)
 
 # Below this the tab edge reaches the revolve axis and the wedge folds through
 # itself: a turn cannot be made by a part reaching past its own centre.
@@ -117,7 +126,7 @@ def _arm():
     Its hypotenuse is the channel block's own underside, so the arm meets the
     block flush however the block is dimensioned.
     """
-    return polygon([(TO_BASE_EDGE, 0.0), ARM_APEX, (ARM_APEX[0], 0.0)])
+    return polygon([(TO_BASE_EDGE, 0.0), ARM_APEX, (ARM_APEX.u, 0.0)])
 
 
 def _channel_block():
@@ -128,14 +137,14 @@ def _channel_block():
             (-CHANNEL_W / 2, 0.0),
             (CHANNEL_W / 2, 0.0),
             (CHANNEL_W / 2, lip_shoulder),
-            (MOUTH / 2, CHANNEL_D),
-            (MOUTH / 2, CHANNEL_D + SLOT_OVERSHOOT),
-            (-MOUTH / 2, CHANNEL_D + SLOT_OVERSHOOT),
-            (-MOUTH / 2, CHANNEL_D),
+            (MOUTH_W / 2, CHANNEL_D),
+            (MOUTH_W / 2, CHANNEL_D + SLOT_OVERSHOOT),
+            (-MOUTH_W / 2, CHANNEL_D + SLOT_OVERSHOOT),
+            (-MOUTH_W / 2, CHANNEL_D),
             (-CHANNEL_W / 2, lip_shoulder),
         ]
     )
-    block = rect(-BLOCK_W / 2, -FLOOR, BLOCK_W / 2, CHANNEL_D) - slot
+    block = rect(-BLOCK_W / 2, -FLOOR_THK, BLOCK_W / 2, CHANNEL_D) - slot
     return block.rotate(-TILT).translate((0.0, FLOOR_HEIGHT))
 
 
@@ -153,7 +162,7 @@ def straight(length):
 
 
 def corner(radius):
-    """A 90-degree corner, `radius` measured to the centre of the slot floor."""
+    """A quarter turn, `radius` measured to the centre of the slot floor."""
     if radius <= MIN_CORNER_RADIUS:
         raise ValueError(
             f"radius {radius} reaches the revolve axis: the profile extends "
@@ -162,7 +171,7 @@ def corner(radius):
         )
     # revolve() spins a profile about its own Y axis and takes no axis
     # argument, so the radius is applied by moving the profile out to it.
-    return profile().translate((radius, 0.0)).revolve(CORNER_SEGMENTS, 90.0)
+    return profile().translate((radius, 0.0)).revolve(CORNER_SEGMENTS, QUARTER_TURN)
 
 
 def chord_inset(radius):

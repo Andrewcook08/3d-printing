@@ -280,7 +280,8 @@ how specifically they localise a failure:
    matches the lock".
 
 `tests/test_architecture.py` enforces that the shared kit never imports a
-project, and that no helper is defined by two projects at once.
+project, that no helper is defined by two projects at once, and that no project
+rewrites a helper the kit already offers.
 
 Warnings are errors (`filterwarnings`), so a dependency's deprecation warning
 fails the suite. Don't silence one — act on it.

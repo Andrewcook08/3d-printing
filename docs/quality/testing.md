@@ -10,7 +10,7 @@ something changes, the narrowest layer that noticed tells you what moved.
 | Layer | Asserts | Catches |
 |---|---|---|
 | **Contract** | What every project must guarantee, for every project | A project that ships unverified, unlocked, or unsound parts |
-| **Architecture** | The boundary between the shared kit and the projects | Shared code that has taken on a project's assumptions, or a helper copied into a second project |
+| **Architecture** | The boundary between the shared kit and the projects | Shared code that has taken on a project's assumptions, or a helper copied into a second project rather than promoted, or one rewritten beside the kit's own |
 | **Properties** | Relationships that must hold for *any* input | A design that is geometrically wrong, including for sizes never built before |
 | **Characterization** | The exact vertices of each shipped cross-section | A change to a part's outline, naming which part moved |
 | **Golden master** | The exact bytes of each shipped file | Any change at all to a printable artifact |
@@ -23,12 +23,14 @@ a new project is covered by existing rather than by copying tests, and a
 failure names the project it belongs to. See
 [project contract](../build/project-contract.md).
 
-**Shared code stays shared.** The kit may not depend on any project — it is
-reusable only while it carries no project's assumptions. And no helper may be
-defined by two projects at once: that is the signal that a helper has outgrown
-the project it started in, so the suite fails and names both, and it gets moved
-rather than copied. Names every project is expected to define are exempt, being
-roles rather than duplication.
+**Shared code stays shared.** Three rules hold the boundary. The kit may not
+depend on any project — it is reusable only while it carries no project's
+assumptions. No helper may be defined by two projects at once: that is the
+signal a helper has outgrown the project it started in, so the suite names both
+and it gets moved rather than copied. And no project may rewrite a helper the
+kit already offers. Names every project is expected to define are exempt, being
+roles rather than duplication. Detection is by name, so a copy under a new name
+passes — the marker convention is what covers that, and these are its backstop.
 
 **Properties assert intent, not history.** Where a value is forced by geometry,
 the test asserts the *relationship* — that a line is genuinely tangent to a

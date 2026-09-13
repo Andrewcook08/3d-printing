@@ -9,9 +9,9 @@ from printing3d.hue_tv_brackets.geometry import (
     CHANNEL_D,
     CHANNEL_W,
     CORNER_SEGMENTS,
-    FLOOR,
+    FLOOR_THK,
     MIN_CORNER_RADIUS,
-    MOUTH,
+    MOUTH_W,
     TO_BASE_EDGE,
     TO_OUTERMOST,
     TO_TAB_EDGE,
@@ -40,7 +40,7 @@ NOZZLE_WIDTH = 0.4
 
 def test_the_mouth_is_narrower_than_the_bed_it_opens_onto():
     """Without this the channel is a trough and the strip lifts straight out."""
-    assert MOUTH < CHANNEL_W
+    assert MOUTH_W < CHANNEL_W
 
 
 def test_the_lips_are_what_narrow_it():
@@ -56,7 +56,7 @@ def test_the_lips_are_what_narrow_it():
 
 def test_the_channel_block_rests_on_the_base_plane():
     """The one constraint the rest of the profile is derived from."""
-    _, resting_height = leaned(BLOCK_W / 2, -FLOOR)
+    _, resting_height = leaned(BLOCK_W / 2, -FLOOR_THK)
     assert resting_height == pytest.approx(0.0, abs=1e-9)
 
 
