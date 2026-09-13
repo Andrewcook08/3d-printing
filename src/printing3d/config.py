@@ -23,6 +23,13 @@ from typing import get_args, get_origin, get_type_hints
 
 SCALARS = (bool, int, float, str)
 
+# What a field may ask for. Said once, so a field asking for something else
+# is told what it could have asked for instead.
+NOT_A_SHAPE = (
+    "which is not a config shape; a field takes a number, text, true/false, "
+    "another dataclass, a list of those, or any of them or None"
+)
+
 
 class ConfigError(ValueError):
     """A config file that cannot be trusted to build what it claims."""
@@ -121,14 +128,13 @@ def _as_table(value, where):
 def _scalar(annotation, value, where):
     """A plain value, with one coercion: a whole number where a decimal is
     wanted. TOML tells 45 from 45.0 and geometry wants the float either way."""
+    if annotation not in SCALARS:
+        raise ConfigError(f"{where} asks for {_shape(annotation)}, {NOT_A_SHAPE}")
     if annotation is float and isinstance(value, int) and not isinstance(value, bool):
         return float(value)
-    if annotation in SCALARS and type(value) is annotation:
+    if type(value) is annotation:
         return value
-    raise ConfigError(
-        f"{where} should be {getattr(annotation, '__name__', annotation)}, "
-        f"not {_named(value)}"
-    )
+    raise ConfigError(f"{where} should be {_shape(annotation)}, not {_named(value)}")
 
 
 def _without_none(annotation, where):
@@ -140,10 +146,15 @@ def _without_none(annotation, where):
     """
     offered = [arg for arg in get_args(annotation) if arg is not type(None)]
     if len(offered) != 1:
-        raise ConfigError(f"{where} asks for {annotation}, which is not a config shape")
+        raise ConfigError(f"{where} asks for {annotation}, {NOT_A_SHAPE}")
     return offered[0]
 
 
 def _named(value):
     """What a value is, for an error message: `12 (int)`."""
     return f"{value!r} ({type(value).__name__})"
+
+
+def _shape(annotation):
+    """What a field asked for, as a name a reader will recognise."""
+    return getattr(annotation, "__name__", str(annotation))

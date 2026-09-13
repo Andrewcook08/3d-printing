@@ -175,3 +175,17 @@ def test_an_optional_value_supplied_is_converted_like_any_other(tmp_path):
 def test_an_optional_value_of_the_wrong_type_is_still_refused(tmp_path):
     with pytest.raises(ConfigError, match="tilt"):
         read(written(tmp_path, 'tilt = "steep"\n'), into=Overridable)
+
+
+@dataclass(frozen=True, kw_only=True)
+class AsksForADict:
+    holes: dict
+
+
+def test_a_field_asking_for_something_config_cannot_express_says_so(tmp_path):
+    """Rather than telling someone their dict is not a dict. The reader takes
+    numbers, text, dataclasses and lists of those -- a field wanting anything
+    else is a schema mistake, and the message has to say which."""
+    with pytest.raises(ConfigError, match="not a config shape") as refused:
+        read(written(tmp_path, "[holes]\na = 1.0\n"), into=AsksForADict)
+    assert "holes" in str(refused.value)
