@@ -163,3 +163,14 @@ def corner(radius):
     # revolve() spins a profile about its own Y axis and takes no axis
     # argument, so the radius is applied by moving the profile out to it.
     return profile().translate((radius, 0.0)).revolve(CORNER_SEGMENTS, 90.0)
+
+
+def chord_inset(radius):
+    """How far a cut between two facets falls inside the true arc.
+
+    The revolve approximates the arc with flat facets, so a section taken
+    between two of them sits a chord's sagitta short of the radius. This is the
+    most a corner's section can differ from the straight's it was swept from.
+    """
+    half_facet = math.radians(360.0 / CORNER_SEGMENTS / 2.0)
+    return (radius + TO_OUTERMOST) * (1.0 - math.cos(half_facet))

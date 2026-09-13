@@ -23,12 +23,16 @@ from printing3d.hue_tv_brackets.geometry import (
     LIP_RISE,
     MOUTH,
     TILT,
-    leaned,
 )
 from printing3d.probes import enclosed_void_count
 from printing3d.shapes import rect
 
 CORNER_TURN = 90.0
+
+# Where the slot floor ends up once the channel is leaned. Stated from the
+# design's intent rather than computed by the code that does the leaning: a
+# check that asks the drawing code where it drew is not a check.
+LEANED_FLOOR_ANGLE = (-TILT) % 180.0
 
 # Half-thickness of the sliver used to read a width off the profile. Small
 # enough that the lip's taper does not smear the reading, wide enough to
@@ -93,19 +97,13 @@ def slot_width_at(section, up):
     return right - left
 
 
-def floor_edge_angle():
-    """The angle the slot floor lies at once the channel is leaned."""
-    (start_u, start_v), (end_u, end_v) = (
-        leaned(-CHANNEL_W / 2, 0.0),
-        leaned(CHANNEL_W / 2, 0.0),
-    )
-    return math.degrees(math.atan2(end_v - start_v, end_u - start_u)) % 180.0
-
-
 def straight_runs(section, min_length):
     """Straight runs of the outline, collinear segments merged, longest first.
 
-    Promotable: domain-free measurement, currently only hue-tv-brackets.
+    Promotable: domain-free measurement, currently only hue-tv-brackets. It
+    supersedes the kit's un-merged edge probe rather than sitting beside it --
+    promoting this means teaching that one to merge, and re-checking what the
+    other project's angle check then measures.
 
     A section cut from a mesh carries vertices wherever the triangulation put
     them, so one flat face arrives as several collinear segments. Merging them
@@ -175,12 +173,11 @@ def check_channel_clips(runner, section):
 
 def check_channel_aims_out(runner, section):
     """The lean is what throws light along the wall instead of at it."""
-    angle = floor_edge_angle()
-    length = longest_face_at(section, angle)
+    length = longest_face_at(section, LEANED_FLOOR_ANGLE)
     runner.check(
         f"the channel still lies at {TILT:.0f} degrees",
         abs(length - CHANNEL_W) < MAX_EDGE_ERROR,
-        f"floor edge {length:.2f} mm at {angle:.1f} deg in the profile",
+        f"floor edge {length:.2f} mm at {LEANED_FLOOR_ANGLE:.1f} deg in the profile",
     )
 
 

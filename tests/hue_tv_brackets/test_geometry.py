@@ -2,28 +2,35 @@
 
 import pytest
 
-from printing3d.hue_tv_brackets.catalog import LADDER_RADII, CornerBracket
+from printing3d.hue_tv_brackets.catalog import LADDER_RADII
 from printing3d.hue_tv_brackets.geometry import (
     BASE_DEPTH,
     BLOCK_W,
     CHANNEL_D,
     CHANNEL_W,
+    CORNER_SEGMENTS,
     FLOOR,
     MIN_CORNER_RADIUS,
     MOUTH,
     TO_BASE_EDGE,
     TO_OUTERMOST,
     TO_TAB_EDGE,
+    chord_inset,
     corner,
     leaned,
     profile,
     straight,
 )
-from printing3d.hue_tv_brackets.verify import midway_section, slot_width_at
+from printing3d.hue_tv_brackets.verify import slot_width_at, upright_section
 from printing3d.shapes import signed_area
 from tests.support import contour_digest
 
-INSIDE_THE_ARC = (15.0, 45.0, 75.0)
+# A section taken where two facets meet is the profile itself; one taken
+# between them is a chord short of it. Both claims are worth asserting.
+FACET = 360.0 / CORNER_SEGMENTS
+WHERE_FACETS_MEET = (22.5, 45.0, 67.5)
+BETWEEN_FACETS = (15.0, 75.0)
+NOZZLE_WIDTH = 0.4
 
 
 # ---------------------------------------------------------------------------
@@ -86,15 +93,35 @@ def test_the_profile_is_one_connected_outline():
 
 
 @pytest.mark.parametrize("radius", LADDER_RADII)
-@pytest.mark.parametrize("degrees", INSIDE_THE_ARC)
+@pytest.mark.parametrize("degrees", WHERE_FACETS_MEET)
 def test_a_corner_is_the_straight_bent(radius, degrees):
-    """The design in one assertion: cut a corner anywhere along its arc and you
-    get the straight's cross-section back."""
-    part = CornerBracket(name="probe", solid=corner(radius), radius=radius)
-    cut = midway_section(part)
+    """The design in one assertion: cut a corner where its facets meet and the
+    straight's cross-section comes back, exactly."""
+    cut = upright_section(corner(radius), degrees).translate((-radius, 0.0))
     reference = profile()
     assert cut.area() == pytest.approx(reference.area(), abs=1e-6)
     assert cut.bounds() == pytest.approx(reference.bounds(), abs=1e-6)
+
+
+@pytest.mark.parametrize("radius", LADDER_RADII)
+@pytest.mark.parametrize("degrees", BETWEEN_FACETS)
+def test_between_facets_a_corner_falls_short_by_a_chord_and_no_more(radius, degrees):
+    """Cut between two facets and the outline sits a sagitta inside the true
+    arc. That inset is the revolve's whole error, and it is bounded."""
+    cut = upright_section(corner(radius), degrees).translate((-radius, 0.0))
+    assert cut.bounds() == pytest.approx(profile().bounds(), abs=chord_inset(radius))
+
+
+@pytest.mark.parametrize("radius", LADDER_RADII)
+def test_the_facets_are_finer_than_the_printer_can_resolve(radius):
+    """Which is what makes the inset above a curiosity rather than a defect."""
+    assert chord_inset(radius) < NOZZLE_WIDTH / 10.0
+
+
+def test_the_chosen_angles_really_do_sit_where_they_claim():
+    """Guards the two tests above from swapping their meanings silently."""
+    assert all(abs(d / FACET - round(d / FACET)) < 1e-9 for d in WHERE_FACETS_MEET)
+    assert all(abs(d / FACET - round(d / FACET)) > 0.1 for d in BETWEEN_FACETS)
 
 
 @pytest.mark.parametrize("radius", LADDER_RADII)
