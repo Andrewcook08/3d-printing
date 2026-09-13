@@ -25,8 +25,9 @@ class Project:
     """One 3D-printing project, and everything the repo needs from it.
 
     Every field is required. A project that cannot say what it ships, pin what
-    it has shipped, or check that its parts are sound has no business shipping
-    them, so there is no way to declare a partial one.
+    it has shipped, check that its parts are sound, or point at the file its
+    numbers come from has no business shipping them, so there is no way to
+    declare a partial one.
     """
 
     name: str
@@ -35,6 +36,7 @@ class Project:
     build: Callable[[], bool]
     verify: Callable[[], bool]
     lock: Path
+    config: Path
 
 
 def discover() -> dict[str, Project]:

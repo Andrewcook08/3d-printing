@@ -10,6 +10,7 @@ from printing3d.registry import Project
 NAME = "hue-tv-brackets"
 SUMMARY = "Adhesive-free clip brackets for a Hue gradient lightstrip around a TV"
 LOCKED = Path(__file__).parent / "LOCKED.txt"
+CONFIG = Path(__file__).parent / "parts.toml"
 
 
 def project() -> Project:
@@ -25,6 +26,7 @@ def project() -> Project:
         build=lambda: _catalog().build_all(),
         verify=lambda: _checks().verify_all(),
         lock=LOCKED,
+        config=CONFIG,
     )
 
 
