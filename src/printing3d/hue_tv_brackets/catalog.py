@@ -54,6 +54,7 @@ LADDER_RADII = [30.0, 40.0, 55.0]
 # be spent at whatever lean looks best.
 TRIAL_CORNERS = [
     (65.0, 51.0),
+    (70.0, 41.0),
     (65.0, 68.0),
     (65.0, 101.0),
     (65.0, 152.0),
