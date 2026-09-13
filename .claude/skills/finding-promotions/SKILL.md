@@ -35,31 +35,57 @@ step 2 felt conclusive.
 
 ### 1. Enumerate
 
-Every public function and class added or changed in the diff, inside a project
-package. Not the kit, not tests.
+**Every public function and class in every project package** — not only the ones
+this change touched. A helper written before this procedure existed is exactly
+the one nobody has ever looked at, and sweeping everything costs one command.
 
 ```sh
-git diff main...HEAD -- 'src/printing3d/*/' | rg '^\+(def|class) '
-rg -n '^(def|class) ' src/printing3d/<project>/*.py    # if reviewing a whole project
+rg -n '^(def|class) [a-z_A-Z]' src/printing3d/*/                  # all of them
+git diff main...HEAD -- 'src/printing3d/*/' | rg '^\+(def|class) '  # what is new
 ```
 
-List them. This step has no judgement in it, and skipping it is how the last
-one was missed.
+Use the diff to decide what to look at *first*, never to decide what to look at
+*at all*. This step has no judgement in it, and skipping it is how the last one
+was missed.
 
 ### 2. Classify
+
+**Judge the behaviour, never the name.** A name is the cheapest thing about a
+helper, and renaming is part of a pure move — so "it would need a different name
+in the kit" is not a reason to stop. `measure_cradle_walls` that takes two column
+ranges and returns their highest points is domain in name only; it belongs in the
+kit under a better one. The same function that *works out* which ranges to
+measure from what a cradle is does not.
 
 For each, answer in order. The first **yes** settles it.
 
 | Ask | If yes |
 |---|---|
+| Does its behaviour depend on a fact about what the project makes? | domain — stop |
 | Does its signature take or return a type a project defines? | domain — stop |
-| Does its name or docstring need a domain noun to make sense? | domain — stop |
-| Would you have to rename it to move it to the kit? | domain — stop |
-| Could a project making something unrelated call it and mean it? | **candidate** |
+| Would another project have to change its signature or behaviour to use it? | not a pure move — see below |
+| Could a project making something unrelated call it **as it stands** and mean it? | **candidate** |
 
 The last question is the real test, and it is about the *caller*, not the code.
 "A future project might want this" is not a yes. "A project making a birdhouse
 could call this today and it would do the right thing" is.
+
+### 2a. When promotion would need a change
+
+CLAUDE.md requires a promotion to be a **pure move, behaviour unchanged**. A
+rename is part of that. A signature change is not — that is a redesign wearing a
+promotion's clothes, and it is where a shared helper starts growing flags.
+
+| Situation | What it is |
+|---|---|
+| Two callers want the same behaviour on different types, and the function does the obvious thing for each | Promote. Widening the annotation is not a behaviour change. |
+| Two callers want *different* behaviour | Two functions. One with a mode argument is shallower than the two it replaced. |
+| The second caller has to pass something saying which kind it is | Stop. A flag argument means the function is doing two jobs. |
+| One caller today, and a second imagined | Stop. That is guessing what the second needs. |
+
+The test that settles it: after generalising, does the **caller** have fewer
+things to know, or more? Fewer means the module got deeper. More means it got
+wider, and a wide shared helper costs every project that uses it.
 
 ### 3. Cross-check the kit
 
@@ -86,6 +112,14 @@ For each helper: its name, the verdict, the reason in one line, whether it
 carries a `Promotable:` marker, and — for candidates — whether a second caller
 now exists.
 
+**Two lists matter most**, and neither exists anywhere else:
+
+- **candidates carrying no marker** — the discovery gap, and the reason this
+  procedure exists
+- **marked helpers that are not actually candidates** — a marker claiming more
+  than the helper delivers, which sends the next reader looking for reuse that
+  is not there
+
 Report. Do not edit.
 
 ## What not to do
@@ -94,8 +128,11 @@ Report. Do not edit.
   caller is the trigger, and generalising from one example is guessing what the
   second needs.
 - **Do not mark something because it looks generic.** Apply the test in step 2.
-- **Do not rename a helper to make it promotable.** If it needs renaming to move,
-  step 2 already answered: it is domain.
+- **Do not stop at a domain-sounding name.** Renaming is part of a pure move.
+  What disqualifies a helper is domain knowledge in its behaviour, not in its
+  spelling.
+- **Do not widen a helper's signature to make it promotable.** That is a
+  redesign, and it needs its own justification and its own second caller.
 - **Do not flag the names every project is expected to define** — the contract
   roles and shared vocabulary. Those are roles, not duplication.
 
@@ -107,3 +144,5 @@ Report. Do not edit.
 | Something is promoted with one caller | The trigger was misread; a candidate is marked and left where it is |
 | A second caller exists and nothing was found | Step 4 was skipped, or searched for the name rather than the job |
 | A kit helper gets quietly widened | Step 3's caveat was ignored — that changes another project and is the owner's call |
+| A promoted helper grows a mode argument | Step 2a was skipped: two behaviours were forced into one function |
+| Only helpers from this change were examined | Step 1 was read as "the diff" instead of "every project package" |
