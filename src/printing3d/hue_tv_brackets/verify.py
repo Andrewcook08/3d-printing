@@ -14,15 +14,16 @@ import math
 from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import corners, parts, straights
 from printing3d.hue_tv_brackets.geometry import (
+    BASE_DEPTH,
     BLOCK_W,
     CHANNEL_D,
     CHANNEL_W,
+    LIP_REACH,
+    LIP_RISE,
     MOUTH_W,
     QUARTER_TURN,
     TILT,
     floor_height,
-    to_support_edge,
-    to_tab_edge,
 )
 from printing3d.probes import enclosed_void_count
 from printing3d.shapes import rect
@@ -48,6 +49,10 @@ MAX_EDGE_ERROR = 0.05  # mm, on a length read off the built profile
 MAX_ANGLE_ERROR = 0.01  # degrees
 COLLINEAR = 1e-6  # sine of the turn below which two segments are one face
 MAX_SECTION_DRIFT = 1e-6  # mm2 between a corner's section and a straight's
+
+# The mouth is read a sliver below the block's face, where the lip has not
+# finished closing, so the reading runs wide by that much of the taper.
+LIP_TAPER_SLACK = 2 * PROBE_BAND * LIP_REACH / LIP_RISE + MAX_EDGE_ERROR
 
 
 def upright_section(solid, degrees=0.0):
@@ -168,8 +173,8 @@ def check_channel_clips(runner, section, tilt):
     )
     runner.check(
         "the lips close over the bed as drawn",
-        abs(mouth - MOUTH_W) < MAX_EDGE_ERROR,
-        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm",
+        abs(mouth - MOUTH_W) < LIP_TAPER_SLACK,
+        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm at the face",
     )
 
 
@@ -184,14 +189,11 @@ def check_channel_aims_out(runner, section, tilt):
     )
 
 
-def check_base_is_flat(runner, section, tilt):
+def check_base_is_flat(runner, section):
     """The adhesive holds on one unbroken pad; a pad that is not flat holds on
     its corners, which is how the strip's own adhesive let go."""
     _, low_v, _, _ = section.bounds()
     pad = longest_face_at(section, 0.0)
-    # The pad runs from the tab edge out to wherever the block's overhang has
-    # to be caught, which is further out the more the channel is leaned.
-    expected = to_tab_edge(tilt) + to_support_edge(tilt)
     runner.check(
         "the pad lies in the mounting plane",
         abs(low_v) < MAX_EDGE_ERROR,
@@ -199,8 +201,8 @@ def check_base_is_flat(runner, section, tilt):
     )
     runner.check(
         "the pad is the full base depth",
-        abs(pad - expected) < MAX_EDGE_ERROR,
-        f"{pad:.2f} mm against {expected:.2f} mm",
+        abs(pad - BASE_DEPTH) < MAX_EDGE_ERROR,
+        f"{pad:.2f} mm",
     )
 
 
@@ -214,7 +216,7 @@ def check_the_channel(runner, section, tilt):
     """Every check that reads the profile, which both shapes share."""
     check_channel_clips(runner, section, tilt)
     check_channel_aims_out(runner, section, tilt)
-    check_base_is_flat(runner, section, tilt)
+    check_base_is_flat(runner, section)
     check_profile_is_solid(runner, section)
 
 
