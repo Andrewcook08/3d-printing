@@ -294,6 +294,12 @@ Full behavior: [docs/quality/testing.md](docs/quality/testing.md).
 
 ## Code style
 
+**Before writing or changing any code, load the `code-craftsmanship:clean-code`
+skill.** It owns naming, function size, error handling and test quality; the
+rules below are only what is specific to this repo. Reach for its siblings when
+the work matches them — `refactoring-patterns` when restructuring existing code,
+`software-design-philosophy` when deciding what a module should hide.
+
 - Line length 88, double quotes, enforced by `ruff format`. Don't hand-align
   trailing comments in columns — the formatter strips the alignment. Multi-line
   explanations go *above* the definition, not trailing after it.
