@@ -132,3 +132,40 @@ def test_two_parts_with_one_name_is_refused_rather_than_written_twice(
     monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
     with pytest.raises(ValueError, match="more than once"):
         build_project("widgets", [a_part("twin"), a_part("twin")])
+
+
+# ---------------------------------------------------------------------------
+# A solid that is not printable
+# ---------------------------------------------------------------------------
+
+
+def a_broken_part(name="broken-part"):
+    """Two cubes with a gap between them: watertight, but not one body.
+
+    A mount whose arm has come adrift from its plate looks exactly like this,
+    and a slicer will happily print the pieces separately.
+    """
+    near = Manifold.cube((10.0, 10.0, 10.0), False)
+    far = Manifold.cube((10.0, 10.0, 10.0), False).translate((100.0, 0.0, 0.0))
+    return Part(name=name, solid=near + far)
+
+
+def test_two_disjoint_bodies_are_not_a_printable_part():
+    assert not a_broken_part().is_sound
+
+
+def test_the_summary_says_so_rather_than_calling_it_watertight():
+    assert "CHECK GEOMETRY" in a_broken_part().summary()
+
+
+def test_building_an_unsound_part_reports_failure(monkeypatch, tmp_path):
+    """The file is still written -- you may want to look at it -- but the build
+    says it is not printable, which is what the command turns into an exit code."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [a_broken_part()]) is False
+    assert (output_dir("widgets") / "broken-part.stl").is_file()
+
+
+def test_one_unsound_part_condemns_the_whole_build(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [a_part("fine"), a_broken_part()]) is False

@@ -116,3 +116,41 @@ def test_the_installed_command_produces_what_the_library_produces(
 def test_the_installed_verify_command_reports_success(tmp_path):
     result = run_installed("verify", tmp_path)
     assert result.returncode == 0, result.stderr
+
+
+def test_the_build_command_exits_nonzero_when_a_part_is_not_printable(
+    monkeypatch, capsys
+):
+    """The exit code is the only thing an automated caller sees, and nothing
+    else exercises the path where a build reports a geometry problem."""
+    from printing3d.registry import Project
+
+    broken = Project(
+        name="broken",
+        summary="a project whose geometry does not hold together",
+        parts=lambda: iter([]),
+        build=lambda: False,
+        verify=lambda: True,
+        lock=PROJECTS[SOME_PROJECT].lock,
+        config=PROJECTS[SOME_PROJECT].config,
+    )
+    monkeypatch.setattr("printing3d.cli.discover", lambda: {"broken": broken})
+
+    assert build([]) == 1
+    assert "GEOMETRY PROBLEM" in capsys.readouterr().out
+
+
+def test_the_build_command_exits_zero_when_everything_is_sound(monkeypatch):
+    from printing3d.registry import Project
+
+    sound = Project(
+        name="sound",
+        summary="a project that builds cleanly",
+        parts=lambda: iter([]),
+        build=lambda: True,
+        verify=lambda: True,
+        lock=PROJECTS[SOME_PROJECT].lock,
+        config=PROJECTS[SOME_PROJECT].config,
+    )
+    monkeypatch.setattr("printing3d.cli.discover", lambda: {"sound": sound})
+    assert build([]) == 0

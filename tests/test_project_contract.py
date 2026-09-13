@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+import printing3d
 from printing3d import config
 from printing3d.parts import existing_stls, output_dir
 from printing3d.registry import Project, discover
@@ -40,6 +41,23 @@ def locked(project):
 def test_at_least_one_project_is_declared():
     """Guards every other test here from passing vacuously."""
     assert PROJECTS
+
+
+def test_every_package_holding_a_config_is_a_discovered_project():
+    """A project that stops declaring itself does not fail -- it vanishes.
+
+    Every test here is parameterised over what discovery found, so a project
+    that drops out takes its own coverage with it: its lock goes unchecked, its
+    output unverified, its geometry unbuilt, and the suite still passes with
+    fewer tests than before. Asserting the set is non-empty does not catch that;
+    asserting it is complete does.
+    """
+    kit = Path(printing3d.__file__).parent
+    configured = {path.parent.name for path in kit.glob("*/parts.toml")}
+    discovered = {project.config.parent.name for project in PROJECTS.values()}
+    assert discovered == configured, (
+        f"packages holding a config but not discovered: {configured - discovered}"
+    )
 
 
 def test_the_project_declares_everything_the_repo_needs(project):
@@ -139,6 +157,29 @@ def test_building_writes_exactly_the_declared_parts(
     assert project.build()
     written = {path.name for path in (tmp_path / project.name).iterdir()}
     assert written == {part.filename for part in shipped}
+
+
+def test_verification_measures_every_part_it_was_given(
+    project, shipped, capsys, monkeypatch, tmp_path
+):
+    """Returning True is not the same as having looked.
+
+    A project whose checks iterate an empty list reports success, and the only
+    other assertion about verification is that it returned True -- so the gate
+    before printing can be entirely disconnected and nothing notices.
+
+    Every part has to appear in what was reported. Counting checks alone is not
+    enough: a project with more straights than corners passes a count while
+    never having looked at a corner.
+    """
+    monkeypatch.setenv("PRINTING3D_OUTPUT", str(tmp_path))
+    assert project.verify()
+    reported = capsys.readouterr().out
+    unmeasured = [part.name for part in shipped if part.name not in reported]
+    assert not unmeasured, f"{project.name} never measured {unmeasured}"
+    assert reported.count("[PASS]") >= len(shipped), (
+        f"{project.name} ran {reported.count('[PASS]')} checks for {len(shipped)} parts"
+    )
 
 
 def test_verification_passes(project, monkeypatch, tmp_path):
