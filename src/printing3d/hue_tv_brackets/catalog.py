@@ -13,12 +13,12 @@ See README.md for the design.
 """
 
 import math
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
-from pathlib import Path
 
 from printing3d import config
-from printing3d.hue_tv_brackets import LOCKED, NAME  # noqa: F401  re-exported
+from printing3d.hue_tv_brackets import CONFIG, LOCKED, NAME  # noqa: F401  re-exported
 from printing3d.hue_tv_brackets.geometry import (
     QUARTER_TURN,
     Design,
@@ -27,9 +27,7 @@ from printing3d.hue_tv_brackets.geometry import (
 )
 from printing3d.parts import Part, build_project
 
-HERE = Path(__file__).parent
-CONFIG = HERE / "parts.toml"
-TRIALS = HERE / "trials.toml"
+TRIALS = CONFIG.parent / "trials.toml"
 
 MM2_PER_CM2 = 100.0
 
@@ -70,16 +68,21 @@ class Shipping(Catalogue):
 
 
 @dataclass(frozen=True)
-class Bracket(Part):
+class Bracket(Part, ABC):
     """A printable bracket, carrying the design it was built from so that
     verify.py can measure the solid against its own intent."""
 
     design: Design
     note: str
 
+    @abstractmethod
     def footprint_line(self) -> str:
-        """One line about what this bracket lands on the TV, for build output."""
-        raise NotImplementedError
+        """One line about what this bracket lands on the TV, for build output.
+
+        Abstract rather than raising: a shape that forgets it should fail when
+        it is constructed, not partway through a build with files already on
+        disk.
+        """
 
     def annotated(self, measurements: str) -> str:
         """A build-output line: what was measured, then why the part exists."""

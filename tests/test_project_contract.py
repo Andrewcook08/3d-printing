@@ -8,8 +8,12 @@ A project's own tests assert what is true of *that* project's shape. These
 assert what is true of *every* project.
 """
 
+import tomllib
+from pathlib import Path
+
 import pytest
 
+from printing3d import config
 from printing3d.parts import existing_stls, output_dir
 from printing3d.registry import Project, discover
 from printing3d.stl import write_stl
@@ -83,6 +87,38 @@ def test_the_committed_output_matches_the_lock(project, locked):
         path = output_dir(project.name) / filename
         assert path.exists(), f"{path} is missing; run `build`"
         assert sha256_of(path) == digest
+
+
+def test_the_project_actually_reads_the_config_it_declares(project, monkeypatch):
+    """Shipping a config file and ignoring it would pass every other check here.
+
+    A project could declare a parts.toml, hardcode every dimension in its code,
+    and be discovered, built, locked and verified exactly as if it had not --
+    which is the one thing the config framework is supposed to prevent. So the
+    files a project opens while producing its parts are recorded, and the one
+    it points at has to be among them.
+
+    Patched at the single place every read funnels through, so that it catches
+    a project however it chose to import the reader.
+    """
+    opened = []
+    original = config._parsed
+
+    def recording(path):
+        opened.append(Path(path))
+        return original(path)
+
+    monkeypatch.setattr(config, "_parsed", recording)
+    list(project.parts())
+    assert project.config in opened, (
+        f"{project.name} never opened {project.config}; its numbers are somewhere else"
+    )
+
+
+def test_the_declared_config_has_something_in_it(project):
+    """An empty file would satisfy the check above without saying anything."""
+    with project.config.open("rb") as handle:
+        assert tomllib.load(handle), f"{project.config} is empty"
 
 
 def test_the_output_holds_nothing_the_project_no_longer_declares(project, shipped):

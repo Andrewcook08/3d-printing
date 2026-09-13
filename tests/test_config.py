@@ -189,3 +189,27 @@ def test_a_field_asking_for_something_config_cannot_express_says_so(tmp_path):
     with pytest.raises(ConfigError, match="not a config shape") as refused:
         read(written(tmp_path, "[holes]\na = 1.0\n"), into=AsksForADict)
     assert "holes" in str(refused.value)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Nested:
+    channel: Channel
+
+
+def test_a_section_that_is_not_a_table_is_refused(tmp_path):
+    with pytest.raises(ConfigError, match="should be a table"):
+        read(written(tmp_path, "channel = 15.0\n"), into=Nested)
+
+
+def test_a_list_that_is_not_a_list_is_refused(tmp_path):
+    with pytest.raises(ConfigError, match="should be a list"):
+        read(written(tmp_path, "[channel]\nwidth = 1.0\n[corner]\n"), into=Design)
+
+
+def test_an_error_names_enough_of_the_path_to_tell_two_projects_apart(tmp_path):
+    project = tmp_path / "some_project"
+    project.mkdir()
+    path = project / "parts.toml"
+    path.write_text("[channel]\nbogus = 1.0\n")
+    with pytest.raises(ConfigError, match="some_project/parts.toml"):
+        read(path, into=Design)

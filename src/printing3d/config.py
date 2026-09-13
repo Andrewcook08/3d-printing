@@ -35,19 +35,25 @@ class ConfigError(ValueError):
     """A config file that cannot be trusted to build what it claims."""
 
 
-def read(path: Path, into: type):
+def read[Shape](path: Path, into: type[Shape]) -> Shape:
     """The config file at `path`, as an instance of the dataclass `into`."""
-    return _built(into, _parsed(path), where=path.name)
+    return _built(into, _parsed(path), where=_where(path))
 
 
-def read_if_present(path: Path, into: type):
+def read_if_present[Shape](path: Path, into: type[Shape]) -> Shape:
     """The same, or an empty `into` when the file is absent.
 
     For the files a project may or may not have -- a set of trial parts being
     tested today and gone tomorrow. Absent and empty mean the same thing, so
     deleting the file is how you retire everything in it.
     """
-    return _built(into, _parsed(path) if path.is_file() else {}, where=path.name)
+    return _built(into, _parsed(path) if path.is_file() else {}, where=_where(path))
+
+
+def _where(path):
+    """How a file is named in an error: enough of the path to tell two
+    projects' parts.toml apart, without the reader's whole machine in it."""
+    return str(Path(*path.parts[-2:]))
 
 
 def _parsed(path):

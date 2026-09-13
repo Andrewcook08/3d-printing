@@ -93,11 +93,20 @@ def build_project[P: Part](
     `announce` lets a project print its own line about a part -- a derived
     dimension worth seeing at build time -- just above the standard summary.
     """
+    # Everything is built before anything is written, so an entry the project
+    # cannot make sense of fails with the output directory untouched rather
+    # than half-populated.
+    parts = list(parts)
     destination = output_dir(project)
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True
     written = set()
     for part in parts:
+        if part.filename in written:
+            raise ValueError(
+                f"{project} declares {part.name!r} more than once; the second "
+                f"would overwrite the first and vanish without a trace"
+            )
         if announce is not None:
             print(announce(part))
         write_stl(part.solid, destination / part.filename, part.name)

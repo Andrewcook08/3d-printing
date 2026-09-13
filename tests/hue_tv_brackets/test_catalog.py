@@ -121,9 +121,15 @@ def test_a_bracket_without_a_note_says_nothing_extra(design):
 # ---------------------------------------------------------------------------
 
 
-def test_the_shipped_configuration_validates():
-    assert shipping().design is not None
+def test_the_shipped_design_describes_a_channel_that_clips(design):
+    """Read from the file rather than asserted about the code: a mouth wider
+    than its bed would be a trough, and the strip would lift straight out."""
+    assert design.mouth_width < design.channel_width
 
 
-def test_the_trials_file_is_optional_and_validates_when_present():
-    assert isinstance(trials().corner, list)
+def test_every_trial_corner_is_wider_than_the_part_reaching_into_it(design):
+    """A radius below the floor cannot be built at all. Checking the file says
+    so before a print does."""
+    for entry in trials().corner:
+        leaning = design if entry.tilt is None else replace(design, tilt=entry.tilt)
+        assert entry.radius > leaning.min_corner_radius, entry.name

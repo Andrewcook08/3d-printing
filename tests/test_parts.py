@@ -1,5 +1,6 @@
 """Where parts come from and where their STLs land."""
 
+import pytest
 from manifold3d import Manifold
 
 from printing3d.parts import (
@@ -121,3 +122,13 @@ def test_the_archive_is_announced_so_a_move_is_never_silent(
     build_project("widgets", [a_part("kept")])
 
     assert "archived retired.stl" in capsys.readouterr().out
+
+
+def test_two_parts_with_one_name_is_refused_rather_than_written_twice(
+    monkeypatch, tmp_path
+):
+    """The second would overwrite the first, leaving one file where the project
+    declared two and no sign that anything was lost."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    with pytest.raises(ValueError, match="more than once"):
+        build_project("widgets", [a_part("twin"), a_part("twin")])

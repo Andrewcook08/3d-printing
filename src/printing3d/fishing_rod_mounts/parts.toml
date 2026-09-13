@@ -5,7 +5,7 @@
 # compute it from these values, it does not belong in this file, and writing it
 # down anyway will be refused when the file is read.
 
-version = "-v3"
+version = "v3"
 
 # ---------------------------------------------------------------------------
 # The mount itself

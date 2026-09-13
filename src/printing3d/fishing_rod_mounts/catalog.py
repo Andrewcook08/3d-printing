@@ -23,10 +23,13 @@ only says how one becomes the other. See README.md for printing and hanging.
 
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from printing3d import config
-from printing3d.fishing_rod_mounts import LOCKED, NAME  # noqa: F401  re-exported
+from printing3d.fishing_rod_mounts import (  # noqa: F401  re-exported
+    CONFIG,
+    LOCKED,
+    NAME,
+)
 from printing3d.fishing_rod_mounts.geometry import (
     Design,
     MountSpec,
@@ -34,8 +37,6 @@ from printing3d.fishing_rod_mounts.geometry import (
     support_named,
 )
 from printing3d.parts import Part, build_project
-
-CONFIG = Path(__file__).parent / "parts.toml"
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -106,7 +107,7 @@ def parts(shipping: Catalogue | None = None) -> Iterator[MountPart]:
                 design=shipping.mount,
             )
             yield MountPart(
-                name=f"{rod.name}-{style.kind}-{spec.rod_dia:.2f}mm{shipping.version}",
+                name=f"{rod.name}-{style.kind}-{spec.rod_dia:.2f}mm-{shipping.version}",
                 solid=build(spec),
                 rod=rod.name,
                 kind=style.kind,

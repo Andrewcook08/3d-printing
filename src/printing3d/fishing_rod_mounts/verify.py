@@ -48,7 +48,7 @@ def rod_at(spec, du=0.0, dv=0.0):
     return (
         m.CrossSection.circle(spec.rod_dia / 2.0, 256)
         .translate((spec.design.axis_from_wall + du, spec.design.axis_height + dv))
-        .extrude(spec.width)
+        .extrude(spec.design.slab_width)
     )
 
 
@@ -60,7 +60,7 @@ def lift_sweep(spec):
     chute = m.CrossSection.square((2 * radius, LIFT_HEIGHT), False).translate(
         (axis_u - radius, axis_v)
     )
-    return (disc + chute).extrude(spec.width)
+    return (disc + chute).extrude(spec.design.slab_width)
 
 
 def seat_height(solid, spec):
@@ -70,7 +70,10 @@ def seat_height(solid, spec):
     since the tip mount's underside is open air below the part.
     """
     floor = surface_height_below(
-        solid, spec.design.axis_from_wall, spec.width / 2.0, spec.design.axis_height
+        solid,
+        spec.design.axis_from_wall,
+        spec.design.slab_width / 2.0,
+        spec.design.axis_height,
     )
     return floor + spec.rod_dia / 2.0
 
@@ -94,13 +97,13 @@ def check_part(runner, part):
     spec = part.spec
     runner.section(
         f"{part.name}  (rod {spec.rod_dia} mm, "
-        f"{len(spec.screw_heights)} screw"
-        f"{'s' if len(spec.screw_heights) > 1 else ''}, "
-        f"{spec.width:.0f} mm wide)"
+        f"{len(spec.design.screw.heights)} screw"
+        f"{'s' if len(spec.design.screw.heights) > 1 else ''}, "
+        f"{spec.design.slab_width:.0f} mm wide)"
     )
     check_rod_seats_and_releases(runner, part)
     check_rod_is_trapped_sideways(runner, part)
-    for height in spec.screw_heights:
+    for height in spec.design.screw.heights:
         check_screw(runner, part, height)
     check_solid_is_printable(runner, part)
     check_derived_angles(runner, part)
@@ -137,7 +140,7 @@ def check_rod_is_trapped_sideways(runner, part):
 
 def check_screw(runner, part, height):
     spec = part.spec
-    mid_width = spec.width / 2.0
+    mid_width = spec.design.slab_width / 2.0
     plate_thickness = spec.design.plate_thickness
     bore_is_open = not has_material_at(
         part.solid, plate_thickness / 2.0, height, mid_width, size=0.4
@@ -158,10 +161,10 @@ def check_screw(runner, part, height):
         f"screw {height:.1f}: clear of the cradle, on flat plate",
         height > spec.design.axis_height + spec.lip_rise + csink_r,
     )
-    headroom = spec.plate_h - height - csink_r
+    headroom = spec.design.plate_height - height - csink_r
     runner.check(
         f"screw {height:.1f}: fits under the plate top",
-        height + csink_r + PLATE_ABOVE_SCREW < spec.plate_h,
+        height + csink_r + PLATE_ABOVE_SCREW < spec.design.plate_height,
         f"{headroom:.1f} mm of plate above it",
     )
 

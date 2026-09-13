@@ -196,8 +196,8 @@ class BoreProbe:
 
     def __init__(self, spec):
         self.solid = build(spec)
-        self.height = spec.screw_heights[0]
-        self.mid_width = spec.width / 2.0
+        self.height = spec.design.screw.heights[0]
+        self.mid_width = spec.design.slab_width / 2.0
 
     def material_at(self, u, off_axis=0.0, size=0.1):
         cube = Manifold.cube((size, size, size), True).translate(
@@ -246,7 +246,7 @@ def test_the_countersink_tapers_at_the_screw_heads_own_angle(bore):
 def test_the_cut_is_centered_on_the_screw_and_across_the_slab():
     spec = tip_spec()
     _lo_u, lo_v, lo_w, _hi_u, hi_v, hi_w = screw_cut(
-        spec.screw_heights[0], spec.width, DESIGN
+        spec.design.screw.heights[0], spec.design.slab_width, DESIGN
     ).bounding_box()
-    assert (lo_w + hi_w) / 2 == pytest.approx(spec.width / 2)
-    assert (lo_v + hi_v) / 2 == pytest.approx(spec.screw_heights[0])
+    assert (lo_w + hi_w) / 2 == pytest.approx(spec.design.slab_width / 2)
+    assert (lo_v + hi_v) / 2 == pytest.approx(spec.design.screw.heights[0])

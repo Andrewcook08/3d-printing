@@ -1,16 +1,17 @@
 """The parametric solid model of one wall mount.
 
-Shape follows stl/wall_hook_for_3mm_screw(2).stl: a thin backplate, a curved
-rib that wraps the load, and a triangular gusset -- open sides rather than a
-solid block. Rebuilt parametrically rather than scaled, because scaling the
-reference mesh to the 5.80 mm blank (0.22x) would shrink its 3 mm screw hole
-to 0.66 mm and the backplate to 11 x 3.3 mm.
+Shape follows reference/wall_hook_for_3mm_screw(2).stl: a thin backplate, a
+curved rib that wraps the load, and a triangular gusset -- open sides rather
+than a solid block. Rebuilt parametrically rather than scaled, because scaling
+the reference mesh to the 5.80 mm blank (0.22x) would shrink its 3 mm screw
+hole to 0.66 mm and the backplate to 11 x 3.3 mm.
 
 A mount is a 2D profile extruded sideways, with the screw bores drilled
-afterwards. Everything is measured from two shared anchors fixing where
-the rod's centerline sits; every other dimension follows from the rod's
-diameter. Those anchors, and every other measured value, arrive from the
-project's config file rather than being written here. That is what lets a butt mount and a tip mount built for
+afterwards. Everything is measured from two shared anchors fixing where the
+rod's centerline sits, and it is those anchors agreeing across a pair that lets
+a butt mount and a tip mount hang one rod level despite gripping very different
+diameters. Every measured value arrives from the project's config file; what is
+here is what follows from them. That is what lets a butt mount and a tip mount built for
 very different diameters hang the same rod level and parallel to the wall.
 """
 
@@ -264,18 +265,6 @@ class MountSpec:
     design: Design
 
     @property
-    def width(self):
-        return self.design.slab_width
-
-    @property
-    def plate_h(self):
-        return self.design.plate_height
-
-    @property
-    def screw_heights(self):
-        return self.design.screw.heights
-
-    @property
     def cradle(self):
         return Cradle(self.rod_dia, self.design)
 
@@ -288,11 +277,11 @@ class MountSpec:
 def profile(spec):
     """The 2D cross-section that gets extruded into a mount."""
     cradle, design = spec.cradle, spec.design
-    part = rect(0.0, 0.0, design.plate_thickness, spec.plate_h)
+    part = rect(0.0, 0.0, design.plate_thickness, spec.design.plate_height)
     part = part + _crescent(cradle, spec.lip_rise)
     for piece in spec.support.pieces(cradle):
         part = part + piece
-    part = part - _rod_space_and_lift_channel(cradle, spec.plate_h)
+    part = part - _rod_space_and_lift_channel(cradle, spec.design.plate_height)
     part = part - _lip_lead_in(cradle, spec.lip_rise)
     return rounded_convex_corners(without_enclosed_voids(part), design.fillet)
 
@@ -358,9 +347,9 @@ def _lip_lead_in(cradle, lip_rise):
 
 def build(spec):
     """The finished mount as a solid, ready to export."""
-    solid = profile(spec).extrude(spec.width)
-    for height in spec.screw_heights:
-        solid = solid - screw_cut(height, spec.width, spec.design)
+    solid = profile(spec).extrude(spec.design.slab_width)
+    for height in spec.design.screw.heights:
+        solid = solid - screw_cut(height, spec.design.slab_width, spec.design)
     return solid
 
 
