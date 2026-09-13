@@ -29,7 +29,7 @@ build <project>           # one project
 | Input | The declared parts of one or more projects |
 | Output | One STL per part, under the project's output directory |
 | Also written | A report line per part, on standard output |
-| Exit code | `0` if every part is sound, `1` otherwise |
+| Exit code | `0` if every part is sound, `1` if one is not, `2` if the arguments were wrong |
 
 Naming a project that does not exist is rejected, with the valid names listed.
 

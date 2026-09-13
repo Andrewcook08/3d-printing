@@ -2,7 +2,8 @@
 
 Verification measures the finished geometry rather than the parameters it came
 from, so a mistake anywhere in between still shows up. These are the
-measurement primitives that makes possible. Nothing here knows what a part is.
+measurement primitives that makes that possible. Nothing here knows what a
+part is.
 """
 
 import math

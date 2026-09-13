@@ -66,9 +66,11 @@ same cradle-center height. So:
    the front face so the heads finish flush.
 
 With one screw you have to hold each mount level while you tighten it. Once
-tight it stays put: the hanging rod applies roughly 96 N·mm of twist about the
-screw, and friction between the plate and the wall under a tightened screw
-resists that by more than an order of magnitude.
+tight it stays put. An estimated 96 N·mm of twist acts about the screw — a 1 kg
+rod through the ~10 mm from screw to cradle — and friction between the plate and
+the wall under a tightened screw resists that by more than an order of
+magnitude. Both figures are estimates rather than measurements; the margin is
+wide enough that the estimate does not have to be good.
 
 The back face is a flat unbroken pad, so double-sided tape works for a trial
 hang before you commit to drilling. Clean the wall with alcohol first.
@@ -136,8 +138,8 @@ test boilerplate of its own — see
 
 ## How it works
 
-Parameterized on the **rod's centerline**, not on the standoff. the centerline distance in `parts.toml`
-puts the centerline 18 mm from the wall in *both* mounts; each cradle's depth
+Parameterized on the **rod's centerline**, not on the standoff. `parts.toml`
+puts that centerline 18 mm from the wall in *both* mounts; each cradle's depth
 is whatever it takes to get there.
 
 | | butt | tip |
@@ -164,5 +166,6 @@ edge. Screws below the load would be in compression and do nothing.
 **Projection is set by the rod, not the mount.** 35.4 mm at the butt is a
 26.15 mm grip plus wall clearance plus a 4 mm retaining rib — there is very
 little fat left to remove. What the rib-and-gusset structure buys is visual
-lightness and material: 32 % less than a solid cradle on the butt mount, 50 %
-less on the tip.
+lightness and material — roughly a third less than a solid cradle on the butt
+mount and about half on the tip, comparing the built volumes against the
+bounding crescent.

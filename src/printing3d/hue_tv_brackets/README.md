@@ -11,11 +11,13 @@ Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
-> **Note.** Everything below about **corners** is out of date, including the
-> print list: the 45° ladder it recommends was printed and every rung bound.
-> Those three parts have moved to `trials.toml`, and the leaned trials that
-> replaced them are not described here at all. The straight runs and the channel
-> are unaffected and still current. This README is rewritten once the corner's
+> **Note.** The **print list below is incomplete, and its corners are wrong.**
+> The 45° ladder it recommends was printed and every rung bound; those three
+> parts have moved to `trials.toml`, along with eleven leaned corners and two
+> one-inch straights that replaced them, none of which are described here.
+> `uv run build` is the accurate list of what exists. What is still current is
+> the **channel** — the clip, its dimensions, and why it leans — since nothing
+> the printing disproved touched it. This README is rewritten once the corner's
 > design is settled.
 
 ## The problem these solve

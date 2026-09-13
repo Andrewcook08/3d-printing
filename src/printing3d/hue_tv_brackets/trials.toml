@@ -13,17 +13,17 @@
 [[corner]]
 name = "corner-r30-v1"
 radius = 30.0
-note = "16.5% edge strain -- bound"
+note = "17.0% edge strain -- bound"
 
 [[corner]]
 name = "corner-r40-v1"
 radius = 40.0
-note = "12.4% edge strain -- bound"
+note = "12.7% edge strain -- bound"
 
 [[corner]]
 name = "corner-r55-v1"
 radius = 55.0
-note = "9.0% edge strain -- bound a third of the way in"
+note = "9.3% edge strain -- bound a third of the way in"
 
 # ---------------------------------------------------------------------------
 # Rolling the channel up cuts the in-plane demand, since it falls with the
