@@ -124,6 +124,19 @@ def arm_apex(tilt):
     return leaned(-BLOCK_W / 2, -FLOOR_THK, tilt)
 
 
+def to_support_edge(tilt):
+    """Where the pad must reach outboard to keep the block self-supporting.
+
+    The block's outermost corner hangs over the pad. A 45-degree line dropped
+    from it is the steepest underside a printer will bridge unaided, so that is
+    where the material below it has to start. At the 45-degree lean the landing
+    falls exactly on the block's own resting corner -- which is why nothing
+    overhangs there, and why this adds nothing at that lean.
+    """
+    top = leaned(BLOCK_W / 2, CHANNEL_D, tilt)
+    return max(to_base_edge(tilt), top.u - top.v)
+
+
 def min_corner_radius(tilt):
     """Below this the tab edge reaches the revolve axis and the wedge folds
     through itself: a turn cannot be made by a part reaching past its centre."""
@@ -149,6 +162,12 @@ def profile(tilt=TILT):
     part = _plate(tilt)
     part = part + _arm(tilt)
     part = part + _channel_block(tilt)
+    # Nothing to catch at the shipped lean, where the block lands on its own
+    # pad. Skipped rather than unioned as an empty shape, which would reorder
+    # the outline's vertices to no purpose.
+    fillet = _outboard_fillet(tilt)
+    if not fillet.is_empty():
+        part = part + fillet
     return part
 
 
@@ -165,6 +184,20 @@ def _arm(tilt):
     """
     apex = arm_apex(tilt)
     return polygon([(to_base_edge(tilt), 0.0), apex, (apex.u, 0.0)])
+
+
+def _outboard_fillet(tilt):
+    """Material under the block's overhanging corner, at a printable 45 degrees.
+
+    Empty at the 45-degree lean, where the block already lands on its own pad.
+    """
+    return polygon(
+        [
+            (to_base_edge(tilt), 0.0),
+            (to_support_edge(tilt), 0.0),
+            leaned(BLOCK_W / 2, CHANNEL_D, tilt),
+        ]
+    )
 
 
 def _channel_block(tilt):
