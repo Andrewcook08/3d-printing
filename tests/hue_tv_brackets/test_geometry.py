@@ -177,9 +177,9 @@ def test_a_corner_just_wider_than_the_profile_is_built():
 
 # Pinned so a change to the outline names itself here, before the golden master
 # reports it as a difference in bytes.
-PINNED_VERTICES = 13
-PINNED_AREA = 150.544156
-PINNED_DIGEST = "5724aa42ecc9a950"
+PINNED_VERTICES = 15
+PINNED_AREA = 153.544156
+PINNED_DIGEST = "d558728e203fd9c4"
 
 
 def test_the_shipped_profile_is_unchanged():

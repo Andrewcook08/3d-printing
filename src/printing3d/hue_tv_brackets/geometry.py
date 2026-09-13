@@ -28,11 +28,17 @@ CHANNEL_D = 4.0
 WALL = 1.5  # slot wall, either side
 FLOOR_THK = 2.0  # material under the slot
 
-# Each lip closes LIP_REACH over the slot while climbing LIP_RISE, leaving a
-# mouth narrower than the bed. That neck is the clip: the strip flexes past it
-# and is then held mechanically.
+# Each lip is a square step LIP_HEIGHT tall, closing LIP_REACH over the slot
+# and leaving a mouth narrower than the bed. That neck is the clip: the strip
+# flexes past it and is then held mechanically.
+#
+# Square rather than chamfered, and that matters for printing. A chamfered
+# underside leans back over the slot, and once the channel is leaned too it
+# ends up near horizontal -- 8 degrees off the bed at the angle we ship, which
+# droops. A step's underside lies across the channel instead, so it comes out
+# at the lean itself and prints unaided.
 LIP_REACH = 1.5
-LIP_RISE = 2.0
+LIP_HEIGHT = 2.0
 
 MOUTH_W = CHANNEL_W - 2 * LIP_REACH
 BLOCK_W = CHANNEL_W + 2 * WALL
@@ -202,17 +208,17 @@ def _outboard_fillet(tilt):
 
 def _channel_block(tilt):
     """The slot and its two lips, described square and then leaned."""
-    lip_shoulder = CHANNEL_D - LIP_RISE
+    shelf = CHANNEL_D - LIP_HEIGHT
     slot = polygon(
         [
             (-CHANNEL_W / 2, 0.0),
             (CHANNEL_W / 2, 0.0),
-            (CHANNEL_W / 2, lip_shoulder),
-            (MOUTH_W / 2, CHANNEL_D),
+            (CHANNEL_W / 2, shelf),
+            (MOUTH_W / 2, shelf),
             (MOUTH_W / 2, CHANNEL_D + SLOT_OVERSHOOT),
             (-MOUTH_W / 2, CHANNEL_D + SLOT_OVERSHOOT),
-            (-MOUTH_W / 2, CHANNEL_D),
-            (-CHANNEL_W / 2, lip_shoulder),
+            (-MOUTH_W / 2, shelf),
+            (-CHANNEL_W / 2, shelf),
         ]
     )
     block = rect(-BLOCK_W / 2, -FLOOR_THK, BLOCK_W / 2, CHANNEL_D) - slot

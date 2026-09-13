@@ -17,8 +17,6 @@ from printing3d.hue_tv_brackets.geometry import (
     BLOCK_W,
     CHANNEL_D,
     CHANNEL_W,
-    LIP_REACH,
-    LIP_RISE,
     MOUTH_W,
     QUARTER_TURN,
     TILT,
@@ -50,10 +48,6 @@ MAX_EDGE_ERROR = 0.05  # mm, on a length read off the built profile
 MAX_ANGLE_ERROR = 0.01  # degrees
 COLLINEAR = 1e-6  # sine of the turn below which two segments are one face
 MAX_SECTION_DRIFT = 1e-6  # mm2 between a corner's section and a straight's
-
-# The mouth is read a sliver below the block's face, where the lip has not
-# finished closing, so the reading runs wide by that much of the taper.
-LIP_TAPER_SLACK = 2 * PROBE_BAND * LIP_REACH / LIP_RISE + MAX_EDGE_ERROR
 
 
 def upright_section(solid, degrees=0.0):
@@ -174,8 +168,8 @@ def check_channel_clips(runner, section, tilt):
     )
     runner.check(
         "the lips close over the bed as drawn",
-        abs(mouth - MOUTH_W) < LIP_TAPER_SLACK,
-        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm at the face",
+        abs(mouth - MOUTH_W) < MAX_EDGE_ERROR,
+        f"{mouth:.3f} mm against {MOUTH_W:.3f} mm",
     )
 
 
