@@ -52,10 +52,16 @@ inherited.
 ## How shared code grows
 
 A helper starts inside the project that needs it. When a second project needs
-the same thing, it moves into the shared kit unchanged. Only utilities with no
+the same thing, it moves into the shared kit. Only utilities with no
 subject-matter knowledge are eligible — anything shaped around what a
 particular project makes stays with that project, because generalising from a
 single example means guessing what the second one needs.
+
+The move never changes what a helper computes; the hash lock is what proves it.
+A helper may shed dependencies on the way — asking for the two values it needs
+rather than the object holding them — since that changes nothing it produces.
+What it may not do is grow a way to ask for something different, because every
+project sharing it then has more to know.
 
 ## How it fails
 

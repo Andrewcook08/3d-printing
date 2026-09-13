@@ -216,8 +216,26 @@ Behavior: [docs/build/project-contract.md](docs/build/project-contract.md).
 ## Growing the shared kit
 
 A helper starts **in the project that needs it**. When a *second* project needs
-the same thing, promote it into the kit — a pure move, behavior unchanged, docs
-untouched.
+the same thing, it moves into the kit.
+
+**What a promotion may and may not change:**
+
+- **Behaviour: never.** The first project must get the same numbers out
+  afterwards, and the hash lock is what proves it rather than your say-so.
+- **What it depends on: narrow it freely.** Swapping a domain object for the two
+  plain values it was being mined for is the *canonical* promotion, not a
+  redesign. A rename is part of it too — a name is the cheapest thing about a
+  helper.
+- **What a caller must know: never grow it.** An argument that selects between
+  behaviours means two functions, not one. A wide shared helper costs every
+  project that touches it.
+
+**Decouple first, move second.** If a helper has to stop depending on a
+project's types before it can be shared, that is its own behaviour-preserving
+commit, justified on its own terms — pure geometry has no business knowing what
+a design is, whether it has one caller or ten. Then the move really is pure.
+Tangling the two is what makes a promotion unreviewable, because the lock can no
+longer tell you which of the changes moved the bytes.
 
 - Only **domain-free** utilities are eligible. Anything shaped around what a
   project makes stays with that project; generalising from one example is
@@ -361,11 +379,29 @@ the work matches them — `refactoring-patterns` when restructuring existing cod
 the point — each is given the skills it needs, this file, and the existing
 projects as the house style, and each **reports findings rather than editing**.
 
+**When: once, after the gates already pass** — lint, types, tests, verification,
+and the locks. Not before. A reviewer reading a tree with failing tests spends
+its findings on what you already know. Launch all three **in parallel**; they are
+independent enough, and three sequential waits is only slower.
+
 | Review | Rubric | Looking for |
 |---|---|---|
 | The code | `code-craftsmanship:clean-code`, plus `software-design-philosophy` and `refactoring-patterns` where the work restructures | Naming, function size, duplication, error handling, tests that cannot fail, anything over-built for the projects that exist |
 | The documentation | the `maintaining-docs` skill | Every claim traced to its source, every reference live, the framework followed, the rename test applied to each doc |
 | Promotions | the `finding-promotions` skill | A helper that belongs in the shared kit, enumerated rather than remembered |
+
+Each runs only when its precondition is met — and the documentation one is
+broader than it looks:
+
+| Review | Runs when | Reads |
+|---|---|---|
+| The code | the change touched code | the change |
+| The documentation | the change touched a doc **or changed behaviour a doc describes** | the change, and any doc describing what moved |
+| Promotions | the change added or altered a helper, **or added or reshaped a project** | the whole repo — the second caller may be old code nobody touched |
+
+"Did I edit a doc" is the wrong question. A code change with no doc edit
+falsifies docs regularly: make a build construct everything before writing, and
+a guarantee about when failures surface goes stale without the doc being opened.
 
 The documentation one is not covered by the documentation tests. Those check
 that references resolve; whether a claim is still *true* is a question only a
@@ -380,6 +416,14 @@ acting on it, and say which ones you are rejecting and why.
 Three things this catches often enough to expect: a fix that would change a
 hash-locked STL; a finding whose repair turns up something more interesting than
 the finding did; and a finding already fixed since the reviewer read the tree.
+
+**Each review reads a snapshot, and acting on one makes the others stale.** That
+is not hypothetical — it has happened three times in one sitting: a review
+reporting assertions already replaced, another noticing a file change underneath
+it mid-audit, a third flagging a doc claim a different fix had already made true.
+So: act on all three, re-run the gates, and if you substantially reworked an area
+another review covered, **re-run that one**. Its verdict was about code that no
+longer exists.
 
 ## Don't
 

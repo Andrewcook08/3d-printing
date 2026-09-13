@@ -70,22 +70,35 @@ The last question is the real test, and it is about the *caller*, not the code.
 "A future project might want this" is not a yes. "A project making a birdhouse
 could call this today and it would do the right thing" is.
 
-### 2a. When promotion would need a change
+### 2a. When the behaviour is general but the signature is not
 
-CLAUDE.md requires a promotion to be a **pure move, behaviour unchanged**. A
-rename is part of that. A signature change is not — that is a redesign wearing a
-promotion's clothes, and it is where a shared helper starts growing flags.
+A promotion may never change **behaviour**. It may freely narrow what a helper
+**depends on**. Those are different things, and running them together is what
+blocks the most valuable promotions there are.
+
+A function computing geometry from two numbers, handed a whole design object to
+mine those two numbers out of, is general behaviour behind a parochial
+signature. It is not "unpromotable" — it is **over-coupled, today, with one
+caller**, and that is a finding on its own terms whether or not a second project
+ever appears. Pure geometry has no business knowing what a design is.
+
+**So report it as coupling, not as a failed promotion.** Decoupling is its own
+behaviour-preserving commit, justified by separation of concerns rather than by
+reuse; the move then waits for a second caller as always. Tangling the two makes
+the promotion unreviewable, because the lock can no longer say which change
+moved the bytes.
 
 | Situation | What it is |
 |---|---|
-| Two callers want the same behaviour on different types, and the function does the obvious thing for each | Promote. Widening the annotation is not a behaviour change. |
-| Two callers want *different* behaviour | Two functions. One with a mode argument is shallower than the two it replaced. |
-| The second caller has to pass something saying which kind it is | Stop. A flag argument means the function is doing two jobs. |
-| One caller today, and a second imagined | Stop. That is guessing what the second needs. |
+| Two callers want the same behaviour on different types | **Promote.** Widening an annotation changes no behaviour. |
+| It depends on more than it needs | **Report the coupling.** Decouple first as its own commit; move it when a second caller exists. |
+| Two callers want *different* behaviour | **Two functions.** One with a mode argument is shallower than the two it replaced. |
+| The second caller must pass something saying which kind it is | **Stop.** A flag argument means two jobs in one function. |
+| One caller today, and a second imagined | **Stop.** That is guessing what the second needs. |
 
-The test that settles it: after generalising, does the **caller** have fewer
-things to know, or more? Fewer means the module got deeper. More means it got
-wider, and a wide shared helper costs every project that uses it.
+The test that settles it: after the change, does the **caller** have fewer things
+to know, or more? Fewer means the module got deeper. More means it got wider, and
+a wide shared helper costs every project that uses it.
 
 ### 3. Cross-check the kit
 
@@ -112,13 +125,16 @@ For each helper: its name, the verdict, the reason in one line, whether it
 carries a `Promotable:` marker, and — for candidates — whether a second caller
 now exists.
 
-**Two lists matter most**, and neither exists anywhere else:
+**Three lists matter most**, and none exists anywhere else:
 
 - **candidates carrying no marker** — the discovery gap, and the reason this
   procedure exists
 - **marked helpers that are not actually candidates** — a marker claiming more
   than the helper delivers, which sends the next reader looking for reuse that
   is not there
+- **helpers depending on more than they need** — general behaviour behind a
+  parochial signature. Worth fixing on its own terms, and what would otherwise
+  keep a genuinely reusable helper locked in one project forever
 
 Report. Do not edit.
 
@@ -131,8 +147,11 @@ Report. Do not edit.
 - **Do not stop at a domain-sounding name.** Renaming is part of a pure move.
   What disqualifies a helper is domain knowledge in its behaviour, not in its
   spelling.
-- **Do not widen a helper's signature to make it promotable.** That is a
-  redesign, and it needs its own justification and its own second caller.
+- **Do not widen a helper's signature to make it promotable.** Narrowing what it
+  depends on is a promotion; adding a way to ask for something different is a
+  redesign, and needs its own justification.
+- **Do not decouple and move in one commit.** Each is reviewable alone and the
+  lock can verify each; together, neither.
 - **Do not flag the names every project is expected to define** — the contract
   roles and shared vocabulary. Those are roles, not duplication.
 
@@ -145,4 +164,5 @@ Report. Do not edit.
 | A second caller exists and nothing was found | Step 4 was skipped, or searched for the name rather than the job |
 | A kit helper gets quietly widened | Step 3's caveat was ignored — that changes another project and is the owner's call |
 | A promoted helper grows a mode argument | Step 2a was skipped: two behaviours were forced into one function |
+| A general helper is dismissed for taking a domain type | Step 2a was read as a verdict rather than as a coupling finding |
 | Only helpers from this change were examined | Step 1 was read as "the diff" instead of "every project package" |
