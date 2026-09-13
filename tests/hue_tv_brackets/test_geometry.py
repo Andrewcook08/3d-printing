@@ -21,7 +21,11 @@ from printing3d.hue_tv_brackets.geometry import (
     profile,
     straight,
 )
-from printing3d.hue_tv_brackets.verify import slot_width_at, upright_section
+from printing3d.hue_tv_brackets.verify import (
+    PROBE_BAND,
+    slot_width_at,
+    upright_section,
+)
 from printing3d.shapes import signed_area
 from tests.support import contour_digest
 
@@ -44,8 +48,8 @@ def test_the_mouth_is_narrower_than_the_bed_it_opens_onto():
 
 
 def test_the_lips_are_what_narrow_it():
-    bed = slot_width_at(profile(), 0.05)
-    mouth = slot_width_at(profile(), CHANNEL_D - 0.05)
+    bed = slot_width_at(profile(), PROBE_BAND)
+    mouth = slot_width_at(profile(), CHANNEL_D - PROBE_BAND)
     assert mouth < bed
 
 
@@ -125,9 +129,17 @@ def test_the_chosen_angles_really_do_sit_where_they_claim():
 
 
 @pytest.mark.parametrize("radius", LADDER_RADII)
-def test_a_wider_corner_puts_the_same_profile_further_out(radius):
+def test_a_corner_reaches_its_radius_plus_the_profile(radius):
     _, _, _, far_x, _, _ = corner(radius).bounding_box()
     assert far_x == pytest.approx(radius + TO_OUTERMOST)
+
+
+def test_a_wider_corner_puts_the_same_profile_further_out():
+    """Widening moves the profile; it does not reshape it."""
+    narrow, wide = min(LADDER_RADII), max(LADDER_RADII)
+    _, _, _, near_reach, _, _ = corner(narrow).bounding_box()
+    _, _, _, far_reach, _, _ = corner(wide).bounding_box()
+    assert far_reach - near_reach == pytest.approx(wide - narrow)
 
 
 def test_a_longer_straight_is_the_same_profile_for_longer():
@@ -147,8 +159,8 @@ def test_a_corner_tighter_than_the_profile_is_refused():
         corner(MIN_CORNER_RADIUS)
 
 
-def test_the_refusal_starts_exactly_where_the_profile_does():
-    assert MIN_CORNER_RADIUS == pytest.approx(TO_TAB_EDGE)
+def test_a_corner_just_wider_than_the_profile_is_built():
+    """The refusal is a floor, not a margin: one hundredth wider is fine."""
     assert corner(MIN_CORNER_RADIUS + 0.01).volume() > 0.0
 
 

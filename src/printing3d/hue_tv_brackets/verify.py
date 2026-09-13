@@ -94,7 +94,7 @@ def slot_width_at(section, up):
     left = max((high for _, high in spans if high <= 0.0), default=None)
     right = min((low for low, _ in spans if low >= 0.0), default=None)
     if left is None or right is None:
-        raise AssertionError(f"no channel walls found {up} mm above the slot floor")
+        raise ValueError(f"no channel walls found {up} mm above the slot floor")
     return right - left
 
 
@@ -187,7 +187,11 @@ def check_base_is_flat(runner, section):
     its corners, which is how the strip's own adhesive let go."""
     _, low_v, _, _ = section.bounds()
     pad = longest_face_at(section, 0.0)
-    runner.check("the pad lies in the mounting plane", abs(low_v) < MAX_EDGE_ERROR)
+    runner.check(
+        "the pad lies in the mounting plane",
+        abs(low_v) < MAX_EDGE_ERROR,
+        f"{low_v:.3f} mm",
+    )
     runner.check(
         "the pad is the full base depth",
         abs(pad - BASE_DEPTH) < MAX_EDGE_ERROR,
@@ -241,6 +245,9 @@ def verify_all():
     runner = CheckRunner()
     brackets = list(parts())
     runs = straights(brackets)
+    if not runs:
+        runner.check("a straight ships for the corners to be measured against", False)
+        return runner.report()
     for part in runs:
         runner.section(part.name)
         check_the_channel(runner, straight_section(part))

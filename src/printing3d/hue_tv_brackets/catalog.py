@@ -28,6 +28,8 @@ from printing3d.parts import Part, build_project
 
 VERSION_SUFFIX = "-v1"
 
+MM2_PER_CM2 = 100.0
+
 STRAIGHT_LENGTHS = [125.0]
 
 # Print all three, thread the strip through each, keep the sharpest that does
@@ -37,19 +39,28 @@ LADDER_RADII = [30.0, 40.0, 55.0]
 
 
 @dataclass(frozen=True)
-class StraightBracket(Part):
+class Bracket(Part):
+    """A printable bracket. Each shape reports its own footprint."""
+
+    def footprint_line(self) -> str:
+        """One line about what this bracket lands on the TV, for build output."""
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class StraightBracket(Bracket):
     """A straight run, carrying the length it was built from."""
 
     length: float
 
     def footprint_line(self) -> str:
         """The adhesive pad this lands on the TV, and the strip it covers."""
-        pad = self.length * BASE_DEPTH / 100.0
+        pad = self.length * BASE_DEPTH / MM2_PER_CM2
         return f"    straight  pad {pad:6.1f} cm2 over {self.length:5.1f} mm of strip"
 
 
 @dataclass(frozen=True)
-class CornerBracket(Part):
+class CornerBracket(Bracket):
     """A quarter turn, carrying the radius it was built from."""
 
     radius: float
@@ -76,9 +87,6 @@ class CornerBracket(Part):
             f"outer {self.outer_radius:5.2f} mm, spends {self.strip_spent:5.1f} mm "
             f"of strip"
         )
-
-
-Bracket = StraightBracket | CornerBracket
 
 
 def parts() -> Iterator[Bracket]:
@@ -109,4 +117,6 @@ def corners(brackets: list[Bracket]) -> list[CornerBracket]:
 
 def build_all() -> bool:
     """Write the whole catalog to output/. True if every solid is sound."""
+    # Called through a lambda rather than passed as Bracket.footprint_line: the
+    # latter binds the base class's version and never reaches the subclass.
     return build_project(NAME, parts(), announce=lambda part: part.footprint_line())
