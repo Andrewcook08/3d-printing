@@ -13,16 +13,8 @@ import math
 import manifold3d as m
 
 from printing3d.checks import CheckRunner
-from printing3d.fishing_rod_mounts.catalog import RODS, parts
-from printing3d.fishing_rod_mounts.geometry import (
-    AXIS_U,
-    AXIS_V,
-    CSINK_D,
-    PLATE_THK,
-    RIB,
-    WEDGE,
-    profile,
-)
+from printing3d.fishing_rod_mounts.catalog import catalogue, parts
+from printing3d.fishing_rod_mounts.geometry import WEDGE, profile
 from printing3d.probes import (
     TOUCHING,
     enclosed_void_count,
@@ -55,7 +47,7 @@ def rod_at(spec, du=0.0, dv=0.0):
     """The rod, as a solid, displaced from its nominal seat."""
     return (
         m.CrossSection.circle(spec.rod_dia / 2.0, 256)
-        .translate((AXIS_U + du, AXIS_V + dv))
+        .translate((spec.design.axis_from_wall + du, spec.design.axis_height + dv))
         .extrude(spec.width)
     )
 
@@ -63,9 +55,10 @@ def rod_at(spec, du=0.0, dv=0.0):
 def lift_sweep(spec):
     """Everything the rod passes through as it is lifted straight up and out."""
     radius = spec.rod_dia / 2.0
-    disc = m.CrossSection.circle(radius, 256).translate((AXIS_U, AXIS_V))
+    axis_u, axis_v = spec.design.axis_from_wall, spec.design.axis_height
+    disc = m.CrossSection.circle(radius, 256).translate((axis_u, axis_v))
     chute = m.CrossSection.square((2 * radius, LIFT_HEIGHT), False).translate(
-        (AXIS_U - radius, AXIS_V)
+        (axis_u - radius, axis_v)
     )
     return (disc + chute).extrude(spec.width)
 
@@ -76,15 +69,18 @@ def seat_height(solid, spec):
     Scans DOWN the cradle centerline: scanning up from v=0 would be wrong,
     since the tip mount's underside is open air below the part.
     """
-    floor = surface_height_below(solid, AXIS_U, spec.width / 2.0, AXIS_V)
+    floor = surface_height_below(
+        solid, spec.design.axis_from_wall, spec.width / 2.0, spec.design.axis_height
+    )
     return floor + spec.rod_dia / 2.0
 
 
-def cradle_wall_tops(cross_section, cradle_radius):
+def cradle_wall_tops(cross_section, cradle_radius, design):
     """Height of the cradle's wall-side wall and of the outer lip."""
+    axis_u, rib = design.axis_from_wall, design.rib
     walls = (
-        (AXIS_U - cradle_radius - RIB, AXIS_U - cradle_radius),
-        (AXIS_U + cradle_radius, AXIS_U + cradle_radius + RIB),
+        (axis_u - cradle_radius - rib, axis_u - cradle_radius),
+        (axis_u + cradle_radius, axis_u + cradle_radius + rib),
     )
     return [highest_point_between(cross_section, u0, u1) for u0, u1 in walls]
 
@@ -118,7 +114,7 @@ def check_rod_seats_and_releases(runner, part):
     )
     clash = overlap(part.solid, lift_sweep(spec))
     runner.check("rod lifts straight out", clash < TOUCHING, f"{clash:.4f} mm3")
-    clearance = AXIS_U - spec.rod_dia / 2.0
+    clearance = spec.design.axis_from_wall - spec.rod_dia / 2.0
     runner.check(
         "rod clears the wall", clearance > MIN_WALL_CLEARANCE, f"{clearance:.2f} mm"
     )
@@ -142,11 +138,12 @@ def check_rod_is_trapped_sideways(runner, part):
 def check_screw(runner, part, height):
     spec = part.spec
     mid_width = spec.width / 2.0
+    plate_thickness = spec.design.plate_thickness
     bore_is_open = not has_material_at(
-        part.solid, PLATE_THK / 2.0, height, mid_width, size=0.4
+        part.solid, plate_thickness / 2.0, height, mid_width, size=0.4
     )
     back_is_flat = not has_material_at(
-        part.solid, PLATE_THK - 0.5, height, mid_width + 3.0, size=0.4
+        part.solid, plate_thickness - 0.5, height, mid_width + 3.0, size=0.4
     )
     front_is_countersunk = has_material_at(
         part.solid, 0.4, height, mid_width + 3.0, size=0.4
@@ -156,10 +153,10 @@ def check_screw(runner, part, height):
         bore_is_open and back_is_flat and front_is_countersunk,
     )
 
-    csink_r = CSINK_D / 2.0
+    csink_r = spec.design.screw.countersink_diameter / 2.0
     runner.check(
         f"screw {height:.1f}: clear of the cradle, on flat plate",
-        height > AXIS_V + spec.lip_rise + csink_r,
+        height > spec.design.axis_height + spec.lip_rise + csink_r,
     )
     headroom = spec.plate_h - height - csink_r
     runner.check(
@@ -192,7 +189,9 @@ def check_derived_angles(runner, part):
             ", ".join(f"{a:.2f}" for a in diagonals) + " deg",
         )
     if spec.lip_rise == 0.0:
-        wall_side, outer = cradle_wall_tops(cross_section, spec.cradle.radius)
+        wall_side, outer = cradle_wall_tops(
+            cross_section, spec.cradle.radius, spec.design
+        )
         runner.check(
             "cradle walls level with each other",
             abs(wall_side - outer) < MAX_WALL_STEP,
@@ -221,8 +220,9 @@ def check_pair_seats_rod_level(runner, parts):
 def verify_all():
     """Run every check against every mount. True if all pass."""
     runner = CheckRunner()
-    for rod in RODS:
-        pair = list(parts([rod]))
+    built = list(parts())
+    for rod in catalogue().rod:
+        pair = [part for part in built if part.rod == rod.name]
         for part in pair:
             check_part(runner, part)
         runner.section(f"cross-part alignment: {rod.name}")

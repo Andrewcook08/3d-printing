@@ -13,3 +13,6 @@ htmlcov/
 
 # macOS
 .DS_Store
+
+# Parts a project has stopped declaring, moved aside by `build`
+output/archive/

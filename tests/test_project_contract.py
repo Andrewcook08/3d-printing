@@ -10,7 +10,7 @@ assert what is true of *every* project.
 
 import pytest
 
-from printing3d.parts import output_dir
+from printing3d.parts import existing_stls, output_dir
 from printing3d.registry import Project, discover
 from printing3d.stl import write_stl
 from tests.support import locked_hashes, sha256_of
@@ -43,6 +43,10 @@ def test_the_project_declares_everything_the_repo_needs(project):
     assert callable(project.parts) and callable(project.build)
     assert callable(project.verify), "every project must ship physical checks"
     assert project.lock.is_file(), f"{project.lock} is missing"
+    assert project.config.is_file(), (
+        f"{project.config} is missing; a project's measured numbers live in a "
+        f"config file, not in its code"
+    )
 
 
 def test_the_project_ships_at_least_one_part(shipped):
@@ -79,6 +83,17 @@ def test_the_committed_output_matches_the_lock(project, locked):
         path = output_dir(project.name) / filename
         assert path.exists(), f"{path} is missing; run `build`"
         assert sha256_of(path) == digest
+
+
+def test_the_output_holds_nothing_the_project_no_longer_declares(project, shipped):
+    """A part dropped from config is archived by the next build. An STL still
+    sitting in output without an entry behind it means that never happened,
+    and it would be printed from in good faith."""
+    on_disk = {path.name for path in existing_stls(project.name)}
+    declared = {part.filename for part in shipped}
+    assert on_disk == declared, (
+        f"orphaned: {sorted(on_disk - declared)}; run `build` to archive them"
+    )
 
 
 def test_building_writes_exactly_the_declared_parts(

@@ -77,15 +77,18 @@ Optional: a scrap of adhesive felt in the cradle protects the grip finish.
 
 ## Changing the numbers
 
-Everything derives from two measurements per rod. Edit `RODS` at the top of
-`catalog.py`:
+Everything derives from two measurements per rod. Add one to `parts.toml`:
 
-```python
-RODS = [
-    Rod(name="spinning-85in", butt_dia=26.15, tip_dia=5.80),
-    Rod(name="baitcaster", butt_dia=00.00, tip_dia=0.00),
-]
+```toml
+[[rod]]
+name = "baitcaster"
+butt_diameter = 0.00
+tip_diameter = 0.00
 ```
+
+Every other number the shape is built from is in that file too — where the
+rod's centerline sits, the plate, the rib, the screw. No code changes to
+re-dimension a mount; the code changes only when the *shape* does.
 
 Then, from the repo root:
 
@@ -118,7 +121,8 @@ shasum -a 256 output/fishing-rod-mounts/*.stl \
 | File | What lives there |
 |---|---|
 | `__init__.py` | Declares this project so the repo discovers it |
-| `catalog.py` | The rods, the two mount styles, and what gets printed |
+| `parts.toml` | Every measured or chosen number, and the rods |
+| `catalog.py` | How a configured rod becomes a printable pair |
 | `geometry.py` | The parametric shape: the cradle, the supports, the profile |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |

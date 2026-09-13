@@ -28,6 +28,8 @@ src/printing3d/            the shared kit -- never imports a project
   registry.py               the Project contract + discovery
   cli.py                    `build` / `verify`
   <project>/                one folder per 3D-printing project
+    parts.toml              its measured and chosen numbers -- never its code
+    trials.toml             parts being tested; optional, delete to retire them
 tests/
   test_*.py                 tests for the shared modules
   <project>/test_*.py       tests for one project
@@ -174,17 +176,22 @@ one. Everything goes in `src/printing3d/<new_project>/`:
 1. `__init__.py` declares the project: its name (kebab-case), a one-line
    summary, its lock file, and callables for parts/build/verify. Import the
    heavy modules *inside* those callables, so listing projects stays cheap.
-2. `geometry.py` — the shape. Reuse `printing3d.shapes` rather than
+2. `parts.toml` — every number you measured or chose. **Required**: the
+   contract fails a project without one. Anything derivable from what is
+   already in it is derived in code instead; write it down here and the file is
+   refused. Parts still being tested go in `trials.toml`, which is optional and
+   whose deletion retires all of them at once.
+3. `geometry.py` — the shape. Reuse `printing3d.shapes` rather than
    re-implementing 2D construction.
-3. `catalog.py` — what actually gets printed, yielding `printing3d.parts.Part`.
-4. `verify.py` — physical checks, using `printing3d.checks.CheckRunner` and
+4. `catalog.py` — how a configured entry becomes a `printing3d.parts.Part`.
+5. `verify.py` — physical checks, using `printing3d.checks.CheckRunner` and
    `printing3d.probes`. **Required**: the contract fails a project without them.
-5. `LOCKED.txt` — generate it once the shape is settled.
-6. `tests/<new_project>/` — only what is specific to this project. The contract
+6. `LOCKED.txt` — generate it once the shape is settled.
+7. `tests/<new_project>/` — only what is specific to this project. The contract
    suite already covers building, locking, soundness and verification.
    Before writing a helper of your own, run the grep in
    [Growing the shared kit](#growing-the-shared-kit).
-7. A `README.md` — this project's design document, not only its print sheet:
+8. A `README.md` — this project's design document, not only its print sheet:
    what the part solves, what forced each dimension, print settings, assembly.
    Reference images and source meshes in `<project>/reference/`.
 
@@ -236,6 +243,23 @@ If two projects end up defining the same helper name, the test suite fails and
 names both. That is the promotion trigger firing: move it into the kit, or
 rename one if they were never the same thing. Names every project is expected to
 define are exempt — those are roles, not duplication.
+
+## Where a number lives
+
+**A number you measured or chose goes in `parts.toml`. A number you computed
+stays in code.**
+
+That is the existing "derive, never restate" rule with a file attached. A value
+the code can work out from what is already configured has no business being
+written down again, and writing it down anyway is refused when the file is read
+— an unknown key is an error, not a shrug.
+
+Construction details are not parameters. A segment count, an overshoot that
+keeps a boolean clean, a throwaway cutting body — none of those are things
+anyone tunes a part with, and they stay in code. The test is whether changing
+it is a design decision or an implementation one.
+
+Behavior: [docs/build/configuration.md](docs/build/configuration.md).
 
 ## Rules specific to generated geometry
 
@@ -326,7 +350,9 @@ something more interesting than the finding did.
 ## Don't
 
 - Don't commit to `main`, or open a PR without checking `git branch --show-current` first.
-- Don't add a dependency without asking; this repo deliberately has one.
+- Prefer not to add a dependency, and ask first. The runtime set is
+  deliberately small — but it is a preference, not a rule, and the lockfile
+  exists so that adding one is a decision rather than a hazard.
 - Don't commit `.venv/`, caches, or slicer project files.
 - Don't move or rename generated STLs by hand — `uv run build` owns `output/`.
 - Don't touch `docs/` in a refactor that preserves behavior. If a doc needs

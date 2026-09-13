@@ -1,0 +1,100 @@
+# Parts being tested, not parts that ship. Delete this file and the next build
+# moves every STL in it to the archive, leaving output/ holding only what ships.
+#
+# A part may lean differently from the design; anything it does not say is
+# taken from parts.toml.
+
+# ---------------------------------------------------------------------------
+# The original 45-degree ladder. All three bound: a corner at this lean forces
+# the strip to bend in its own plane, which flat strips refuse. Kept only until
+# a replacement is chosen.
+# ---------------------------------------------------------------------------
+
+[[corner]]
+name = "corner-r30-v1"
+radius = 30.0
+note = "16.5% edge strain -- bound"
+
+[[corner]]
+name = "corner-r40-v1"
+radius = 40.0
+note = "12.4% edge strain -- bound"
+
+[[corner]]
+name = "corner-r55-v1"
+radius = 55.0
+note = "9.0% edge strain -- bound a third of the way in"
+
+# ---------------------------------------------------------------------------
+# Rolling the channel up cuts the in-plane demand, since it falls with the
+# cosine of the lean. Sharpest first, which is also cheapest first: print in
+# this order and stop at the first that threads.
+# ---------------------------------------------------------------------------
+
+[[corner]]
+name = "trial-corner-65deg-r51-v1"
+radius = 51.0
+tilt = 65.0
+note = "6.0% strain"
+
+[[corner]]
+name = "trial-corner-70deg-r41-v1"
+radius = 41.0
+tilt = 70.0
+note = "6.0% strain -- the 65-degree R51's opposite number"
+
+[[corner]]
+name = "trial-corner-70deg-r55-v1"
+radius = 55.0
+tilt = 70.0
+note = "4.5% strain"
+
+[[corner]]
+name = "trial-corner-70deg-r82-v1"
+radius = 82.0
+tilt = 70.0
+note = "3.0% strain -- recommended starting point with the 65-degree R101"
+
+[[corner]]
+name = "trial-corner-65deg-r68-v1"
+radius = 68.0
+tilt = 65.0
+note = "4.5% strain"
+
+[[corner]]
+name = "trial-corner-65deg-r101-v1"
+radius = 101.0
+tilt = 65.0
+note = "3.0% strain -- three times gentler than the rung that bound"
+
+[[corner]]
+name = "trial-corner-65deg-r152-v1"
+radius = 152.0
+tilt = 65.0
+note = "2.0% strain"
+
+[[corner]]
+name = "trial-corner-65deg-r197-v1"
+radius = 197.0
+tilt = 65.0
+note = "1.54% strain; paired with the 70-degree R160 at the same strain"
+
+[[corner]]
+name = "trial-corner-70deg-r160-v1"
+radius = 160.0
+tilt = 70.0
+note = "1.54% strain -- the control for the 65-degree R197"
+
+# ---------------------------------------------------------------------------
+# An inch of each lean, to feel the twist against a 45-degree run.
+# ---------------------------------------------------------------------------
+
+[[straight]]
+name = "trial-straight-65deg-25.4mm-v1"
+length = 25.4
+tilt = 65.0
+
+[[straight]]
+name = "trial-straight-70deg-25.4mm-v1"
+length = 25.4
+tilt = 70.0

@@ -11,6 +11,11 @@ Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
+> **Note.** The design sections below describe the 45° corner, which the
+> printed ladder disproved — every rung bound. The straight runs and the channel
+> are unaffected and still current. The corner's design is unsettled until the
+> leaned trials come back, and this README is rewritten when it is.
+
 ## The problem these solve
 
 The strip was mounted with its own adhesive backing. Over weeks the adhesive
@@ -170,16 +175,27 @@ brackets exist to prevent.
 
 ## Changing the numbers
 
-Every dimension is an independent knob. The channel block and the lean live at
-the top of `geometry.py`: the slot's width and depth set what strip fits, the
-lip's reach sets how hard it clips, the base depth sets the adhesive pad, and
-the lean sets how far out the light is thrown. What gets printed lives in
-`catalog.py`:
+Every dimension is an independent knob, and all of them live in `parts.toml`:
+the slot's width and depth set what strip fits, the lip's reach sets how hard it
+clips, the base depth sets the adhesive pad, and the lean sets how far out the
+light is thrown. The parts themselves are entries in the same file:
 
-```python
-STRAIGHT_LENGTHS = [125.0]
-LADDER_RADII = [30.0, 40.0, 55.0]
+```toml
+[[straight]]
+name = "straight-125mm-v1"
+length = 125.0
+
+[[corner]]
+name = "corner-r101-v1"
+radius = 101.0
+tilt = 65.0        # this corner only; everything else takes the design's lean
 ```
+
+Parts still being tested live in `trials.toml` instead. Deleting that file
+retires every one of them: the next build moves their STLs to the archive and
+leaves `output/` holding only what ships.
+
+No code changes for any of this. The code changes when the *shape* does.
 
 Then, from the repo root:
 
@@ -213,8 +229,10 @@ stops, and that every corner is still the straight bent.
 | File | What lives there |
 |---|---|
 | `__init__.py` | Declares this project so the repo discovers it |
+| `parts.toml` | Every measured or chosen number, and the parts that ship |
+| `trials.toml` | Parts being tested; delete it to retire all of them |
 | `geometry.py` | The channel, the lean, and the two sweeps |
-| `catalog.py` | The lengths and radii that get printed |
+| `catalog.py` | How a configured entry becomes a printable bracket |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |
 | `reference/` | The straight bracket every dimension was measured from |

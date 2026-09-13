@@ -1,81 +1,129 @@
-"""What the catalog ships, and how each bracket is named."""
+"""How a configured entry becomes a bracket.
+
+The tests that used to live here compared the catalog against the constants it
+was built from. Both sides now read the same file, so those would assert that
+config equals config -- they are gone rather than left to look like coverage.
+What is left is what the code actually decides: how an entry's own lean beats
+the design's, and what a corner's radius implies about the arc it sweeps.
+"""
+
+from dataclasses import replace
 
 import pytest
 
 from printing3d.hue_tv_brackets.catalog import (
-    LADDER_RADII,
-    STRAIGHT_LENGTHS,
-    TRIAL_CORNERS,
-    TRIAL_LEANS,
+    Catalogue,
+    CornerEntry,
+    StraightEntry,
     corners,
     parts,
+    shipping,
     straights,
+    trials,
 )
-from printing3d.hue_tv_brackets.geometry import TILT, to_outermost, to_tab_edge
 
 
 @pytest.fixture(scope="module")
-def shipped():
+def design():
+    return shipping().design
+
+
+@pytest.fixture(scope="module")
+def built():
     return list(parts())
 
 
-@pytest.fixture(scope="module")
-def by_radius(shipped):
-    return {part.radius: part for part in corners(shipped)}
+def only(design, **entries):
+    """The brackets a catalogue holding just these entries would produce."""
+    catalogue = replace(
+        shipping(), design=design, **{"straight": [], "corner": [], **entries}
+    )
+    return list(parts(catalogue, Catalogue()))
 
 
-def test_the_catalog_ships_both_shapes(shipped):
-    """Guards every test below from passing by collecting nothing, which is how
-    pruning the ladder to one radius would otherwise go unnoticed."""
-    assert straights(shipped)
-    assert corners(shipped)
+# ---------------------------------------------------------------------------
+# What the shipped configuration produces
+# ---------------------------------------------------------------------------
 
 
-def shipping(brackets):
-    """The brackets at the lean this project ships, trials excluded."""
-    return [part for part in brackets if part.tilt == TILT]
+def test_the_catalog_ships_both_shapes(built):
+    """Guards the tests below from passing by measuring nothing."""
+    assert straights(built)
+    assert corners(built)
 
 
-def trials(brackets):
-    """The brackets at a lean still under test."""
-    return [part for part in brackets if part.tilt != TILT]
+def test_an_entry_may_override_the_lean_and_nothing_else(built, design):
+    """Every bracket carries the design it was built from, and the only thing
+    an entry is allowed to change about it is how far the channel leans."""
+    assert all(replace(part.design, tilt=design.tilt) == design for part in built)
 
 
-def test_one_straight_ships_for_each_length(shipped):
-    assert [part.length for part in shipping(straights(shipped))] == STRAIGHT_LENGTHS
+# ---------------------------------------------------------------------------
+# An entry's own lean
+# ---------------------------------------------------------------------------
 
 
-def test_one_corner_ships_for_each_rung_of_the_ladder(shipped):
-    assert [part.radius for part in shipping(corners(shipped))] == LADDER_RADII
+def test_an_entry_without_a_lean_takes_the_designs(design):
+    entry = StraightEntry(name="plain", length=10.0)
+    (built,) = only(design, straight=[entry])
+    assert built.design.tilt == design.tilt
 
 
-def test_a_trial_corner_and_a_matching_straight_ship_for_each_lean(shipped):
-    """A trial corner is only meaningful beside a straight at its own lean,
-    which is what verify compares it against."""
-    assert [(p.tilt, p.radius) for p in trials(corners(shipped))] == TRIAL_CORNERS
-    assert [p.tilt for p in trials(straights(shipped))] == TRIAL_LEANS
+def test_an_entry_with_a_lean_overrides_the_design(design):
+    entry = CornerEntry(name="rolled", radius=101.0, tilt=65.0)
+    (built,) = only(design, corner=[entry])
+    assert built.design.tilt == 65.0
 
 
-def test_a_brackets_name_says_what_it_is(shipped):
-    """The name is written into the STL header, so it is how a printed bracket
-    is told apart from its neighbours on the ladder."""
-    assert all(f"{part.length:g}mm" in part.name for part in straights(shipped))
-    assert all(f"r{part.radius:g}" in part.name for part in corners(shipped))
+def test_overriding_the_lean_changes_nothing_else(design):
+    entry = CornerEntry(name="rolled", radius=101.0, tilt=65.0)
+    (built,) = only(design, corner=[entry])
+    assert replace(built.design, tilt=design.tilt) == design
 
 
-def test_no_two_brackets_share_a_name(shipped):
-    names = [part.name for part in shipped]
-    assert len(names) == len(set(names))
+# ---------------------------------------------------------------------------
+# What a corner's radius implies
+# ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("radius", LADDER_RADII)
-def test_a_corner_reports_the_arc_its_material_sweeps(by_radius, radius):
-    part = by_radius[radius]
-    assert part.inner_radius == pytest.approx(radius - to_tab_edge(part.tilt))
-    assert part.outer_radius == pytest.approx(radius + to_outermost(part.tilt))
+def test_a_corner_reports_the_arc_its_material_sweeps(built):
+    for part in corners(built):
+        assert part.inner_radius == pytest.approx(part.radius - part.design.to_tab_edge)
+        assert part.outer_radius == pytest.approx(
+            part.radius + part.design.to_outermost
+        )
 
 
-@pytest.mark.parametrize("radius", LADDER_RADII)
-def test_a_corner_leaves_room_inside_its_own_turn(by_radius, radius):
+def test_a_corner_leaves_room_inside_its_own_turn(built):
     """A corner whose inner edge reached the axis would fold through itself."""
-    assert by_radius[radius].inner_radius > 0.0
+    assert all(part.inner_radius > 0.0 for part in corners(built))
+
+
+# ---------------------------------------------------------------------------
+# The notes an entry carries
+# ---------------------------------------------------------------------------
+
+
+def test_a_note_reaches_the_build_output(design):
+    entry = StraightEntry(name="noted", length=10.0, note="why this exists")
+    (built,) = only(design, straight=[entry])
+    assert "why this exists" in built.footprint_line()
+
+
+def test_a_bracket_without_a_note_says_nothing_extra(design):
+    entry = StraightEntry(name="plain", length=10.0)
+    (built,) = only(design, straight=[entry])
+    assert "--" not in built.footprint_line()
+
+
+# ---------------------------------------------------------------------------
+# The files themselves
+# ---------------------------------------------------------------------------
+
+
+def test_the_shipped_configuration_validates():
+    assert shipping().design is not None
+
+
+def test_the_trials_file_is_optional_and_validates_when_present():
+    assert isinstance(trials().corner, list)

@@ -1,0 +1,42 @@
+# Hue TV brackets -- every measured or chosen number the shape is built from.
+#
+# Anything derivable from what is here lives in geometry.py instead. If you can
+# compute it from these values it does not belong in this file, and writing it
+# down anyway will be refused when the file is read.
+#
+# Parts still being tested live in trials.toml. Deleting that file retires
+# every one of them in a single step.
+
+[design]
+# The channel, measured off reference/Hue LED Strip with Angle straight
+# section.stl. The strip itself measures 14.4 mm across.
+channel_width = 15.0
+channel_depth = 4.0
+wall = 1.5
+floor_thickness = 2.0
+
+# The clip. Each lip closes this far over the slot while climbing that far,
+# necking the 15.0 mm bed down to a 12.0 mm mouth. The strip flexes past it and
+# is then held without adhesive of its own, which is the whole point.
+lip_reach = 1.5
+lip_height = 2.0
+
+# The strip fires out AND back rather than only back: the wall behind this TV
+# is dark, and light thrown along a wall washes further than light thrown at it.
+# It is also the only lean at which the bracket prints with no support at all.
+tilt = 45.0
+
+plate_thickness = 2.0
+
+# The adhesive footprint, and the tab: the plate's overhang past the arm, which
+# is the lever arm resisting the peel that pulled the strip's own adhesive off.
+base_depth = 22.0
+
+# ---------------------------------------------------------------------------
+# What ships
+# ---------------------------------------------------------------------------
+
+[[straight]]
+name = "straight-125mm-v1"
+length = 125.0
+note = "the long runs; one covers what five of the original 25 mm clips would"
