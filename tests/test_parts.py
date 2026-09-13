@@ -201,3 +201,15 @@ def test_retiring_the_same_shape_twice_keeps_one_copy(monkeypatch, tmp_path):
         build_project("widgets", [a_part("same")])
         build_project("widgets", [])
     assert len(list(archive_dir("widgets").glob("*.stl"))) == 1
+
+
+def test_a_duplicate_name_is_refused_before_anything_is_written(monkeypatch, tmp_path):
+    """The build promises all-or-nothing. Catching the duplicate partway through
+    the write loop would leave the parts before it on disk, which is the
+    half-populated directory the promise rules out."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    with pytest.raises(ValueError, match="more than once"):
+        build_project("widgets", [a_part("first"), a_part("twin"), a_part("twin")])
+    assert not list(output_dir("widgets").glob("*.stl")), (
+        "the build wrote before failing"
+    )

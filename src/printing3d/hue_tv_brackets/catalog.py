@@ -18,7 +18,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 
 from printing3d import config
-from printing3d.hue_tv_brackets import CONFIG, LOCKED, NAME  # noqa: F401  re-exported
+from printing3d.hue_tv_brackets import CONFIG, NAME
 from printing3d.hue_tv_brackets.geometry import (
     QUARTER_TURN,
     Design,

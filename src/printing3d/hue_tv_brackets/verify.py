@@ -113,8 +113,10 @@ def straight_runs(section, min_length):
     """
     runs = []
     for contour in section.to_polygons():
-        corners = _corners_of([tuple(point) for point in contour])
-        for start, end in zip(corners, corners[1:] + corners[:1], strict=True):
+        turning_points = _corners_of([tuple(point) for point in contour])
+        for start, end in zip(
+            turning_points, turning_points[1:] + turning_points[:1], strict=True
+        ):
             length = math.hypot(end[0] - start[0], end[1] - start[1])
             if length >= min_length:
                 angle = math.degrees(math.atan2(end[1] - start[1], end[0] - start[0]))
@@ -228,15 +230,13 @@ def check_corner_turns_a_quarter(runner, part):
     runner.check("the corner stops at the quarter", stops)
 
 
-def check_corner_matches_the_straight(runner, section, straight_section):
+def check_corner_matches_the_straight(runner, section, reference):
     """The point of the design: a corner and a straight are the same bracket,
     so a section through one must be a section through the other."""
-    drift = abs(section.area() - straight_section.area())
+    drift = abs(section.area() - reference.area())
     bounds = max(
         abs(mine - theirs)
-        for mine, theirs in zip(
-            section.bounds(), straight_section.bounds(), strict=True
-        )
+        for mine, theirs in zip(section.bounds(), reference.bounds(), strict=True)
     )
     runner.check(
         "the corner's section is the straight's section",

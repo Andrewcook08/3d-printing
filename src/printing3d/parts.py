@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -94,29 +94,37 @@ def build_project[P: Part](
     `announce` lets a project print its own line about a part -- a derived
     dimension worth seeing at build time -- just above the standard summary.
     """
-    # Everything is built before anything is written, so an entry the project
-    # cannot make sense of fails with the output directory untouched rather
-    # than half-populated.
+    # Everything is built and checked before anything is written, so an entry
+    # the project cannot make sense of fails with the output directory
+    # untouched rather than half-populated.
     parts = list(parts)
+    _refuse_duplicate_names(project, parts)
     destination = output_dir(project)
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True
-    written = set()
     for part in parts:
-        if part.filename in written:
-            raise ValueError(
-                f"{project} declares {part.name!r} more than once; the second "
-                f"would overwrite the first and vanish without a trace"
-            )
         if announce is not None:
             print(announce(part))
         write_stl(part.solid, destination / part.filename, part.name)
         print(part.summary())
         all_sound &= part.is_sound
-        written.add(part.filename)
-    for path in archive_orphans(project, written):
+    declared = {part.filename for part in parts}
+    for path in archive_orphans(project, declared):
         print(f"  archived {path.name}")
     return all_sound
+
+
+def _refuse_duplicate_names(project: str, parts: list) -> None:
+    """Two entries under one name would leave one file where a project asked
+    for two, with nothing on disk to say the other had ever existed."""
+    seen = set()
+    for part in parts:
+        if part.filename in seen:
+            raise ValueError(
+                f"{project} declares {part.name!r} more than once; the second "
+                f"would overwrite the first and vanish without a trace"
+            )
+        seen.add(part.filename)
 
 
 def archive_orphans(project: str, declared: set[str]) -> list[Path]:
@@ -127,13 +135,11 @@ def archive_orphans(project: str, declared: set[str]) -> list[Path]:
     a file that is gone -- which fails the contract until it is re-locked on
     purpose, exactly as any other change to a shipped part does.
     """
+    archive = archive_dir(project)
     orphans = [path for path in existing_stls(project) if path.name not in declared]
     if orphans:
-        archive_dir(project).mkdir(parents=True, exist_ok=True)
-    return [
-        Path(shutil.move(path, _archived_as(path, archive_dir(project))))
-        for path in orphans
-    ]
+        archive.mkdir(parents=True, exist_ok=True)
+    return [Path(shutil.move(path, _archived_as(path, archive))) for path in orphans]
 
 
 def _archived_as(path: Path, archive: Path) -> Path:
@@ -151,6 +157,6 @@ def _archived_as(path: Path, archive: Path) -> Path:
     return archive / f"{path.stem}-{digest}{path.suffix}"
 
 
-def existing_stls(project: str) -> Iterator[Path]:
+def existing_stls(project: str) -> list[Path]:
     """The STLs currently on disk for `project`, in a stable order."""
-    return iter(sorted(output_dir(project).glob("*.stl")))
+    return sorted(output_dir(project).glob("*.stl"))

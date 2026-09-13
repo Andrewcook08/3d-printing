@@ -11,9 +11,7 @@ afterwards. Everything is measured from two shared anchors fixing where the
 rod's centerline sits, and it is those anchors agreeing across a pair that lets
 a butt mount and a tip mount hang one rod level despite gripping very different
 diameters. Every measured value arrives from the project's config file; what is
-here is what follows from them. That is what lets a butt mount and a tip mount built for
-very different diameters hang the same rod level and parallel to the wall.
-"""
+here is what follows from them."""
 
 import math
 from dataclasses import dataclass

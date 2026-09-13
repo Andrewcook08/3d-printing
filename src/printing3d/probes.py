@@ -48,7 +48,9 @@ def surface_height_below(solid, u, w, start_v, step=0.25, limit=-5.0, rounds=40)
             break
         air, v = v, v - step
     else:
-        raise AssertionError(f"no surface found below v={start_v}")
+        raise ValueError(
+            f"no surface below v={start_v} at (u={u}, w={w}), scanned to {limit}"
+        )
 
     for _ in range(rounds):
         midpoint = (air + floor) / 2.0

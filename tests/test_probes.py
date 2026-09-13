@@ -50,7 +50,7 @@ def test_the_surface_below_is_the_top_face(cube):
 
 
 def test_scanning_where_there_is_nothing_raises(cube):
-    with pytest.raises(AssertionError, match="no surface"):
+    with pytest.raises(ValueError, match="no surface"):
         surface_height_below(cube, 50.0, 5.0, 20.0)
 
 

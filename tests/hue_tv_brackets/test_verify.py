@@ -12,15 +12,17 @@ import pytest
 
 from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import CornerBracket, shipping
-from printing3d.hue_tv_brackets.geometry import corner, profile
+from printing3d.hue_tv_brackets.geometry import CORNER_SEGMENTS, corner, profile
 from printing3d.hue_tv_brackets.verify import (
     check_base_is_flat,
     check_channel_aims_out,
     check_channel_clips,
     check_corner_matches_the_straight,
     check_corner_turns_a_quarter,
+    check_profile_is_solid,
     corner_section,
 )
+from printing3d.shapes import rect
 
 DESIGN = shipping().design
 
@@ -68,19 +70,29 @@ def test_a_corner_that_does_not_match_its_straight_is_caught():
 
 
 @pytest.mark.parametrize("turn", [45.0, 200.0])
-def test_a_corner_that_does_not_turn_a_quarter_is_caught(monkeypatch, turn):
-    """Swept through the wrong angle, the arc either stops short or runs on."""
-    from printing3d.hue_tv_brackets import geometry
+def test_a_corner_that_does_not_turn_a_quarter_is_caught(turn):
+    """Swept through the wrong angle, the arc either stops short or runs on.
 
-    monkeypatch.setattr(geometry, "QUARTER_TURN", turn)
+    Built by revolving directly rather than by patching the constant the check
+    reads: patched, the sweep and the check would move together and agree
+    forever, which is a test that cannot fail wearing the clothes of one that
+    can.
+    """
     part = CornerBracket(
         name="wrong-sweep",
-        solid=corner(DESIGN, 101.0),
+        solid=profile(DESIGN).translate((101.0, 0.0)).revolve(CORNER_SEGMENTS, turn),
         design=DESIGN,
         note="",
         radius=101.0,
     )
     assert objections_to(check_corner_turns_a_quarter, part)
+
+
+def test_a_profile_with_a_pocket_walled_into_it_is_caught():
+    """Air the slicer would wall in for no benefit. The shipped profile has
+    none, so one is put there."""
+    pocketed = profile(DESIGN) - rect(-10.0, 0.5, -9.0, 1.5)
+    assert objections_to(check_profile_is_solid, pocketed)
 
 
 def test_a_corner_section_comes_home_to_the_profiles_frame():

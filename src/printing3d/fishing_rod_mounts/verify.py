@@ -37,6 +37,14 @@ MIN_EDGE_LENGTH = 4.0  # ignore short edges when measuring diagonals
 MIN_WALL_CLEARANCE = 0.5  # mm of air between the rod and the wall
 PLATE_ABOVE_SCREW = 1.5  # mm of plate that must remain above a countersink
 
+# Probing the screw bore. The probe is smaller than the bore so it fits inside
+# one; the back is sampled just inside the face, where a countersink would show
+# if it had been cut from the wrong side; and the off-axis distance is far
+# enough out to miss the shank while still inside the countersink's cone.
+BORE_PROBE_SIZE = 0.4
+JUST_INSIDE_THE_BACK = 0.5
+OFF_THE_BORE_AXIS = 3.0
+
 
 # ---------------------------------------------------------------------------
 # Probes: questions asked of a finished solid
@@ -143,13 +151,21 @@ def check_screw(runner, part, height):
     mid_width = spec.design.slab_width / 2.0
     plate_thickness = spec.design.plate_thickness
     bore_is_open = not has_material_at(
-        part.solid, plate_thickness / 2.0, height, mid_width, size=0.4
+        part.solid, plate_thickness / 2.0, height, mid_width, size=BORE_PROBE_SIZE
     )
     back_is_flat = not has_material_at(
-        part.solid, plate_thickness - 0.5, height, mid_width + 3.0, size=0.4
+        part.solid,
+        plate_thickness - JUST_INSIDE_THE_BACK,
+        height,
+        mid_width + OFF_THE_BORE_AXIS,
+        size=BORE_PROBE_SIZE,
     )
     front_is_countersunk = has_material_at(
-        part.solid, 0.4, height, mid_width + 3.0, size=0.4
+        part.solid,
+        BORE_PROBE_SIZE,
+        height,
+        mid_width + OFF_THE_BORE_AXIS,
+        size=BORE_PROBE_SIZE,
     )
     runner.check(
         f"screw {height:.1f}: bore open, countersunk front only",
@@ -205,7 +221,14 @@ def check_derived_angles(runner, part):
 def check_pair_seats_rod_level(runner, parts):
     """The two mounts must agree on where the rod is, or it will not be level
     or parallel to the wall. Measured off the real solids, not the parameters."""
-    butt, tip = (next(p for p in parts if p.kind == kind) for kind in ("butt", "tip"))
+    by_kind = {part.kind: part for part in parts}
+    missing = [kind for kind in ("butt", "tip") if kind not in by_kind]
+    if missing:
+        runner.check(
+            f"a {' and a '.join(missing)} mount ships to compare against", False
+        )
+        return
+    butt, tip = by_kind["butt"], by_kind["tip"]
     butt_seat = seat_height(butt.solid, butt.spec)
     tip_seat = seat_height(tip.solid, tip.spec)
     mismatch = abs(butt_seat - tip_seat)

@@ -25,11 +25,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from printing3d import config
-from printing3d.fishing_rod_mounts import (  # noqa: F401  re-exported
-    CONFIG,
-    LOCKED,
-    NAME,
-)
+from printing3d.fishing_rod_mounts import CONFIG, NAME
 from printing3d.fishing_rod_mounts.geometry import (
     Design,
     MountSpec,
