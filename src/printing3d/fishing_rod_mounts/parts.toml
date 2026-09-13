@@ -1,0 +1,66 @@
+# Low-profile fishing rod mounts -- every measured or chosen number the shape
+# is built from.
+#
+# Anything derivable from what is here lives in geometry.py instead. If you can
+# compute it from these values, it does not belong in this file, and writing it
+# down anyway will be refused when the file is read.
+
+version = "-v3"
+
+# ---------------------------------------------------------------------------
+# The mount itself
+# ---------------------------------------------------------------------------
+
+[mount]
+# Where the rod's centerline sits. Every mount agrees on these two, which is
+# what lets a butt mount and a tip mount hang one rod level and parallel to the
+# wall despite gripping very different diameters.
+axis_from_wall = 18.0
+axis_height = 17.5
+
+# Backplate thickness, and also the removal-channel limit: nothing above the
+# cradle may sit further from the wall than this, or the rod -- a long cylinder
+# that cannot dodge sideways -- is trapped.
+plate_thickness = 4.0
+
+# Backplate height. Screws must sit ABOVE the rod: a weight hanging out from
+# the wall always tries to peel the TOP off.
+plate_height = 35.0
+
+slab_width = 11.0     # both mounts, so the pair reads as a set on the wall
+rib = 4.0             # thickness of the curved rib and the arm
+rod_clearance = 0.6   # added to rod diameter -> cradle diameter
+fillet = 0.8          # softening on convex corners
+lip_chamfer = 1.2     # 45-degree lead-in so the rod drops in rather than catching
+
+[mount.screw]
+# One screw, not two: the second was overkill for this load, and dropping it is
+# what let the backplate come down to 35 mm.
+heights = [27.5]
+clearance_diameter = 4.2          # through-hole: clears #6, #8 and M4
+countersink_diameter = 8.4
+countersink_included_angle = 90.0  # countersunk on the FRONT, so the back stays
+                                   # a flat unbroken pad for tape
+
+# ---------------------------------------------------------------------------
+# The rods. Measure each at the two places a mount will grip it.
+# ---------------------------------------------------------------------------
+
+[[rod]]
+name = "spinning-85in"
+butt_diameter = 26.15
+tip_diameter = 5.80
+
+# ---------------------------------------------------------------------------
+# How each end of a rod is held. Every style is built for every rod.
+# ---------------------------------------------------------------------------
+
+[[style]]
+kind = "butt"
+support = "arm-and-gusset"
+lip_rise = 5.0        # the rib rises past the centerline, so the grip is caught
+
+[[style]]
+kind = "tip"
+support = "wedge"
+lip_rise = 0.0        # nothing to catch: the blank is held by the cradle alone

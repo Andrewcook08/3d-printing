@@ -100,11 +100,11 @@ def _converted(annotation, value, where):
 
 
 def _entries(entry_type, value, where):
-    """Every entry of an array of tables, numbered so a failure is findable."""
+    """Every entry of a list, numbered so a failure is findable."""
     if not isinstance(value, list):
-        raise ConfigError(f"{where} should be a list of entries, not {_named(value)}")
+        raise ConfigError(f"{where} should be a list, not {_named(value)}")
     return [
-        _built(entry_type, _as_table(entry, f"{where}[{index}]"), f"{where}[{index}]")
+        _converted(entry_type, entry, f"{where}[{index}]")
         for index, entry in enumerate(value)
     ]
 

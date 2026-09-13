@@ -140,3 +140,19 @@ def test_an_optional_file_is_still_validated(tmp_path):
     path = written(tmp_path, '[[corner]]\nname = "t"\nbogus = 1\n', "trials.toml")
     with pytest.raises(ConfigError, match="bogus"):
         read_if_present(path, into=Catalogue)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Screws:
+    heights: list[float]
+
+
+def test_a_list_of_plain_numbers_is_read_and_coerced(tmp_path):
+    """One mount takes one screw, another might take two; the count is config."""
+    path = written(tmp_path, "heights = [27.5, 40]\n")
+    assert read(path, into=Screws).heights == [27.5, 40.0]
+
+
+def test_a_bad_value_inside_a_list_of_numbers_names_its_position(tmp_path):
+    with pytest.raises(ConfigError, match=r"heights\[1\]"):
+        read(written(tmp_path, 'heights = [27.5, "high"]\n'), into=Screws)
