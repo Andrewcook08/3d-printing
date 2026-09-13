@@ -17,10 +17,13 @@ a project declares named parts
         └─ tests ──▶ pass / fail                   did anything change?
 ```
 
-Three properties hold the whole thing together:
+The properties that hold the whole thing together:
 
 - **Generation is deterministic.** The same source always produces the same
   bytes, which is what makes the parts hash-lockable.
+- **Parameters are data, not code.** What a project measures or chooses lives
+  in its config file; the code derives everything else from it and changes only
+  when the shape does.
 - **Dimensions are derived, never restated.** A measurement is entered once;
   everything geometric follows from it.
 - **Nothing reaches the default branch unchecked.**
@@ -34,6 +37,7 @@ Three properties hold the whole thing together:
 | Doc | Covers |
 |---|---|
 | [Project contract](build/project-contract.md) | What a project must declare, and what it inherits for free |
+| [Configuration](build/configuration.md) | Where a project's numbers live, and what reading them guarantees |
 | [Build pipeline](build/pipeline.md) | A declared part becoming an STL file, and what building reports |
 | [Geometry model](build/geometry.md) | How a part's shape is expressed, and why it prints without supports |
 | [Output and locking](build/output.md) | Where files land, determinism, and the hash lock |

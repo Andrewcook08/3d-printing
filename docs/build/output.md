@@ -14,11 +14,30 @@ output/<project>/<part-name>.stl
 These files are **committed**. You can print straight from a clone without
 generating anything first.
 
+## Retiring a part
+
+Building makes the output directory hold exactly what the project declares. A
+part whose entry has been removed from [configuration](configuration.md) is
+moved aside on the next build rather than deleted:
+
+```
+output/archive/<project>/<part-name>.stl
+```
+
+The archive is not committed. It exists so a retired shape can be recovered
+without going through version control, which still has it either way.
+
+**The lock is never touched by this.** A retired part leaves the lock describing
+a file that is no longer there, and the conformance tests fail until it is
+re-locked deliberately — the same as any other change to what a project ships. A
+build that could edit its own lock could not be a golden master.
+
 ## Redirecting the output
 
 Setting `PRINTING3D_OUTPUT` replaces the root that projects write beneath.
-Projects still get their own subdirectory under it. This is how tests and
-experiments generate parts without touching the committed ones.
+Projects still get their own subdirectory under it, and the archive moves with
+them. This is how tests and experiments generate parts without touching the
+committed ones.
 
 ## Guarantees
 

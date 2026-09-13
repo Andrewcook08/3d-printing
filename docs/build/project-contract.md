@@ -18,6 +18,7 @@ own files and never a file shared with every other project.
 | How to build | Writes those parts to its output directory. |
 | How to verify | Its physical checks. **Required** — see below. |
 | A lock | The file recording the hash of everything it has shipped. |
+| A config | The file its measured and chosen numbers come from. **Required** — see [configuration](configuration.md). |
 
 Identity is available without loading any geometry, so listing the projects
 stays cheap however many there are. The heavier parts load only when something
