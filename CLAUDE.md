@@ -23,6 +23,7 @@ src/printing3d/            the shared kit -- never imports a project
   shapes.py                 2D construction (rect, polygon, fill, rounding)
   probes.py                 measuring built solids and profiles
   checks.py                 the pass/fail runner
+  config.py                 reading a project's numbers into its own schema
   stl.py                    binary STL writer
   parts.py                  what a Part is, where its file lands
   registry.py               the Project contract + discovery

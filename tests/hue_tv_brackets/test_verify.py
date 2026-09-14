@@ -49,6 +49,24 @@ def test_a_channel_with_no_lips_is_caught():
     assert objections_to(check_channel_clips, profile(troughed), troughed)
 
 
+def test_a_channel_necked_shut_is_NOT_caught():
+    """Pins a known hole rather than a guarantee, so it cannot be forgotten.
+
+    A 0.60 mm mouth admits nothing and passes every check, because catching it
+    needs a floor under the mouth and the strip's bow has never been measured.
+    If someone measures it and adds that floor, this test fails and is deleted
+    -- which is the point of writing it down as a test instead of a comment.
+    """
+    shut = replace(DESIGN, lip_reach=7.2)  # a 0.60 mm mouth for a 14.4 mm strip
+    assert objections_to(check_channel_clips, profile(shut), shut) == []
+
+
+def test_a_channel_too_narrow_for_its_strip_is_caught():
+    """The bed has to carry the strip, not merely be a bed."""
+    skinny = replace(DESIGN, strip_width=DESIGN.channel_width + 1.0)
+    assert objections_to(check_channel_clips, profile(skinny), skinny)
+
+
 def test_a_channel_leaning_the_wrong_way_is_caught():
     """The section is built at one lean and measured against another."""
     rolled = replace(DESIGN, tilt=65.0)

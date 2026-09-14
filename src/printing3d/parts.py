@@ -94,9 +94,10 @@ def build_project[P: Part](
     `announce` lets a project print its own line about a part -- a derived
     dimension worth seeing at build time -- just above the standard summary.
     """
-    # Everything is built and checked before anything is written, so an entry
-    # the project cannot make sense of fails with the output directory
-    # untouched rather than half-populated.
+    # The whole catalogue is realised and its names checked before anything is
+    # written, so a catalogue that cannot be made sense of fails with the output
+    # directory untouched. Writing is not itself all-or-nothing: a part that
+    # fails mid-loop leaves the ones before it on disk.
     parts = list(parts)
     _refuse_duplicate_names(project, parts)
     destination = output_dir(project)

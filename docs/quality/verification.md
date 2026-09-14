@@ -31,8 +31,15 @@ shape against a measurement of that object.
 **Every check reports its measurement, not just its verdict.** A near miss is
 visible before it becomes a failure.
 
-**Every check can fail.** Each is exercised against something deliberately
-wrong, so a check that has quietly stopped measuring anything is itself caught.
+**Every check function can fail.** Each is exercised against something
+deliberately wrong, so one that has quietly stopped measuring anything is
+itself caught. This is guaranteed per *function*, not per reported line: a
+function reporting several lines is mutated as a unit, so some individual lines
+carry no mutation aimed at them alone.
+
+**A check's known limits are pinned too.** Where a check cannot catch something
+it looks like it should, that gap is written down as a test asserting the gap
+still exists — so closing it later breaks a test rather than passing silently.
 
 **What is checked is a project's own business.** One project asks whether a rod
 seats, lifts out and is trapped sideways; another asks whether a channel necks

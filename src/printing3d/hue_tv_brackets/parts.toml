@@ -9,8 +9,12 @@
 
 [design]
 # The channel, measured off reference/Hue LED Strip with Angle straight
-# section.stl. The strip itself measures 14.4 mm across.
+# section.stl.
 channel_width = 15.0
+
+# The strip this holds, measured across. The bed must carry it and the mouth
+# must neck below it -- that difference is what the clip is.
+strip_width = 14.4
 channel_depth = 4.0
 wall = 1.5
 floor_thickness = 2.0

@@ -53,6 +53,12 @@ def upright_section(solid, degrees=0.0):
     """The cross-section of `solid` on the vertical plane `degrees` about Z.
 
     Promotable: domain-free measurement, currently only hue-tv-brackets.
+    Waiting on two choices nobody outside this repo made. The sense of
+    `degrees` is ours -- the solid turns by its negative, so the opposite
+    convention returns a mirrored section and silently inverts every
+    comparison drawn from it. And the plane passes through the origin, with no
+    offset to say otherwise, so a caller wanting it elsewhere translates first
+    and nothing here says which way.
     """
     return solid.rotate((0.0, 0.0, -degrees)).rotate((-90.0, 0.0, 0.0)).slice(0.0)
 
@@ -110,6 +116,12 @@ def straight_runs(section, min_length):
     A section cut from a mesh carries vertices wherever the triangulation put
     them, so one flat face arrives as several collinear segments. Merging them
     is what makes a measured face comparable to the face as drawn.
+
+    Waiting on four choices nobody outside this repo made: COLLINEAR as the
+    turn below which two segments are one face; angles folded modulo 180, so a
+    face and its reverse read alike; longest first, with ties falling out of
+    the tuple order rather than from any decision; and a zero-length segment
+    counted as running straight through.
     """
     runs = []
     for contour in section.to_polygons():
@@ -149,6 +161,12 @@ def longest_face_at(section, angle):
     """Length of the longest flat face lying at `angle`, or zero if none does.
 
     Promotable: domain-free measurement, currently only hue-tv-brackets.
+    Waiting on four choices nobody outside this repo made: MAX_ANGLE_ERROR as
+    the match tolerance and MAX_EDGE_ERROR as the length floor, both read from
+    module scope where no caller can reach them; zero returned for "no such
+    face", where slot_width_at above raises for its own empty case; and a
+    comparison that does not wrap, so a face measured at 179.99 never matches
+    one asked for at 0.0 even though straight_runs folded them together.
     """
     for length, found in straight_runs(section, MAX_EDGE_ERROR):
         if abs(found - angle) < MAX_ANGLE_ERROR:
@@ -158,7 +176,20 @@ def longest_face_at(section, angle):
 
 def check_channel_clips(runner, section, design):
     """A mouth wider than its bed is a trough: the strip would lift straight
-    back out, which is the whole failure this bracket exists to prevent."""
+    back out, which is the whole failure this bracket exists to prevent.
+
+    Bounded from the other side too. Every check here compared the built
+    channel against the design's own derived numbers, which a channel necked
+    shut satisfies perfectly -- a 0.60 mm mouth passed all of them. Measuring
+    against the strip is what makes the question physical instead of circular.
+
+    A channel necked SHUT still passes, and saying so is better than pretending
+    otherwise. Catching it needs a floor under the mouth, and the floor is how
+    far the strip bows to pass the neck -- which nobody here has measured. The
+    shipped 12.0 mm works on a 14.4 mm strip: one data point, not a limit.
+    Guessing a fraction of the strip width would put an invented number in
+    front of a check and make it read as verified.
+    """
     bed = slot_width_at(section, PROBE_BAND, design)
     mouth = slot_width_at(section, design.channel_depth - PROBE_BAND, design)
     runner.check(
@@ -175,6 +206,16 @@ def check_channel_clips(runner, section, design):
         "the lips close over the bed as drawn",
         abs(mouth - design.mouth_width) < lip_taper_slack(design),
         f"{mouth:.3f} mm against {design.mouth_width:.3f} mm at the face",
+    )
+    runner.check(
+        "the bed carries the strip",
+        bed >= design.strip_width,
+        f"bed {bed:.2f} mm for a {design.strip_width:.1f} mm strip",
+    )
+    runner.check(
+        "the mouth necks below the strip",
+        mouth < design.strip_width,
+        f"mouth {mouth:.2f} mm against a {design.strip_width:.1f} mm strip",
     )
 
 

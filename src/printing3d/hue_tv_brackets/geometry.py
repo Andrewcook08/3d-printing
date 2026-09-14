@@ -50,6 +50,12 @@ class Design:
 
     channel_width: float  # the strip's bed
     channel_depth: float
+
+    # What the channel is for. Read only by the pre-print checks -- no
+    # dimension of the bracket derives from it, because the channel was
+    # measured off the reference rather than sized from the strip.
+    strip_width: float
+
     wall: float  # slot wall, either side
     floor_thickness: float  # material under the slot
 
