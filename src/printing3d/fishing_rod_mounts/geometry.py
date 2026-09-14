@@ -122,6 +122,19 @@ class Cradle:
         return self.design.axis_from_wall - self.radius - self.design.rib
 
     @property
+    def outer_circle(self):
+        """The circle the rib's outer face follows: its centre and its radius.
+
+        Both tangent calculations below work on this one circle. Before it had
+        a name it was dug out of the design separately in three places, and
+        nothing said they were the same circle.
+        """
+        return (
+            self.design.axis_from_wall,
+            self.design.axis_height,
+        ), self.outer_radius
+
+    @property
     def standoff_behind_rod(self):
         """Material between the wall face and the rod's nearest surface."""
         return self.design.axis_from_wall - self.radius
@@ -192,8 +205,8 @@ class Wedge:
     def pieces(self, cradle):
         design = cradle.design
         corner_u, axis_v = design.plate_thickness, design.axis_height
-        slope = tangent_slope_from_corner(cradle.outer_radius, corner_u, design)
-        tangent_u, tangent_v = self._tangent_point(cradle.outer_radius, slope, design)
+        slope = tangent_slope(corner_u, *cradle.outer_circle)
+        tangent_u, tangent_v = tangency_point(slope, *cradle.outer_circle)
         top_face_rise = slope * (cradle.wall_side_u - corner_u)
         return [
             polygon(
@@ -206,14 +219,6 @@ class Wedge:
                 ]
             )
         ]
-
-    @staticmethod
-    def _tangent_point(outer_radius, slope, design):
-        normal = math.sqrt(slope * slope + 1.0)
-        return (
-            design.axis_from_wall + outer_radius * slope / normal,
-            design.axis_height - outer_radius / normal,
-        )
 
 
 ARM_AND_GUSSET = ArmAndGusset()
@@ -233,19 +238,29 @@ def support_named(name):
     return SUPPORTS[name]
 
 
-def tangent_slope_from_corner(outer_radius, corner_u, design):
-    """Slope of the line from (corner_u, 0) tangent to the crescent's outer
-    circle from below.
+def tangent_slope(from_u, centre, radius):
+    """Slope of the line from (from_u, 0) tangent to a circle, from below.
+
+    Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
 
     Lets the wedge's underside diagonal and the diagonal above it be parallel
     while each stays pinned to the feature it must meet.
     """
-    run = design.axis_from_wall - corner_u
-    axis_v = design.axis_height
-    a = run * run - outer_radius * outer_radius
+    run = centre[0] - from_u
+    axis_v = centre[1]
+    a = run * run - radius * radius
     b = -2.0 * run * axis_v
-    c = axis_v * axis_v - outer_radius * outer_radius
+    c = axis_v * axis_v - radius * radius
     return (-b - math.sqrt(b * b - 4.0 * a * c)) / (2.0 * a)
+
+
+def tangency_point(slope, centre, radius):
+    """Where a tangent of that slope touches the circle.
+
+    Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
+    """
+    normal = math.sqrt(slope * slope + 1.0)
+    return (centre[0] + radius * slope / normal, centre[1] - radius / normal)
 
 
 # ---------------------------------------------------------------------------
@@ -347,13 +362,13 @@ def build(spec):
     """The finished mount as a solid, ready to export."""
     solid = profile(spec).extrude(spec.design.slab_width)
     for height in spec.design.screw.heights:
-        solid = solid - screw_cut(height, spec.design.slab_width, spec.design)
+        solid = solid - screw_cut(height, spec.design)
     return solid
 
 
-def screw_cut(height, width, design):
+def screw_cut(height, design):
     """Through-hole plus front-face countersink, drilled horizontally."""
-    screw = design.screw
+    width, screw = design.slab_width, design.screw
     half_angle = math.radians(screw.countersink_included_angle) / 2.0
     depth = (
         (screw.countersink_diameter - screw.clearance_diameter)

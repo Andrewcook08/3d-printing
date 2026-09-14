@@ -103,11 +103,7 @@ def test_a_wedge_whose_diagonals_are_not_parallel_is_caught(monkeypatch):
     solver and the check cannot move together.
     """
     tip = next(part for part in SHIPPED if part.kind == "tip")
-    monkeypatch.setattr(
-        geometry,
-        "tangent_slope_from_corner",
-        lambda outer_radius, corner_u, design: 0.9,
-    )
+    monkeypatch.setattr(geometry, "tangent_slope", lambda from_u, centre, radius: 0.9)
     assert objections_to(check_derived_angles, tip)
 
 

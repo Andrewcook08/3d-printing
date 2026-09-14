@@ -14,7 +14,7 @@ from printing3d.fishing_rod_mounts.geometry import (
     build,
     profile,
     screw_cut,
-    tangent_slope_from_corner,
+    tangent_slope,
 )
 from printing3d.shapes import signed_area
 from tests.support import contour_digest
@@ -126,9 +126,7 @@ def distance_from_rod_axis(slope, corner_u=PLATE_THK):
 
 
 def test_the_undersides_line_leaves_the_plates_bottom_corner():
-    slope = tangent_slope_from_corner(
-        Cradle(TIP_DIA, design=DESIGN).outer_radius, PLATE_THK, DESIGN
-    )
+    slope = tangent_slope(PLATE_THK, *Cradle(TIP_DIA, design=DESIGN).outer_circle)
     assert underside_height_at(slope, PLATE_THK) == pytest.approx(0.0)
 
 
@@ -137,14 +135,12 @@ def test_the_underside_just_touches_the_crescents_outer_circle(rod_dia):
     """Tangent, not merely close: that is what removes the kink where the
     strut meets the curve."""
     cradle = Cradle(rod_dia, design=DESIGN)
-    slope = tangent_slope_from_corner(cradle.outer_radius, PLATE_THK, DESIGN)
+    slope = tangent_slope(PLATE_THK, *cradle.outer_circle)
     assert distance_from_rod_axis(slope) == pytest.approx(cradle.outer_radius)
 
 
 def test_the_wedge_passes_below_the_rod():
-    slope = tangent_slope_from_corner(
-        Cradle(TIP_DIA, design=DESIGN).outer_radius, PLATE_THK, DESIGN
-    )
+    slope = tangent_slope(PLATE_THK, *Cradle(TIP_DIA, design=DESIGN).outer_circle)
     assert underside_height_at(slope, AXIS_U) < AXIS_V
 
 
@@ -246,7 +242,7 @@ def test_the_countersink_tapers_at_the_screw_heads_own_angle(bore):
 def test_the_cut_is_centered_on_the_screw_and_across_the_slab():
     spec = tip_spec()
     _lo_u, lo_v, lo_w, _hi_u, hi_v, hi_w = screw_cut(
-        spec.design.screw.heights[0], spec.design.slab_width, DESIGN
+        spec.design.screw.heights[0], DESIGN
     ).bounding_box()
     assert (lo_w + hi_w) / 2 == pytest.approx(spec.design.slab_width / 2)
     assert (lo_v + hi_v) / 2 == pytest.approx(spec.design.screw.heights[0])
