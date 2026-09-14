@@ -26,6 +26,7 @@ def project() -> Project:
         parts=lambda: _catalog().parts(),
         build=lambda: _catalog().build_all(),
         verify=lambda: _checks().verify_all(),
+        verify_trials=lambda: _checks().verify_trials(),
         lock=LOCKED,
         measured=MEASURED,
         config=CONFIG,

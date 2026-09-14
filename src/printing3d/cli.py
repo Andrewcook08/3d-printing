@@ -32,7 +32,23 @@ def build(argv: list[str] | None = None) -> int:
 
 def verify(argv: list[str] | None = None) -> int:
     """Entry point for `verify`."""
-    return _run(argv, verb="verify", step=lambda project: project.verify)
+    return _run(argv, verb="verify", step=_verify)
+
+
+def _verify(project: Project) -> Callable[[], bool]:
+    """Check what a project ships, and anything it is still testing.
+
+    Both, because a trial is a thing you are about to print. Only the first
+    half is what the measurement lock pins.
+    """
+
+    def check() -> bool:
+        passed = project.verify()
+        if project.verify_trials is not None:
+            passed &= project.verify_trials()
+        return passed
+
+    return check
 
 
 def relock(argv: list[str] | None = None) -> int:

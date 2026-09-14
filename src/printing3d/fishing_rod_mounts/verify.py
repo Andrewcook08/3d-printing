@@ -232,8 +232,17 @@ def check_pair_seats_rod_level(runner, parts):
         )
         return
     butt, tip = by_kind["butt"], by_kind["tip"]
-    butt_seat = seat_height(butt.solid, butt.spec)
-    tip_seat = seat_height(tip.solid, tip.spec)
+    try:
+        butt_seat = seat_height(butt.solid, butt.spec)
+        tip_seat = seat_height(tip.solid, tip.spec)
+    except ValueError as unmeasurable:
+        # A seat that cannot be found is a failed check, not a crashed run.
+        # This module reports; a traceback here would take every part after
+        # this one down with it, which is the moment you most want the rest.
+        runner.check(
+            "butt + tip seat the rod at the same height", False, str(unmeasurable)
+        )
+        return
     mismatch = abs(butt_seat - tip_seat)
     tilt = math.degrees(math.atan2(mismatch, SPAN))
     runner.check(

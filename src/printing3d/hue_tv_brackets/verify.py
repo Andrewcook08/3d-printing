@@ -231,24 +231,39 @@ def check_corner_matches_the_straight(runner, section, reference):
     )
 
 
-def verify_all():
-    """Run every check against every bracket. True if all pass."""
+def verify_all() -> bool:
+    """Run every check against every bracket this project ships."""
+    return _checked(list(parts()))
+
+
+def verify_trials() -> bool:
+    """Run every check against the brackets still being tested.
+
+    Kept out of `verify_all` so that what the measurement lock pins is exactly
+    what the project ships. A trial is checked because you are about to print
+    it; it is not part of the record of what this project produces, and
+    retiring one should cost a config file and nothing else.
+    """
+    tried = list(trial_parts())
+    return _checked(tried) if tried else True
+
+
+def _checked(brackets) -> bool:
+    """Check these brackets, and report."""
     runner = CheckRunner()
-    # Trials are checked alongside what ships, because a trial is something you
-    # are about to print. They are compared against the straights they were
-    # swept with, which are themselves trials at the same lean.
-    brackets = [*parts(), *trial_parts()]
-    runs = straights(brackets)
-    if not runs:
-        runner.check("a straight ships for the corners to be measured against", False)
-        return runner.report()
-    for part in runs:
+    for part in straights(brackets):
         runner.section(part.name)
         check_the_channel(runner, straight_section(part), part.design)
 
     # A corner is compared against a straight at its OWN lean: "the same
-    # bracket bent" only means anything between two brackets aimed alike.
-    references = {part.design: straight_section(part) for part in runs}
+    # bracket bent" only means anything between two brackets aimed alike. The
+    # straight may be declared in the other catalogue -- a 65-degree corner is
+    # matched by a 65-degree trial, a 45-degree one by the straight that ships
+    # -- so the references are drawn from everything the project can build.
+    references = {
+        part.design: straight_section(part)
+        for part in straights([*parts(), *trial_parts()])
+    }
     for part in corners(brackets):
         runner.section(part.name)
         section = corner_section(part)
@@ -256,7 +271,7 @@ def verify_all():
         check_corner_turns_a_quarter(runner, part)
         reference = references.get(part.design)
         runner.check(
-            f"a {part.design.tilt:g}-degree straight ships to compare it against",
+            f"a {part.design.tilt:g}-degree straight exists to compare it against",
             reference is not None,
         )
         if reference is not None:

@@ -24,10 +24,10 @@ DECLARATION = "project"  # the attribute a project package exposes
 class Project:
     """One 3D-printing project, and everything the repo needs from it.
 
-    Every field is required. A project that cannot say what it ships, pin what
-    it has shipped, pin what its parts measured, check that they are sound, or
-    point at the file its numbers come from has no business shipping them, so
-    there is no way to declare a partial one.
+    Every field but one is required. A project that cannot say what it ships,
+    pin what it has shipped, pin what its parts measured, check that they are
+    sound, or point at the file its numbers come from has no business shipping
+    them, so there is no way to declare a partial one.
     """
 
     name: str
@@ -38,6 +38,12 @@ class Project:
     lock: Path
     measured: Path
     config: Path
+
+    # The one optional field, because parts under test are themselves
+    # optional. It is kept apart from `verify` rather than folded into it so
+    # that what gets pinned stays exactly what the project ships: a trial is
+    # checked because you are about to print it, not because it is a record.
+    verify_trials: Callable[[], bool] | None = None
 
 
 def discover() -> dict[str, Project]:
@@ -52,6 +58,6 @@ def discover() -> dict[str, Project]:
         declaration = getattr(package, DECLARATION, None)
         if declaration is None:
             continue
-        project = declaration() if callable(declaration) else declaration
+        project = declaration()
         found[project.name] = project
     return dict(sorted(found.items()))

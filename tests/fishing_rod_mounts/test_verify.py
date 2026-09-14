@@ -70,12 +70,18 @@ def test_a_screw_placed_off_the_top_of_the_plate_is_caught(butt):
 
 def test_a_pair_that_would_hang_the_rod_crooked_is_caught():
     """The two mounts agreeing on where the rod sits is the whole reason a butt
-    and a tip mount can be built for very different diameters. Lift one and the
-    rod hangs out of level, which is the check that has to notice."""
+    and a tip mount can be built for very different diameters. Drop one and the
+    rod hangs out of level, which is the check that has to notice.
+
+    Dropped rather than lifted, deliberately. Lifting one slides its cradle
+    floor up past the point the probe starts from, and a probe that begins
+    inside material cannot measure a surface below it -- which is a different
+    failure, reported separately, and not the one this test is about.
+    """
     pair = [part for part in SHIPPED if part.rod == SHIPPED[0].rod]
     tip = next(part for part in pair if part.kind == "tip")
-    lifted = replace(tip, solid=tip.solid.translate((0.0, 5.0, 0.0)))
-    crooked = [part for part in pair if part.kind != "tip"] + [lifted]
+    dropped = replace(tip, solid=tip.solid.translate((0.0, -5.0, 0.0)))
+    crooked = [part for part in pair if part.kind != "tip"] + [dropped]
 
     objections = objections_to(check_pair_seats_rod_level, crooked)
 
@@ -84,6 +90,23 @@ def test_a_pair_that_would_hang_the_rod_crooked_is_caught():
     # anything noticing.
     assert any("same height" in objection for objection in objections), objections
     assert any("tilt" in objection for objection in objections), objections
+
+
+def test_a_seat_that_cannot_be_measured_is_reported_not_raised():
+    """Lifting a mount puts its cradle floor above where the probe starts.
+
+    That measurement genuinely cannot be taken, and the old answer to it was a
+    wrong number. The new answer must still arrive as a failed check: a
+    traceback here takes down every part queued behind this one, which is
+    exactly when you want the rest of the report.
+    """
+    pair = [part for part in SHIPPED if part.rod == SHIPPED[0].rod]
+    tip = next(part for part in pair if part.kind == "tip")
+    lifted = replace(tip, solid=tip.solid.translate((0.0, 5.0, 0.0)))
+    unmeasurable = [part for part in pair if part.kind != "tip"] + [lifted]
+
+    objections = objections_to(check_pair_seats_rod_level, unmeasurable)
+    assert any("same height" in objection for objection in objections), objections
 
 
 def test_a_mount_in_two_pieces_is_caught(butt):
@@ -104,7 +127,11 @@ def test_a_wedge_whose_diagonals_are_not_parallel_is_caught(monkeypatch):
     """
     tip = next(part for part in SHIPPED if part.kind == "tip")
     monkeypatch.setattr(geometry, "tangent_slope", lambda from_u, centre, radius: 0.9)
-    assert objections_to(check_derived_angles, tip)
+    # Named, not merely counted: this check reports two things for a tip mount,
+    # and a bogus slope disturbs both -- so "something objected" would be
+    # satisfied by the wrong one.
+    objections = objections_to(check_derived_angles, tip)
+    assert any("diagonals" in objection for objection in objections), objections
 
 
 def test_a_rod_missing_one_of_its_mounts_is_reported_not_crashed(butt):

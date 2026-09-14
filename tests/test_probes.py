@@ -58,6 +58,19 @@ def test_a_solid_profile_has_no_enclosed_voids():
     assert enclosed_void_count(rect(0.0, 0.0, 10.0, 10.0)) == 0
 
 
+def test_a_probe_starting_inside_material_refuses_to_answer():
+    """It used to answer with the height it started at.
+
+    A plausible number, arrived at by measuring nothing: both ends of the
+    bisection began inside material, so the search was a no-op. The caller
+    scans down a cradle's centreline, so a cradle accidentally filled in read
+    back as a sensible seat height and every check on it passed.
+    """
+    cube = Manifold.cube((10.0, 10.0, 10.0), False)
+    with pytest.raises(ValueError, match="already inside material"):
+        surface_height_below(cube, 5.0, 5.0, 5.0)
+
+
 def test_a_punched_profile_reports_its_pocket():
     assert (
         enclosed_void_count(rect(0.0, 0.0, 10.0, 10.0) - rect(3.0, 3.0, 7.0, 7.0)) == 1

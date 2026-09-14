@@ -42,6 +42,12 @@ def surface_height_below(solid, u, w, start_v, step=0.25, limit=-5.0, rounds=40)
     def material(v):
         return has_material_at(solid, u, v, w, size=FINE_PROBE_SIZE)
 
+    if material(start_v):
+        raise ValueError(
+            f"v={start_v} at (u={u}, w={w}) is already inside material; "
+            f"there is no surface below a point that is not above one"
+        )
+
     air, v = start_v, start_v
     while v > limit:
         if material(v):

@@ -122,19 +122,38 @@ def test_the_installed_verify_command_reports_success(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
+def a_cube():
+    from manifold3d import Manifold
+
+    return Manifold.cube((10.0, 10.0, 10.0), False)
+
+
 def stand_in_project(tmp_path, *, builds=True, checks_pass=True):
-    """A project whose build and checks can be told to fail on command."""
+    """A project whose build and checks can be told to fail on command.
+
+    Its build writes a real STL, so the digest the lock ends up holding is a
+    digest of something rather than the empty string two ways.
+    """
+    from printing3d.parts import output_dir
     from printing3d.registry import Project
+    from printing3d.stl import write_stl
 
     def report():
         print("  [PASS] a measurement  -- 1.000 mm")
         return checks_pass
 
+    def make() -> bool:
+        if builds:
+            written = output_dir(SOME_PROJECT)
+            written.mkdir(parents=True, exist_ok=True)
+            write_stl(a_cube(), written / "stand-in.stl", "stand-in")
+        return builds
+
     return Project(
         name=SOME_PROJECT,
         summary="a project standing in for a real one",
         parts=lambda: iter([]),
-        build=lambda: builds,
+        build=make,
         verify=report,
         lock=tmp_path / "LOCKED.txt",
         measured=tmp_path / "MEASURED.txt",
@@ -153,7 +172,9 @@ def test_relocking_writes_both_records(tmp_path):
     assert _repin(project)()
 
     assert project.measured.read_text() == "  [PASS] a measurement  -- 1.000 mm\n"
-    assert project.lock.read_text() == hashes_of(SOME_PROJECT)
+    locked = project.lock.read_text()
+    assert "stand-in.stl" in locked, f"the byte lock recorded nothing: {locked!r}"
+    assert locked == hashes_of(SOME_PROJECT)
 
 
 def test_an_unsound_build_is_not_pinned(tmp_path):
