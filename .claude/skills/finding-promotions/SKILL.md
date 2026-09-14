@@ -37,7 +37,7 @@ step 2 felt conclusive.
 carrying it to step 5 in your head:
 
 ```
-<helper>  <verdict>  <marker? y/n>  <second caller?>  <one-line reason>
+<helper>  <verdict>  <marker? y/n>  <spec-able? y/n>  <second caller?>  <reason>
 ```
 
 Sixty helpers across two projects is already near the limit of what anyone
@@ -143,7 +143,7 @@ moved the bytes.
 | It depends on more than it needs | **Report the coupling.** Decouple first as its own commit; move it when a second caller exists. |
 | Two callers want *different* behaviour | **Two functions.** One with a mode argument is shallower than the two it replaced. |
 | The second caller must pass something saying which kind it is | **Stop.** A flag argument means two jobs in one function. |
-| One caller today, and a second imagined | **Stop.** That is guessing what the second needs. |
+| One caller today, and a second imagined | **Stop** — unless 2b applies. Imagining a second caller is guessing; a closed-form helper has no second shape left to imagine. |
 | A method reading its own object's fields | **Not over-coupling.** Taking a domain object as an *argument* is coupling; reading `self` is cohesion, and is why the object exists. Read literally, 2a would flag every property a design has. |
 | A general algorithm with one domain call inside it | **Stop.** Hoisting that call out hands the caller a step it did not have, so the module got wider, not deeper. That is a redesign wanting its own justification, not a narrowing. |
 
@@ -157,6 +157,34 @@ other test here and still belong where they are.
 The test that settles it: after the change, does the **caller** have fewer things
 to know, or more? Fewer means the module got deeper. More means it got wider, and
 a wide shared helper costs every project that uses it.
+
+### 2b. Move now, or mark and wait
+
+Every candidate goes to the kit eventually. This decides whether it goes now.
+
+A candidate is **spec-able** when all four hold:
+
+1. **You can point at what makes it right** — a mathematical identity, a
+   published format, a definition standard in the field, checkable by a stranger
+   who has read nothing else here. "It is obviously correct" points at nothing.
+2. **Nothing in its signature is ours** — plain values, or types the kit already
+   owns.
+3. **It has exactly one behaviour** — no branch a caller selects, and no
+   "...except when" in the description.
+4. **Its tests can be written without naming a project.**
+
+**The check:** write the docstring with every word belonging to this repo
+deleted. If what is left still specifies the function completely, it is
+spec-able. If you cannot finish the sentence, it is not.
+
+| Verdict | What it means |
+|---|---|
+| **Spec-able** | **Move it now.** Nothing about its shape is ours, so a second caller could settle nothing. Waiting only hides it — the next project reads the kit, not a grep. |
+| **Domain-free, shape ours** | **Mark it and leave it.** What it merges, what tolerance it takes, what it returns when there is nothing to return — a second caller is what settles those, and guessing is how a wrong abstraction gets two callers stuck on it. |
+
+This bar is higher than step 2's on purpose: it is the route that moves without
+the evidence. Passing the birdhouse test is not passing this one. CLAUDE.md
+carries the reasoning; this step is only where it gets applied.
 
 ### 3. Cross-check the kit
 
@@ -190,8 +218,8 @@ is what makes it a single thing to promote later instead of three.
 ### 5. Report
 
 For each helper: its name, the verdict, the reason in one line, whether it
-carries a `Promotable:` marker, and — for candidates — whether a second caller
-now exists.
+carries a `Promotable:` marker, and — for candidates — its 2b verdict and
+whether a second caller now exists.
 
 **Read what an existing marker actually says, not just that it is there.** A
 marker is prose, and prose goes stale: one here notes that promoting a helper
@@ -199,8 +227,11 @@ would mean teaching a kit function to merge its results first. Change that kit
 function and the sentence is quietly false, with nothing failing. A marker
 whose caveat no longer holds belongs in the second list below.
 
-**Three lists matter most**, and none exists anywhere else:
+**Four lists matter most**, and none exists anywhere else:
 
+- **spec-able candidates still living in a project** — these move now, and no
+  second caller is needed. Nothing about their shape is ours, so nothing is
+  being guessed at
 - **candidates carrying no marker** — the discovery gap, and the reason this
   procedure exists
 - **marked helpers that are not actually candidates** — a marker claiming more
@@ -219,9 +250,13 @@ Report. Do not edit.
 
 ## What not to do
 
-- **Do not promote on one caller.** A candidate is marked, not moved. The second
-  caller is the trigger, and generalising from one example is guessing what the
-  second needs.
+- **Do not promote on one caller unless 2b says spec-able.** A candidate whose
+  shape we chose is marked, not moved — the second caller is what settles that
+  shape, and generalising from one example is guessing. A candidate whose shape
+  nobody chose has nothing left to settle.
+- **Do not stretch 2b to cover something you like.** It is four conditions and a
+  falsifiable check, not a feeling. Every helper looks obvious to whoever just
+  wrote it, and that is exactly how a kit becomes a junk drawer.
 - **Do not mark something because it looks generic.** Apply the test in step 2.
 - **Do not stop at a domain-sounding name.** Renaming is part of a pure move.
   What disqualifies a helper is domain knowledge in its behaviour, not in its
@@ -239,7 +274,8 @@ Report. Do not edit.
 | Symptom | What went wrong |
 |---|---|
 | Everything comes back "domain" | Step 2 answered from the code's neighbourhood rather than from whether another project could call it |
-| Something is promoted with one caller | The trigger was misread; a candidate is marked and left where it is |
+| A helper whose shape we chose is promoted on one caller | The trigger was misread. 2b applies only where nothing about the shape is ours |
+| A spec-able helper is marked instead of moved | 2b was skipped, and the inventory now holds something that belonged in the kit already |
 | A second caller exists and nothing was found | Step 4 was skipped, or searched for the name rather than the job |
 | A kit helper gets quietly widened | Step 3's caveat was ignored — that changes another project and is the owner's call |
 | A promoted helper grows a mode argument | Step 2a was skipped: two behaviours were forced into one function |

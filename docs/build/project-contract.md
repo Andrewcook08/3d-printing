@@ -51,11 +51,18 @@ inherited.
 
 ## How shared code grows
 
-A helper starts inside the project that needs it. When a second project needs
-the same thing, it moves into the shared kit. Only utilities with no
-subject-matter knowledge are eligible — anything shaped around what a
-particular project makes stays with that project, because generalising from a
-single example means guessing what the second one needs.
+A helper starts inside the project that needs it and reaches the shared kit by
+one of two routes. Usually a second project needs the same thing: the second
+caller is what shows which parts of a helper's shape were essential and which
+were incidental, and generalising from a single example means guessing. The
+exception is a helper whose specification can be written without referring to
+this repo at all — closed mathematics, a published file format — which moves as
+soon as it exists, because no second caller could teach it anything.
+
+That second bar is higher than "carries no subject-matter knowledge", since it
+is the route that moves without the evidence. Only utilities with no
+subject-matter knowledge are eligible either way; anything shaped around what a
+particular project makes stays with that project.
 
 The move never changes what a helper computes; the hash lock is what proves it.
 A helper may shed dependencies on the way — asking for the two values it needs

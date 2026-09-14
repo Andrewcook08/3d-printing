@@ -217,8 +217,54 @@ Behavior: [docs/build/project-contract.md](docs/build/project-contract.md).
 
 ## Growing the shared kit
 
-A helper starts **in the project that needs it**. When a *second* project needs
-the same thing, it moves into the kit.
+A helper starts **in the project that needs it**. There are two ways it reaches
+the kit, and most helpers take the first:
+
+- **A second project needs it.** The usual route. The second caller is what
+  tells you which parts of a helper's shape were essential and which were
+  incidental, and abstracting before you know that is guessing.
+- **It is spec-able.** Then it moves immediately, because there is nothing left
+  for a second caller to teach you.
+
+### Spec-able: when waiting buys nothing
+
+"Generalising from one example is guessing what the second needs" is the entire
+argument for waiting, and it is a good one — for a helper whose shape we chose.
+It has no force when we chose nothing. There is one tangent line from a point to
+a circle, its signature was settled by Euclid rather than by us, and a second
+caller wanting something different wants a different function.
+
+Meanwhile waiting costs something real. A helper in a project folder is found by
+running a procedure; a helper in the kit is found by reading the kit, which is
+what you do when starting a project. So the absence causes the duplication the
+rule exists to prevent: the next project, not seeing a tangent solver, writes
+one.
+
+A helper is **spec-able** when all four hold:
+
+1. **You can point at what makes it right** — a mathematical identity, a
+   published format, a definition standard in the field. Something a stranger
+   could check the code against without reading anything else in this repo.
+   "It is obviously correct" points at nothing.
+2. **Nothing in its signature is ours.** Plain values, or types the kit already
+   owns. No project type goes in or comes out.
+3. **It has exactly one behaviour.** No branch a caller selects, and no
+   "...except when" in the description. An exception clause is two functions.
+4. **Its tests can be written without naming a project.** If a wrong answer is
+   only wrong given what some project happens to make, it is not spec-able.
+
+**The check, and it is falsifiable:** write the helper's docstring with every
+word belonging to this repo deleted. If what is left still specifies the
+function completely, it is spec-able. If you cannot finish the sentence, it is
+not. This is the same move as the documentation skill's rename test, pointed at
+a signature instead of a doc.
+
+This bar is deliberately higher than **domain-free**, because this is the route
+that skips the evidence. A helper can pass the birdhouse test — an unrelated
+project could call it today and mean it — and still fail this one, because we
+chose its shape: what it merges, what tolerance it takes, what it returns when
+there is nothing to return. Those wait for a second caller to settle the shape,
+and they are what the `Promotable:` marker is for.
 
 **What a promotion may and may not change:**
 
@@ -239,14 +285,15 @@ a design is, whether it has one caller or ten. Then the move really is pure.
 Tangling the two is what makes a promotion unreviewable, because the lock can no
 longer tell you which of the changes moved the bytes.
 
-- Only **domain-free** utilities are eligible. Anything shaped around what a
-  project makes stays with that project; generalising from one example is
-  guessing what the second needs.
+- Only **domain-free** utilities are eligible by either route. Anything shaped
+  around what a project makes stays with that project.
 - **The kit never imports a project.** Enforced by a test, so don't work around
   it — if shared code needs a project's knowledge, it isn't shared code.
 - Promoted code must arrive with its own tests.
 
-Don't pre-build abstractions for projects that don't exist yet.
+Don't pre-build abstractions for projects that don't exist yet. Moving a closed
+piece of mathematics is not pre-building one: the abstraction already exists,
+and the only question is which folder it sits in.
 
 ### Finding what already exists
 
@@ -256,8 +303,8 @@ Before writing a helper, check whether one of the projects already has it:
 rg -n "Promotable:" src/printing3d/
 ```
 
-A domain-free helper carries one line in its docstring saying so, and that grep
-is the entire inventory — there is no list to keep in step, because the marker
+A domain-free helper **that is waiting for a second caller** carries one line in
+its docstring saying so, and that grep is the entire inventory — there is no list to keep in step, because the marker
 lives on the thing it describes:
 
 ```python
@@ -272,11 +319,17 @@ Mark a helper when you **write** it, not when you promote it. The marker records
 the judgement that it carries no project's assumptions — which you are making
 right then, and will not remember later.
 
+**A spec-able helper is moved, not marked.** The marker means "domain-free, but
+its shape is still ours, so it waits". If nothing about the shape is ours there
+is nothing to wait for, and leaving a marker on it instead of moving it is how
+the inventory fills with things that should already be in the kit.
+
 Because that depends on remembering, it is also checked rather than trusted: the
 `finding-promotions` skill enumerates the helpers a change added and classifies
 each, and it is one of the reviews run before work is finished. It catches the
-two things the test cannot — a domain-free helper nobody marked, and a second
-project that wrote the same thing under a different name.
+three things the test cannot — a domain-free helper nobody marked, a spec-able
+one marked instead of moved, and a second project that wrote the same thing
+under a different name.
 
 If two projects end up defining the same helper name, the test suite fails and
 names both. That is the promotion trigger firing: move it into the kit, or
