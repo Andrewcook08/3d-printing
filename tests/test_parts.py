@@ -33,7 +33,13 @@ def test_the_trials_directory_never_reaches_the_repository():
     that happens to produce it.
     """
     trials = Path(DEFAULT_OUTPUT_DIR) / TRIALS_DIR
-    assert git("check-ignore", "-q", str(trials)).returncode == 0, (
+    # Asks about a file that would live there rather than the directory itself.
+    # The ignore rule names a directory, and git cannot tell a path is one
+    # unless it exists -- so asking about the bare directory passes on a machine
+    # that has run a build and fails on a fresh clone, which is the worst way
+    # for a test to be wrong.
+    would_be_written = trials / "any-project" / "any-part.stl"
+    assert git("check-ignore", "-q", str(would_be_written)).returncode == 0, (
         f"{trials} is not ignored by git; parts under test would be committed"
     )
     tracked = git("ls-files", str(trials)).stdout.strip()
