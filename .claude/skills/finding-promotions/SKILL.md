@@ -40,9 +40,21 @@ this change touched. A helper written before this procedure existed is exactly
 the one nobody has ever looked at, and sweeping everything costs one command.
 
 ```sh
-rg -n '^(def|class) [a-z_A-Z]' src/printing3d/*/                  # all of them
-git diff main...HEAD -- 'src/printing3d/*/' | rg '^\+(def|class) '  # what is new
+rg -n '^\s*(def|class) [a-zA-Z_]' src/printing3d/*/*.py            # all of them
+git diff main...HEAD -- 'src/printing3d/*/*.py' \
+  | rg '^\+\s*(def|class) '                                       # what is new
 ```
+
+Both details are load-bearing, and both were wrong here once:
+
+- **Match indented definitions too.** Most of this repo's geometry lives inside
+  classes, so a pattern anchored at column zero is blind to methods, properties
+  and static methods — which is where the helpers actually are. One of the two
+  helpers this procedure has found so far was a static method.
+- **Spell the pathspec `*/*.py`.** Git's pathspecs do not cross `/` the way a
+  shell glob does, so `'src/printing3d/*/'` matches no file and prints nothing.
+  Empty output is indistinguishable from "this change added no helpers", so
+  that mistake fails in the direction of reassurance — the worst direction.
 
 Use the diff to decide what to look at *first*, never to decide what to look at
 *at all*. This step has no judgement in it, and skipping it is how the last one
@@ -57,14 +69,20 @@ ranges and returns their highest points is domain in name only; it belongs in th
 kit under a better one. The same function that *works out* which ranges to
 measure from what a cradle is does not.
 
-For each, answer in order. The first **yes** settles it.
+For each, answer in order. The first **yes** settles it — with one deliberate
+exception, marked below, because taking a project's type is a fact about a
+signature and this table is about behaviour.
 
 | Ask | If yes |
 |---|---|
 | Does its behaviour depend on a fact about what the project makes? | domain — stop |
-| Does its signature take or return a type a project defines? | domain — stop |
-| Would another project have to change its signature or behaviour to use it? | not a pure move — see below |
-| Could a project making something unrelated call it **as it stands** and mean it? | **candidate** |
+| Does its signature take or return a type a project defines? | **not a verdict.** Note it and keep going — answer the rest about the behaviour, then see 2a |
+| Would another project have to change its **behaviour** to use it? | not a pure move — see below |
+| Could a project making something unrelated call it — as it stands, or as it would stand with that type narrowed away — and mean it? | **candidate** |
+
+Row two is the trap this table used to set for itself. Read as "domain — stop",
+it fires on precisely the helpers 2a exists to rescue, and list 3 comes back
+empty every time. A parochial signature is a finding, never a verdict.
 
 The last question is the real test, and it is about the *caller*, not the code.
 "A future project might want this" is not a yes. "A project making a birdhouse
@@ -125,6 +143,12 @@ For each helper: its name, the verdict, the reason in one line, whether it
 carries a `Promotable:` marker, and — for candidates — whether a second caller
 now exists.
 
+**Read what an existing marker actually says, not just that it is there.** A
+marker is prose, and prose goes stale: one here notes that promoting a helper
+would mean teaching a kit function to merge its results first. Change that kit
+function and the sentence is quietly false, with nothing failing. A marker
+whose caveat no longer holds belongs in the second list below.
+
 **Three lists matter most**, and none exists anywhere else:
 
 - **candidates carrying no marker** — the discovery gap, and the reason this
@@ -166,3 +190,5 @@ Report. Do not edit.
 | A promoted helper grows a mode argument | Step 2a was skipped: two behaviours were forced into one function |
 | A general helper is dismissed for taking a domain type | Step 2a was read as a verdict rather than as a coupling finding |
 | Only helpers from this change were examined | Step 1 was read as "the diff" instead of "every project package" |
+| Step 1 printed nothing and that was taken as good news | The pathspec or the pattern matched no file. An empty sweep of a repo with helpers in it is a broken command, never a clean bill |
+| A marked helper's caveat is no longer true | Step 5 checked that a marker exists instead of reading what it claims |
