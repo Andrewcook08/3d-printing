@@ -98,3 +98,46 @@ tilt = 65.0
 name = "trial-straight-70deg-25.4mm-v1"
 length = 25.4
 tilt = 70.0
+
+# ---------------------------------------------------------------------------
+# Round three. Both 3.0% rungs bound, so the target is 1.0% -- three times
+# gentler again, and nine times gentler than the 9.3% that bound a third of the
+# way in.
+#
+# Strain is (strip_width / 2) * cos(lean) / radius, so it can be bought two
+# ways. Leaning the channel further is the cheap one: the same 1.0% costs R246
+# at 70 degrees and R63 at 85, because cos falls away quickly through here. A
+# corner also needs its radius of clear edge on BOTH sides, so R246 wants most
+# of half a metre of TV edge per corner and R63 wants an eighth of that.
+# ---------------------------------------------------------------------------
+
+[[corner]]
+name = "trial-corner-70deg-r246-v1"
+radius = 246.0
+tilt = 70.0
+note = "1.0% strain at the lean already tried -- the direct answer, and a big part"
+
+[[corner]]
+name = "trial-corner-80deg-r125-v1"
+radius = 125.0
+tilt = 80.0
+note = "1.0% strain, half the radius, by leaning further instead"
+
+[[corner]]
+name = "trial-corner-85deg-r63-v1"
+radius = 63.0
+tilt = 85.0
+note = "1.0% strain at a radius smaller than the R82 that just bound"
+
+# A straight at each new lean, so a corner has something at its own lean to be
+# compared against.
+
+[[straight]]
+name = "trial-straight-80deg-25.4mm-v1"
+length = 25.4
+tilt = 80.0
+
+[[straight]]
+name = "trial-straight-85deg-25.4mm-v1"
+length = 25.4
+tilt = 85.0
