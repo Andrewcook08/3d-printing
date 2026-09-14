@@ -59,6 +59,11 @@ class Part:
         )
 
 
+def digest_of(path: Path) -> str:
+    """The sha256 of a file, spelled the way `shasum -a 256` spells it."""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def repo_root() -> Path:
     """The directory holding pyproject.toml, found by walking up from here."""
     for directory in Path(__file__).resolve().parents:

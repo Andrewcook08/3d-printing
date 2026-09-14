@@ -112,7 +112,8 @@ def test_the_checks_still_measure_what_they_measured(project):
     than the verdicts: a check still passing is not the same claim as a check
     still reading 15.000 mm.
     """
-    assert measurements_from(project.verify) == project.measured.read_text(), (
+    _, measured = measurements_from(project.verify)
+    assert measured == project.measured.read_text(), (
         f"{project.measured.name} no longer matches what {project.name} "
         f"measures; if the change was intended, run `relock`"
     )
