@@ -7,9 +7,11 @@ point of use. Fixtures belong in conftest.py.
 import hashlib
 from pathlib import Path
 
+from printing3d.parts import digest_of
 
-def sha256_of(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+# The kit already spells this, and a second spelling is a second thing that can
+# drift from what the lock actually holds.
+sha256_of = digest_of
 
 
 def locked_hashes(locked_file: Path) -> dict[str, str]:
@@ -29,3 +31,17 @@ def contour_digest(cross_section) -> str:
         for u, v in contour:
             fingerprint.update(f"{u:.9g},{v:.9g};".encode())
     return fingerprint.hexdigest()[:16]
+
+
+def objections_to(check, *arguments):
+    """What a check complains about when handed `arguments`.
+
+    Shared because both projects' negative suites need exactly this and wrote
+    it identically. The architecture test would have failed on that in `src/`;
+    it does not look at `tests/`, so it was noticed by a sweep instead.
+    """
+    from printing3d.checks import CheckRunner
+
+    runner = CheckRunner()
+    check(runner, *arguments)
+    return runner.failures

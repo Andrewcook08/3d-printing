@@ -10,7 +10,6 @@ from dataclasses import replace
 
 import pytest
 
-from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import CornerBracket, shipping
 from printing3d.hue_tv_brackets.geometry import CORNER_SEGMENTS, corner, profile
 from printing3d.hue_tv_brackets.verify import (
@@ -23,15 +22,9 @@ from printing3d.hue_tv_brackets.verify import (
     corner_section,
 )
 from printing3d.shapes import rect
+from tests.support import objections_to
 
 DESIGN = shipping().design
-
-
-def objections_to(check, *arguments):
-    """What a check complains about when handed `arguments`."""
-    runner = CheckRunner()
-    check(runner, *arguments)
-    return runner.failures
 
 
 def test_the_checks_pass_the_shape_that_ships():

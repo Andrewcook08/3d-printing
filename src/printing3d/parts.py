@@ -178,7 +178,7 @@ def _archived_as(path: Path, archive: Path) -> Path:
     settled = archive / path.name
     if not settled.is_file() or settled.read_bytes() == path.read_bytes():
         return settled
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:8]
+    digest = digest_of(path)[:8]
     return archive / f"{path.stem}-{digest}{path.suffix}"
 
 

@@ -9,7 +9,6 @@ from dataclasses import replace
 
 import pytest
 
-from printing3d.checks import CheckRunner
 from printing3d.fishing_rod_mounts import geometry
 from printing3d.fishing_rod_mounts.catalog import parts
 from printing3d.fishing_rod_mounts.verify import (
@@ -20,6 +19,7 @@ from printing3d.fishing_rod_mounts.verify import (
     check_screw,
     check_solid_is_printable,
 )
+from tests.support import objections_to
 
 SHIPPED = list(parts())
 
@@ -27,13 +27,6 @@ SHIPPED = list(parts())
 @pytest.fixture
 def butt():
     return next(part for part in SHIPPED if part.kind == "butt")
-
-
-def objections_to(check, *arguments):
-    """What a check complains about when handed `arguments`."""
-    runner = CheckRunner()
-    check(runner, *arguments)
-    return runner.failures
 
 
 def test_the_checks_pass_the_mounts_that_ship(butt):
