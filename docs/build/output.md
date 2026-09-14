@@ -34,16 +34,26 @@ measured.
 
 ## Retiring a part
 
-Building makes the output directory hold exactly what the project declares. A
-part whose entry has been removed from [configuration](configuration.md) is
-moved aside on the next build rather than deleted:
+Building makes each directory hold exactly what its configuration declares —
+the committed one and the trials one alike. A part whose entry has been removed
+from [configuration](configuration.md) is moved aside on the next build rather
+than deleted, wherever it was written:
 
 ```
 output/archive/<project>/<part-name>.stl
 ```
 
-The archive is not committed. It exists so a retired shape can be recovered
-without going through version control, which still has it either way.
+The archive is not committed. The two uncommitted directories answer different
+questions and a shape can pass through both: **trials** is where something is
+written because the project has not committed to it, and **archive** is where
+anything goes once its entry is gone. A trial that is printed, answered and
+deleted is built into the first and retired into the second.
+
+What the archive is worth differs accordingly. A retired *shipped* part is in
+version control either way, so the archived copy is a convenience. A retired
+*trial* was never committed, so the archived copy is the only file of that
+shape — recoverable otherwise only by restoring its entry and rebuilding, which
+works because the build is deterministic, but is work rather than a copy.
 
 **Nothing in the archive is overwritten.** A part retired, brought back at a
 different size, and retired again keeps both shapes — the second is set apart by
