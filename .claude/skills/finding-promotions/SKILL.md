@@ -37,7 +37,7 @@ step 2 felt conclusive.
 carrying it to step 5 in your head:
 
 ```
-<helper>  <verdict>  <marker? y/n>  <spec-able? y/n>  <second caller?>  <reason>
+<helper>  <verdict>  <marker? y/n>  <choices: n, and which>  <second caller?>
 ```
 
 Sixty helpers across two projects is already near the limit of what anyone
@@ -162,29 +162,46 @@ a wide shared helper costs every project that uses it.
 
 Every candidate goes to the kit eventually. This decides whether it goes now.
 
-A candidate is **spec-able** when all four hold:
+**Do not reach for a verdict. Count.** List every decision in the helper that
+nobody outside this repo made for you, and write the list down:
 
-1. **You can point at what makes it right** — a mathematical identity, a
-   published format, a definition standard in the field, checkable by a stranger
-   who has read nothing else here. "It is obviously correct" points at nothing.
-2. **Nothing in its signature is ours** — plain values, or types the kit already
-   owns.
-3. **It has exactly one behaviour** — no branch a caller selects, and no
-   "...except when" in the description.
-4. **Its tests can be written without naming a project.**
+- which branch of a quadratic, which root, which sign
+- what tolerance, and what counts as close enough
+- how results are ordered
+- what it returns when there is nothing to return
+- what happens at the input where it divides by zero
 
-**The check:** write the docstring with every word belonging to this repo
-deleted. If what is left still specifies the function completely, it is
-spec-able. If you cannot finish the sentence, it is not.
+Two conditions guard the count. **Nothing in its signature may be ours** — plain
+values or types the kit owns — and **its tests must be writable without naming a
+project**. Fail either and you counted too early.
 
-| Verdict | What it means |
+**The check:** delete every word belonging to this repo from the docstring, then
+ask two questions.
+
+1. Does what is left still specify the function? If you cannot finish the
+   sentence, stop.
+2. Could a stranger reimplement it from what is left and get the same answers,
+   bit for bit? If not, the docstring survived by being **vague**, and what it
+   failed to mention goes on your list.
+
+Question 2 is the one that does the work. Without it the check rewards
+under-written prose — a docstring that never mentions its sign convention sails
+through deletion *because* it was hiding one.
+
+| Count | What it means |
 |---|---|
-| **Spec-able** | **Move it now.** Nothing about its shape is ours, so a second caller could settle nothing. Waiting only hides it — the next project reads the kit, not a grep. |
-| **Domain-free, shape ours** | **Mark it and leave it.** What it merges, what tolerance it takes, what it returns when there is nothing to return — a second caller is what settles those, and guessing is how a wrong abstraction gets two callers stuck on it. |
+| **Zero** | **Move it now.** Nothing is left for a second caller to settle, and waiting only hides it — the next project reads the kit, not a grep. |
+| **One or more** | **Mark it, and name the choices in the marker.** They are exactly what a second caller will arrive wanting different, so recording them is what makes the wait useful rather than merely long. |
 
-This bar is higher than step 2's on purpose: it is the route that moves without
-the evidence. Passing the birdhouse test is not passing this one. CLAUDE.md
-carries the reasoning; this step is only where it gets applied.
+Expect the count to be one or more most of the time. Zero is rare, and a sweep
+that promotes nothing is a normal result, not a failed sweep.
+
+**The trap: a formula whose family is famous.** "It is Euclid" points at
+something loudly enough to drown out the branch choice inside it. There are two
+tangent lines from a point to a circle, not one. Check every behaviour, not the
+pedigree of the maths.
+
+CLAUDE.md carries the reasoning; this step is only where it gets applied.
 
 ### 3. Cross-check the kit
 
@@ -218,8 +235,8 @@ is what makes it a single thing to promote later instead of three.
 ### 5. Report
 
 For each helper: its name, the verdict, the reason in one line, whether it
-carries a `Promotable:` marker, and — for candidates — its 2b verdict and
-whether a second caller now exists.
+carries a `Promotable:` marker, and — for candidates — its choice count, what
+those choices are, and whether a second caller now exists.
 
 **Read what an existing marker actually says, not just that it is there.** A
 marker is prose, and prose goes stale: one here notes that promoting a helper
@@ -229,14 +246,14 @@ whose caveat no longer holds belongs in the second list below.
 
 **Four lists matter most**, and none exists anywhere else:
 
-- **spec-able candidates still living in a project** — these move now, and no
-  second caller is needed. Nothing about their shape is ours, so nothing is
-  being guessed at
+- **candidates whose choice-count is zero** — these move now, no second caller
+  needed. Expect this list to be empty often; that is not a failure
 - **candidates carrying no marker** — the discovery gap, and the reason this
   procedure exists
 - **marked helpers that are not actually candidates** — a marker claiming more
   than the helper delivers, which sends the next reader looking for reuse that
-  is not there
+  is not there. A marker that does not name the choices it waits on belongs
+  here too: silence reads as readiness
 - **helpers depending on more than they need** — general behaviour behind a
   parochial signature. Worth fixing on its own terms, and what would otherwise
   keep a genuinely reusable helper locked in one project forever
@@ -254,9 +271,9 @@ Report. Do not edit.
   shape we chose is marked, not moved — the second caller is what settles that
   shape, and generalising from one example is guessing. A candidate whose shape
   nobody chose has nothing left to settle.
-- **Do not stretch 2b to cover something you like.** It is four conditions and a
-  falsifiable check, not a feeling. Every helper looks obvious to whoever just
-  wrote it, and that is exactly how a kit becomes a junk drawer.
+- **Do not stretch 2b to cover something you like.** It is a count you write
+  down, not a feeling. Every helper looks obvious to whoever just wrote it, and
+  that is exactly how a kit becomes a junk drawer.
 - **Do not mark something because it looks generic.** Apply the test in step 2.
 - **Do not stop at a domain-sounding name.** Renaming is part of a pure move.
   What disqualifies a helper is domain knowledge in its behaviour, not in its
@@ -276,6 +293,8 @@ Report. Do not edit.
 | Everything comes back "domain" | Step 2 answered from the code's neighbourhood rather than from whether another project could call it |
 | A helper whose shape we chose is promoted on one caller | The trigger was misread. 2b applies only where nothing about the shape is ours |
 | A spec-able helper is marked instead of moved | 2b was skipped, and the inventory now holds something that belonged in the kit already |
+| A helper moves on "it is standard maths" | The family was checked instead of the behaviour. A famous formula still has branches, signs and degenerate inputs, and every one of them is a choice |
+| A marker says a helper is waiting but not for what | The count was taken and thrown away. The choices are the useful half |
 | A second caller exists and nothing was found | Step 4 was skipped, or searched for the name rather than the job |
 | A kit helper gets quietly widened | Step 3's caveat was ignored — that changes another project and is the owner's call |
 | A promoted helper grows a mode argument | Step 2a was skipped: two behaviours were forced into one function |

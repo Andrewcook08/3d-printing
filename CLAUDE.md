@@ -230,9 +230,7 @@ the kit, and most helpers take the first:
 
 "Generalising from one example is guessing what the second needs" is the entire
 argument for waiting, and it is a good one — for a helper whose shape we chose.
-It has no force when we chose nothing. There is one tangent line from a point to
-a circle, its signature was settled by Euclid rather than by us, and a second
-caller wanting something different wants a different function.
+It has no force when we chose nothing.
 
 Meanwhile waiting costs something real. A helper in a project folder is found by
 running a procedure; a helper in the kit is found by reading the kit, which is
@@ -240,31 +238,60 @@ what you do when starting a project. So the absence causes the duplication the
 rule exists to prevent: the next project, not seeing a tangent solver, writes
 one.
 
-A helper is **spec-able** when all four hold:
+**Count the discretionary choices.** A helper is a general formula plus some
+number of decisions nobody outside this repo made for you: which branch of a
+quadratic, which sign, what tolerance, how to order the results, what to return
+when there is nothing to return, what happens at the input that divides by zero.
 
-1. **You can point at what makes it right** — a mathematical identity, a
-   published format, a definition standard in the field. Something a stranger
-   could check the code against without reading anything else in this repo.
-   "It is obviously correct" points at nothing.
-2. **Nothing in its signature is ours.** Plain values, or types the kit already
-   owns. No project type goes in or comes out.
-3. **It has exactly one behaviour.** No branch a caller selects, and no
-   "...except when" in the description. An exception clause is two functions.
-4. **Its tests can be written without naming a project.** If a wrong answer is
-   only wrong given what some project happens to make, it is not spec-able.
+- **Zero → move it now.** There is nothing left for a second caller to settle.
+- **One or more → mark it, and name them in the marker.** Those choices are
+  precisely what a second caller will turn up wanting different, so writing them
+  down is what makes the wait productive instead of merely long.
+
+The count is the whole test. Two conditions guard it:
+
+- **Nothing in its signature is ours** — plain values, or types the kit already
+  owns. A project type going in or out means the count was taken too early.
+- **Its tests can be written without naming a project.** If a wrong answer is
+  only wrong given what some project happens to make, you are not counting the
+  choices you think you are.
 
 **The check, and it is falsifiable:** write the helper's docstring with every
-word belonging to this repo deleted. If what is left still specifies the
-function completely, it is spec-able. If you cannot finish the sentence, it is
-not. This is the same move as the documentation skill's rename test, pointed at
-a signature instead of a doc.
+word belonging to this repo deleted, then ask **two** questions.
+
+1. Does what is left still specify the function? If you cannot finish the
+   sentence, it is not spec-able.
+2. Could a stranger reimplement it from what is left and get the same answers,
+   bit for bit? If not, the docstring survived by being **vague**, and whatever
+   it failed to mention is your count.
+
+The second question is not optional garnish. Without it the check rewards
+under-written prose: a docstring that never mentions a sign convention sails
+through deletion precisely because it was hiding one.
+
+**The example this rule was first written around fails it.** "There is one
+tangent line from a point to a circle" — there are two. The helper takes one
+root of a quadratic, and nothing outside this repo says which root. It returns a
+slope, which does not exist for a vertical tangent, and it divides by a quantity
+that is zero at exactly that input. Three choices, not zero. Its docstring
+survives deletion reading "slope of the line from a point tangent to a circle,
+from below" — with *from below* standing in the open, unexplained. That is the
+count making itself visible.
+
+**Zero is rarer than it sounds**, and that is fine. Most helpers are a formula
+plus one or two choices and most will still wait. The day-to-day value of this
+rule is the count, not the move: it turns "does this feel promotable" into
+something you enumerate, and it tells the next reader exactly what a second
+caller would be arriving to settle.
 
 This bar is deliberately higher than **domain-free**, because this is the route
 that skips the evidence. A helper can pass the birdhouse test — an unrelated
-project could call it today and mean it — and still fail this one, because we
-chose its shape: what it merges, what tolerance it takes, what it returns when
-there is nothing to return. Those wait for a second caller to settle the shape,
-and they are what the `Promotable:` marker is for.
+project could call it today and mean it — and still have a count above zero.
+Those wait, and they are what the `Promotable:` marker is for.
+
+Beware of a formula whose *family* is famous. "It is Euclid" points at something
+loudly enough to drown out the branch choice sitting inside it, and that is the
+one way this route moves code it should not have.
 
 **What a promotion may and may not change:**
 
@@ -319,10 +346,14 @@ Mark a helper when you **write** it, not when you promote it. The marker records
 the judgement that it carries no project's assumptions — which you are making
 right then, and will not remember later.
 
-**A spec-able helper is moved, not marked.** The marker means "domain-free, but
-its shape is still ours, so it waits". If nothing about the shape is ours there
-is nothing to wait for, and leaving a marker on it instead of moving it is how
-the inventory fills with things that should already be in the kit.
+**A spec-able helper is moved, not marked**, and a marker that stays **names the
+choices it is waiting on**. The marker means "domain-free, but N of its
+decisions are ours" — so say which, or the next reader takes it as ready to go:
+
+```python
+    Promotable: domain-free plane geometry, currently only <project>.
+    Waiting on one choice nobody outside this repo made: <the choice>.
+```
 
 Because that depends on remembering, it is also checked rather than trusted: the
 `finding-promotions` skill enumerates the helpers a change added and classifies

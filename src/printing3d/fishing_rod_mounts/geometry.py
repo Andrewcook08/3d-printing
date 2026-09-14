@@ -242,6 +242,11 @@ def tangent_slope(from_u, centre, radius):
     """Slope of the line from (from_u, 0) tangent to a circle, from below.
 
     Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
+    Waiting on three choices nobody outside this repo made. There are two
+    tangents from a point to a circle and this takes the lower. It returns a
+    slope, which no vertical tangent has. And its denominator is zero at
+    exactly the input that produces one, so that case has no answer here at
+    all. A second caller is what settles all three.
 
     Lets the wedge's underside diagonal and the diagonal above it be parallel
     while each stays pinned to the feature it must meet.
@@ -258,6 +263,8 @@ def tangency_point(slope, centre, radius):
     """Where a tangent of that slope touches the circle.
 
     Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
+    Waiting on one choice nobody outside this repo made: a slope meets the
+    circle at two points and this takes the lower, to match the tangent above.
     """
     normal = math.sqrt(slope * slope + 1.0)
     return (centre[0] + radius * slope / normal, centre[1] - radius / normal)
