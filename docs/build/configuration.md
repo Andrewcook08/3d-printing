@@ -10,9 +10,14 @@ a part — a diameter, a radius, an angle, how many of a thing to make — is an
 edit to that file, and nothing else changes.
 
 A project may read more than one file. The one convention worth copying is a
-`trials.toml` holding parts being tested rather than shipped, so that deleting
-it retires all of them at once — but that is a project's choice, not something
-the contract provides. What the contract requires is `parts.toml`.
+`trials.toml` holding parts being tested rather than shipped: deleting it
+retires all of them at once, and what they produce is kept out of the committed
+[output](output.md) and out of both locks. That is a project's choice, not
+something the contract provides. What the contract requires is `parts.toml`.
+
+The distinction the two files draw is what a project is **committing to**. An
+entry in `parts.toml` is a part the project ships and stands behind; an entry in
+`trials.toml` is a question it has not answered yet.
 
 ## The shape of a file
 

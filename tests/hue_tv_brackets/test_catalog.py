@@ -12,13 +12,13 @@ from dataclasses import replace
 import pytest
 
 from printing3d.hue_tv_brackets.catalog import (
-    Catalogue,
     CornerEntry,
     StraightEntry,
     corners,
     parts,
     shipping,
     straights,
+    trial_parts,
     trials,
 )
 
@@ -30,7 +30,13 @@ def design():
 
 @pytest.fixture(scope="module")
 def built():
-    return list(parts())
+    """Everything the project builds -- what ships and what is being tested.
+
+    Both, because these tests are about how an entry becomes a bracket, which
+    is the same question either side of that line. Only the corners are trials
+    today, so the shipped catalogue alone would make half of them vacuous.
+    """
+    return [*parts(), *trial_parts()]
 
 
 def only(design, **entries):
@@ -38,7 +44,7 @@ def only(design, **entries):
     catalogue = replace(
         shipping(), design=design, **{"straight": [], "corner": [], **entries}
     )
-    return list(parts(catalogue, Catalogue()))
+    return list(parts(catalogue))
 
 
 # ---------------------------------------------------------------------------

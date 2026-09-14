@@ -14,6 +14,24 @@ output/<project>/<part-name>.stl
 These files are **committed**. You can print straight from a clone without
 generating anything first.
 
+**Parts still being tested are not.** A project trying shapes it has not
+committed to writes them apart from what it ships:
+
+```
+output/trials/<project>/<part-name>.stl
+```
+
+They are built and checked exactly like the rest — you are going to print one —
+but they are not committed and neither lock covers them. A trial is a question
+rather than an artifact: printed once, answering something, then deleted.
+Committing them would fill the repo with the shapes that lost, and pinning them
+would make retiring one a change to the record of what the project ships.
+
+So retiring every trial is deleting one config file, and nothing leaves the
+repository because nothing entered it. When a trial wins, it is moved into the
+shipped configuration and becomes an ordinary part — committed, locked,
+measured.
+
 ## Retiring a part
 
 Building makes the output directory hold exactly what the project declares. A

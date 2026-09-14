@@ -10,7 +10,7 @@ same bracket, which is the claim the whole design rests on.
 """
 
 from printing3d.checks import CheckRunner
-from printing3d.hue_tv_brackets.catalog import corners, parts, straights
+from printing3d.hue_tv_brackets.catalog import corners, parts, straights, trial_parts
 from printing3d.hue_tv_brackets.geometry import QUARTER_TURN
 from printing3d.probes import enclosed_void_count, straight_runs
 from printing3d.shapes import rect
@@ -234,7 +234,10 @@ def check_corner_matches_the_straight(runner, section, reference):
 def verify_all():
     """Run every check against every bracket. True if all pass."""
     runner = CheckRunner()
-    brackets = list(parts())
+    # Trials are checked alongside what ships, because a trial is something you
+    # are about to print. They are compared against the straights they were
+    # swept with, which are themselves trials at the same lean.
+    brackets = [*parts(), *trial_parts()]
     runs = straights(brackets)
     if not runs:
         runner.check("a straight ships for the corners to be measured against", False)

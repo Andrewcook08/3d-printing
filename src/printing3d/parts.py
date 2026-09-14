@@ -25,6 +25,7 @@ DEFAULT_OUTPUT_DIR = "output"
 # so a shape can be recovered without going through git. Kept inside the
 # output root so that redirecting output redirects the archive with it.
 ARCHIVE_DIR = "archive"
+TRIALS_DIR = "trials"  # parts being tested; never committed, never locked
 
 
 @dataclass(frozen=True)
@@ -83,21 +84,40 @@ def output_dir(project: str) -> Path:
     return output_base() / project
 
 
+def trials_dir(project: str) -> Path:
+    """Where `project` writes the parts it is still testing.
+
+    Kept apart from what ships, and out of version control. A trial is a
+    question rather than an artifact: it is printed once, it answers something,
+    and then it is deleted. Committing it would fill the repo with the shapes
+    that lost, and pinning it would make retiring one a change to the record of
+    what the project ships.
+    """
+    return output_base() / TRIALS_DIR / project
+
+
 def archive_dir(project: str) -> Path:
     """Where `project` keeps parts it has stopped declaring."""
     return output_base() / ARCHIVE_DIR / project
 
 
 def build_project[P: Part](
-    project: str, parts: Iterable[P], announce: Callable[[P], str] | None = None
+    project: str,
+    parts: Iterable[P],
+    announce: Callable[[P], str] | None = None,
+    into: Path | None = None,
 ) -> bool:
-    """Make the project's output directory hold exactly what it declares.
+    """Make a directory hold exactly the parts it was given.
 
-    Everything declared is written; anything left over from a part the project
-    used to declare is archived. True if every solid is sound.
+    Everything given is written; anything left over from a part no longer
+    listed is archived. True if every solid is sound.
 
     `announce` lets a project print its own line about a part -- a derived
     dimension worth seeing at build time -- just above the standard summary.
+
+    `into` says where, defaulting to what the project ships. A project testing
+    shapes it has not committed to passes its trials directory instead, so the
+    two sets cannot end up in one pile.
     """
     # The whole catalogue is realised and its names checked before anything is
     # written, so a catalogue that cannot be made sense of fails with the output
@@ -105,7 +125,7 @@ def build_project[P: Part](
     # fails mid-loop leaves the ones before it on disk.
     parts = list(parts)
     _refuse_duplicate_names(project, parts)
-    destination = output_dir(project)
+    destination = output_dir(project) if into is None else into
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True
     for part in parts:
@@ -115,7 +135,7 @@ def build_project[P: Part](
         print(part.summary())
         all_sound &= part.is_sound
     declared = {part.filename for part in parts}
-    for path in archive_orphans(project, declared):
+    for path in archive_orphans(destination, declared, archive_dir(project)):
         print(f"  archived {path.name}")
     return all_sound
 
@@ -133,16 +153,15 @@ def _refuse_duplicate_names(project: str, parts: list) -> None:
         seen.add(part.filename)
 
 
-def archive_orphans(project: str, declared: set[str]) -> list[Path]:
-    """Move the STLs `project` no longer declares out of its output directory.
+def archive_orphans(directory: Path, declared: set[str], archive: Path) -> list[Path]:
+    """Move the STLs in `directory` that are no longer declared into `archive`.
 
     The lock is deliberately left alone. A build that could edit its own lock
     could not be a golden master, so retiring a part leaves the lock describing
     a file that is gone -- which fails the contract until it is re-locked on
     purpose, exactly as any other change to a shipped part does.
     """
-    archive = archive_dir(project)
-    orphans = [path for path in existing_stls(project) if path.name not in declared]
+    orphans = [path for path in existing_stls(directory) if path.name not in declared]
     if orphans:
         archive.mkdir(parents=True, exist_ok=True)
     return [Path(shutil.move(path, _archived_as(path, archive))) for path in orphans]
@@ -163,6 +182,6 @@ def _archived_as(path: Path, archive: Path) -> Path:
     return archive / f"{path.stem}-{digest}{path.suffix}"
 
 
-def existing_stls(project: str) -> list[Path]:
-    """The STLs currently on disk for `project`, in a stable order."""
-    return sorted(output_dir(project).glob("*.stl"))
+def existing_stls(directory: Path) -> list[Path]:
+    """The STLs currently on disk in `directory`, in a stable order."""
+    return sorted(directory.glob("*.stl"))

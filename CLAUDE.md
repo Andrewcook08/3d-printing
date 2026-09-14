@@ -19,6 +19,7 @@ subtraction.
 ```
 pyproject.toml              one package, one lockfile, one dependency set
 output/<project>/           generated STLs, committed
+output/trials/<project>/    parts still being tested, never committed
 src/printing3d/            the shared kit -- never imports a project
   shapes.py                 2D construction (rect, polygon, fill, rounding)
   probes.py                 measuring built solids and profiles
@@ -201,7 +202,12 @@ one. Everything goes in `src/printing3d/<new_project>/`:
 
    Optional extra files are read with `read_if_present`. That is how a project
    keeps parts it is still testing in a `trials.toml` it can delete wholesale,
-   which is a pattern rather than something the contract provides.
+   which is a pattern rather than something the contract provides. What those
+   entries produce is built and checked like anything else but is written
+   outside the committed output and covered by neither lock -- so adding or
+   retiring a trial changes one config file and nothing else. Promote a trial
+   by moving its entry into `parts.toml`; that is what makes it a part the
+   project ships.
 
    Editing this file is the normal way to change a part, and a golden-master
    failure is its normal consequence — re-lock deliberately, as below.

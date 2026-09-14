@@ -164,7 +164,7 @@ def test_the_output_holds_nothing_the_project_no_longer_declares(project, shippe
     """A part dropped from config is archived by the next build. An STL still
     sitting in output without an entry behind it means that never happened,
     and it would be printed from in good faith."""
-    on_disk = {path.name for path in existing_stls(project.name)}
+    on_disk = {path.name for path in existing_stls(output_dir(project.name))}
     declared = {part.filename for part in shipped}
     assert on_disk == declared, (
         f"orphaned: {sorted(on_disk - declared)}; run `build` to archive them"

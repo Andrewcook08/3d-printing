@@ -39,9 +39,13 @@ so light goes out *and* back.
 | File | Size | Volume |
 |---|---|---|
 | **`output/hue-tv-brackets/straight-125mm-v1.stl`** | 26.2 × 125.0 × 17.0 mm | 18.8 cm³ |
-| **`output/hue-tv-brackets/corner-r30-v1.stl`** | 39.2 × 39.2 × 17.0 mm | 6.3 cm³ |
-| **`output/hue-tv-brackets/corner-r40-v1.stl`** | 49.2 × 49.2 × 17.0 mm | 8.7 cm³ |
-| **`output/hue-tv-brackets/corner-r55-v1.stl`** | 64.2 × 64.2 × 17.0 mm | 12.2 cm³ |
+
+**No corner ships yet.** The 45° ladder listed here previously all bound — the
+strip will not take that curvature in its own plane — and the replacements are
+still being printed. They are trials, so they build outside the committed
+output and are not listed above; `uv run build` prints every one it writes and
+where. When one is chosen it moves into the shipped configuration and appears
+here.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
@@ -195,7 +199,10 @@ radius = 101.0
 tilt = 65.0        # this corner only; everything else takes the design's lean
 ```
 
-Parts still being tested live in `trials.toml` instead. Deleting that file
+Parts still being tested live in `trials.toml` instead. What they produce is
+written to `output/trials/hue-tv-brackets/`, which is not committed and is
+covered by neither lock -- a trial is printed to answer a question, not kept.
+Deleting that file
 retires every one of them: the next build moves their STLs to the archive and
 leaves `output/` holding only what ships.
 
@@ -234,7 +241,7 @@ stops, and that every corner is still the straight bent.
 |---|---|
 | `__init__.py` | Declares this project so the repo discovers it |
 | `parts.toml` | Every measured or chosen number, and the parts that ship |
-| `trials.toml` | Parts being tested; delete it to retire all of them |
+| `trials.toml` | Parts being tested; their STLs are never committed, and deleting this retires all of them |
 | `geometry.py` | The channel, the lean, and the two sweeps |
 | `catalog.py` | How a configured entry becomes a printable bracket |
 | `verify.py` | Geometric checks against the built solids |

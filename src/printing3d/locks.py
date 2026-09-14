@@ -15,7 +15,7 @@ import contextlib
 import io
 from collections.abc import Callable
 
-from printing3d.parts import digest_of, existing_stls, output_base
+from printing3d.parts import digest_of, existing_stls, output_base, output_dir
 
 DIGEST_GAP = "  "  # what `shasum -a 256` puts between a digest and its path
 
@@ -25,7 +25,7 @@ def hashes_of(project: str) -> str:
     alongside_output = output_base().parent
     return "".join(
         f"{digest_of(path)}{DIGEST_GAP}{path.relative_to(alongside_output)}\n"
-        for path in existing_stls(project)
+        for path in existing_stls(output_dir(project))
     )
 
 

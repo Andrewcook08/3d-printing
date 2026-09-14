@@ -1,17 +1,50 @@
 """Where parts come from and where their STLs land."""
 
+import subprocess
+from pathlib import Path
+
 import pytest
 from manifold3d import Manifold
 
 from printing3d.parts import (
     DEFAULT_OUTPUT_DIR,
     OUTPUT_DIR_ENV,
+    TRIALS_DIR,
     Part,
     archive_dir,
     build_project,
     output_dir,
     repo_root,
+    trials_dir,
 )
+
+
+def git(*arguments):
+    """Ask git something about this working copy."""
+    return subprocess.run(
+        ["git", *arguments], cwd=repo_root(), capture_output=True, text=True
+    )
+
+
+def test_the_trials_directory_never_reaches_the_repository():
+    """A trial is built and checked and never committed. That is the whole
+    distinction between it and a part, so it is asserted against git rather
+    than by reading .gitignore -- the effect is what matters, not the line
+    that happens to produce it.
+    """
+    trials = Path(DEFAULT_OUTPUT_DIR) / TRIALS_DIR
+    assert git("check-ignore", "-q", str(trials)).returncode == 0, (
+        f"{trials} is not ignored by git; parts under test would be committed"
+    )
+    tracked = git("ls-files", str(trials)).stdout.strip()
+    assert not tracked, f"already committed under {trials}:\n{tracked}"
+
+
+def test_a_projects_trials_land_outside_what_it_ships():
+    """Two directories that cannot be the same one, however the output root is
+    set: a shipped part and a part under test must never share a pile."""
+    assert trials_dir("widgets") != output_dir("widgets")
+    assert output_dir("widgets") not in trials_dir("widgets").parents
 
 
 def a_part(name="demo-part"):

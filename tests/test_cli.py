@@ -58,8 +58,12 @@ def test_every_discovered_project_is_keyed_by_its_own_name():
 
 
 def test_building_with_no_arguments_builds_every_project(tmp_path):
+    from printing3d.parts import TRIALS_DIR
+
     assert build([]) == 0
-    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(PROJECTS)
+    # A project with parts still under test writes them beside the output
+    # directories rather than into one of them.
+    assert {p.name for p in tmp_path.iterdir()} == set(PROJECTS) | {TRIALS_DIR}
 
 
 def test_building_one_project_by_name(tmp_path):

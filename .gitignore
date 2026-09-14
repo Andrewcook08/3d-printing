@@ -16,3 +16,6 @@ htmlcov/
 
 # Parts a project has stopped declaring, moved aside by `build`
 output/archive/
+
+# Parts still being tested -- built and checked, never committed
+output/trials/

@@ -25,7 +25,7 @@ from printing3d.hue_tv_brackets.geometry import (
     corner,
     straight,
 )
-from printing3d.parts import Part, build_project
+from printing3d.parts import Part, build_project, trials_dir
 
 TRIALS = CONFIG.parent / "trials.toml"
 
@@ -141,18 +141,35 @@ def trials() -> Catalogue:
     return config.read_if_present(TRIALS, into=Catalogue)
 
 
-def parts(
+def parts(ships: Shipping | None = None) -> Iterator[Bracket]:
+    """Every bracket this project ships, in the order it is listed and printed.
+
+    What the project declares, and so what is committed, locked and measured
+    against. Defaults to the shipped file; a caller may pass its own to see
+    what a different set of entries would produce.
+    """
+    ships = shipping() if ships is None else ships
+    yield from _brackets(ships.design, ships)
+
+
+def trial_parts(
     ships: Shipping | None = None, tried: Catalogue | None = None
 ) -> Iterator[Bracket]:
-    """Every bracket a catalogue describes, in the order it is listed and printed.
+    """Every bracket still being tested.
 
-    Defaults to the shipped files; a caller may pass its own to see what a
-    different set of entries would produce.
+    Built and checked exactly like the rest, and committed like none of it. A
+    trial takes its lean from its own entry where it names one, and otherwise
+    from the shipped design, so a trial and a shipped part differ only where
+    the trial says they do.
     """
     ships = shipping() if ships is None else ships
     tried = trials() if tried is None else tried
-    design = ships.design
-    for entry in [*ships.straight, *tried.straight]:
+    yield from _brackets(ships.design, tried)
+
+
+def _brackets(design: Design, catalogue) -> Iterator[Bracket]:
+    """One catalogue's entries as brackets, straights before corners."""
+    for entry in catalogue.straight:
         leaning = _leaning(design, entry)
         yield StraightBracket(
             name=entry.name,
@@ -161,7 +178,7 @@ def parts(
             note=entry.note,
             length=entry.length,
         )
-    for entry in [*ships.corner, *tried.corner]:
+    for entry in catalogue.corner:
         leaning = _leaning(design, entry)
         yield CornerBracket(
             name=entry.name,
@@ -188,7 +205,17 @@ def corners(brackets: list[Bracket]) -> list[CornerBracket]:
 
 
 def build_all() -> bool:
-    """Write the whole catalog to output/. True if every solid is sound."""
-    # Called through a lambda rather than passed as Bracket.footprint_line: the
-    # latter binds the base class's version and never reaches the subclass.
-    return build_project(NAME, parts(), announce=lambda part: part.footprint_line())
+    """Write what ships, then what is being tested. True if every solid is sound.
+
+    Two destinations rather than one: the trials land outside the committed
+    output, so retiring them is deleting a config file and nothing else.
+    """
+
+    # Called through a wrapper rather than passed as Bracket.footprint_line:
+    # the latter binds the base class's version and never reaches the subclass.
+    def announce(part):
+        return part.footprint_line()
+
+    shipped = build_project(NAME, parts(), announce=announce)
+    tried = build_project(NAME, trial_parts(), announce=announce, into=trials_dir(NAME))
+    return shipped and tried
