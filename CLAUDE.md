@@ -349,7 +349,8 @@ and picking the wrong one breaks something silently:
 |---|---|
 | A caller needs a different **number**, same behaviour | Add a parameter whose default is the value it has now. Existing callers do not change and never learn it happened |
 | A caller needs a different **behaviour** | A second function. **Never a flag** — an argument selecting between behaviours makes every caller read a branch it does not use |
-| The behaviour is wrong **for everyone** | A bug fix, and **not yours to make alone** — see below |
+| The behaviour is wrong **for everyone**, and parts already shipped were verified with it | A bug fix, and **not yours to make alone** — see below |
+| The behaviour is wrong for everyone but **no shipped part was affected** — right on every input produced so far, wrong on one a config change would produce | Fix it, and say in the commit that it is a correctness fix and what it was latently wrong about |
 
 A tolerance is not a flag. The rule that a caller's knowledge may never grow is
 about arguments that *select between behaviours*; a number dimensioning a single
@@ -366,10 +367,17 @@ those projects have already printed, and what that means for parts already in
 someone's hands is the user's call, not a detail of the fix. Bring the evidence,
 say what would change, and wait.
 
-**How you know which row you are in.** Not by reasoning about it — `MEASURED.txt`
-answers it. Make the change and run the tests: a clean run means existing callers
-get what they always got, and a failure names the measurement that moved. The
-question this rule turns on is a test result, not a judgement.
+**What the locks settle, and what they do not.** `MEASURED.txt` names any
+measurement that moved, which is what makes a real change impossible to miss.
+But a clean run is a *necessary* condition, not a sufficient one: it proves
+nothing moved on the inputs the existing projects build today, and says nothing
+about a third project or about what a config change would produce tomorrow. A
+tolerance here can move four orders of magnitude and pin clean, because neither
+project has an edge shallow enough to notice.
+
+So green tests end the question of *what already broke*. They do not end the
+question of *which row you are in* — if you changed something that already
+existed, that is still yours to answer.
 
 The `changing-shared-code` skill walks this as a procedure, including the
 promotion and deletion cases. Load it before touching anything under

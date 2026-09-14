@@ -1,6 +1,6 @@
 ---
 name: changing-shared-code
-description: Use before adding, changing, or deleting anything in the shared kit (src/printing3d/*.py) — including carrying out a promotion. Turns "will this break another project" from something you reason about into something a lock answers.
+description: Use before adding, changing, or deleting one of the shared kit's own modules — the .py files directly in src/printing3d/ — including carrying out a promotion. Separates the edits that cannot break another project from the ones that silently can.
 ---
 
 # Changing Shared Code
@@ -17,9 +17,14 @@ are green, and another project now measures something different.
 
 ## When to run it
 
-**You are about to add, change, or delete something under `src/printing3d/*.py`** —
-the kit's own modules, not a project's. That trigger is mechanical, which is the
-point; "am I doing something risky" is not a trigger anyone applies reliably.
+**You are about to add, change, or delete one of the kit's own modules** — the
+`.py` files sitting directly in `src/printing3d/`, not the ones inside a project
+package. That trigger is mechanical, which is the point; "am I doing something
+risky" is not a trigger anyone applies reliably.
+
+`ls src/printing3d/*.py` lists exactly those. **Do not hand that same pattern to
+git** — a shell glob stops at a `/` and a git pathspec does not, so
+`git ls-files -- 'src/printing3d/*.py'` quietly includes every project file too.
 
 Finding *what* should be promoted is a different job — that is
 `finding-promotions`, run as a review. This skill is what you do once you are
@@ -27,37 +32,70 @@ holding the edit.
 
 ## The tree
 
-Answer in order. Do not skip Q1 because you are confident.
+Answer in order. Q1 is decided from the edit in front of you; Q2 is measured;
+Q3 and Q4 are judgement, narrowed by what Q2 found.
 
-### Q1 — Does this change what existing callers get?
+### Q1 — What kind of edit is this?
 
-**Do not reason about this. Measure it.** Make the change and run the tests.
+The locks cannot answer this one, because it is about what you are doing rather
+than about what happened.
 
-| What happens | What it means |
+| The edit | Where it goes |
 |---|---|
-| Everything passes | Existing callers get what they always got. Adding a function, or a parameter defaulting to the current value, lands here |
-| A `MEASURED.txt` test fails | Something moved, and the failure names the measurement. Go to Q2 |
-| A `LOCKED.txt` test fails | You changed geometry, not just a measurement. That is a different conversation — re-lock deliberately or undo it |
+| **Adding** something that did not exist — a new function, or a parameter whose default is the value in use now | Nothing existing can change, by construction. Confirm that at Q2 and you are done |
+| **Changing** the body, or the value, of something that already exists | Q2 — and then **Q3 regardless of what Q2 says** |
+| **Deleting** something | See *Deleting from the kit*, below |
+| **Moving** a helper in from a project | See *Carrying out a promotion*, below |
 
-A clean run is the whole of Q1's answer. This is the only question here that has
-a mechanical answer, which is why it is first.
+### Q2 — Run the locks. What did they catch?
 
-### Q2 — Wrong for everyone, or unsuited to the new caller?
+```sh
+uv run pytest
+```
 
-| | |
+| Result | What it means |
 |---|---|
-| **Unsuited to the new caller** — it does the right thing for who calls it today, and the newcomer wants something else | Go to Q3 |
-| **Wrong for everyone** — the existing callers have been getting a bad answer too | **Stop. Ask the user.** |
+| Everything passes | **No pinned measurement moved, on the inputs the existing projects produce today.** That is narrower than "nothing changed" — read the next paragraph before you believe it |
+| A `MEASURED.txt` test fails | Something moved, and the failure names the measurement. On to Q3 |
+| A `LOCKED.txt` test fails | You changed geometry, not just a measurement. Re-lock deliberately or undo it — and you are past the scope of this skill |
+| Both fail | Treat it as the geometry change first; the measurements moved because the shape did |
 
-**Wrong for everyone is a hard stop, not a heads-up.** Do not fix it and report
-afterwards. A behaviour wrong for every project has been wrong in every part
-those projects have already printed — possibly parts sitting on someone's wall.
-What that means is the user's call, not a detail of your fix.
+**What a clean run does and does not prove.** It proves no *shipped* measurement
+moved, on the profiles two projects happen to build today. It proves nothing
+about a third project, and nothing about what a config change would produce
+tomorrow. A tolerance can move four orders of magnitude here and pin clean,
+because neither existing project has an edge shallow enough to notice — that is
+a fact about the coverage, not about the constant.
 
-Bring them: what the helper does now, what it should do, which measurements move,
-and which shipped parts were verified with the wrong answer. Then wait.
+So a clean Q2 is a **necessary** condition, never a sufficient one. If you
+changed something that already existed, you still owe Q3.
 
-### Q3 — Does the difference live in the verb, or in a number?
+### Q3 — Who is today's behaviour wrong for?
+
+| | What to do |
+|---|---|
+| **Nobody.** It is right for its callers; the newcomer wants something else | Q4 |
+| **Everyone — and parts already shipped were verified with the wrong answer** | **Stop. Ask the user.** |
+| **Everyone, but no shipped part was affected.** Right on every input produced so far, wrong on inputs a config change would produce | Fix it. Say plainly in the commit that it is a correctness fix and what it was latently wrong about. No stop — nothing in anyone's hands is affected |
+
+That third row is the common one and it is easy to miss, because it looks
+exactly like the first from inside the diff. Both real changes this skill was
+tested against landed there: a kit helper that measured split faces as separate
+short ones, right on every profile either project actually built, wrong the
+moment a seam landed on an edge that mattered.
+
+**The middle row is a hard stop, not a heads-up.** Do not fix it and report
+afterwards. That behaviour has been wrong in every part those projects have
+already printed — possibly parts on someone's wall. What that means is the
+user's call, not a detail of your fix. Bring them: what the helper does now,
+what it should do, which measurements move, and which shipped parts were
+verified with the wrong answer. Then wait.
+
+The line between the middle and bottom rows is exactly *did a part ship that was
+verified with this?* — which is why the gate is there, and why it does not fire
+when nothing shipped was affected.
+
+### Q4 — Does the difference live in the verb, or in a number?
 
 | The difference | The move |
 |---|---|
@@ -75,13 +113,19 @@ behaviour rather than choosing between two.
 
 ## The move that is always wrong
 
-**Editing a kit constant because a new project needed it.** That is Q2's
-wrong-for-everyone path taken while you are actually in Q3's parameter case. It
-changes every other project without saying so, and before the measurement lock
-existed nothing would have caught it.
+**Editing a kit constant because a new project needed it.** Almost always Q4's
+parameter case done as if it were a correctness fix: the newcomer wants a
+different number, and a number gets typed over the old one. Every other project
+is changed without being told.
 
-If you find yourself typing a new value over an old one in the kit, stop and
-re-read Q2.
+This is the move the tree is shaped to stop, and it is worth knowing how it gets
+past: the tests come back green, because a constant that matters to a third
+project need not matter to the two that exist. A clean run is why it *feels*
+safe. That is Q2's caveat, and it is why editing something that already existed
+owes Q3 no matter what Q2 says.
+
+If you find yourself typing a new value over an old one in the kit, you are in
+Q4 and the answer is a parameter.
 
 ## Two cases with their own shape
 
@@ -112,18 +156,22 @@ superseded. Its tests move to whatever replaced it.
 
 | Symptom | What went wrong |
 |---|---|
-| A kit constant has a new value and no other file changed | Q2 was skipped entirely. This is the always-wrong move |
-| A kit function grew a boolean argument | Q3 answered "number" for a difference that was in the verb |
-| A behaviour was fixed for everyone and the user heard about it afterwards | Q2's stop was read as advice |
-| Q1 was answered by reading the code | The locks answer Q1; reasoning about it is how the quiet case stays quiet |
+| A kit constant has a new value and no other file changed | Q4's parameter case done as a correctness fix. This is the always-wrong move |
+| A kit function grew a boolean argument | Q4 answered "number" for a difference that was in the verb |
+| A behaviour was fixed for everyone and the user heard about it afterwards | Q3's stop was read as advice, or the middle and bottom rows were confused |
+| A change to existing behaviour stopped at a green test run | Q2 was read as sufficient. It is necessary; Q3 is still owed |
+| Everything landed in the bottom row of Q3 | "No shipped part was affected" was assumed rather than checked. Check which parts were verified with it |
 | Both locks were re-pinned to make the tests pass | Re-locking is for a change you meant. It is never the fix for a failure you did not expect |
 | A promotion and a decoupling landed in one commit | Neither can be reviewed; the locks cannot attribute what moved |
 | A superseded kit helper was left in place "just in case" | The next project will find it by reading the kit |
 
 ## What not to do
 
-- **Do not answer Q1 from the diff.** A shared helper's blast radius is not
-  visible from the change itself; that is the entire reason it is dangerous.
+- **Do not answer Q3 from the diff.** Whether a behaviour is wrong for everyone
+  is not visible from the change; it is a question about the callers you have
+  and the parts they shipped.
+- **Do not let a green test run end the tree.** It ends Q2, and only for the
+  inputs today's projects produce.
 - **Do not widen a kit helper to make a new caller fit.** Narrowing what it
   depends on is free; growing what it can be asked for is a redesign.
 - **Do not re-pin a lock to get to green.** A lock failure is information. Find
