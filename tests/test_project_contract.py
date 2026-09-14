@@ -15,6 +15,7 @@ import pytest
 
 import printing3d
 from printing3d import config
+from printing3d.locks import measurements_from
 from printing3d.parts import existing_stls, output_dir
 from printing3d.registry import Project, discover
 from printing3d.stl import write_stl
@@ -65,6 +66,10 @@ def test_the_project_declares_everything_the_repo_needs(project):
     assert callable(project.parts) and callable(project.build)
     assert callable(project.verify), "every project must ship physical checks"
     assert project.lock.is_file(), f"{project.lock} is missing"
+    assert project.measured.is_file(), (
+        f"{project.measured} is missing; a project pins what its checks "
+        f"measured as well as what its parts weigh -- run `relock`"
+    )
     assert project.config.is_file(), (
         f"{project.config} is missing; a project's measured numbers live in a "
         f"config file, not in its code"
@@ -96,6 +101,21 @@ def test_rebuilt_bytes_match_the_lock(shipped, locked, tmp_path):
         assert sha256_of(path) == locked[part.filename], (
             f"{part.filename} is no longer byte-identical"
         )
+
+
+def test_the_checks_still_measure_what_they_measured(project):
+    """The byte lock cannot see this.
+
+    A shared helper can change what a check *measures* without moving a single
+    vertex -- a tolerance widened, a face merged differently -- and every other
+    gate passes. This is the one that notices, so it pins the numbers rather
+    than the verdicts: a check still passing is not the same claim as a check
+    still reading 15.000 mm.
+    """
+    assert measurements_from(project.verify) == project.measured.read_text(), (
+        f"{project.measured.name} no longer matches what {project.name} "
+        f"measures; if the change was intended, run `relock`"
+    )
 
 
 def test_the_committed_output_matches_the_lock(project, locked):

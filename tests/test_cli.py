@@ -118,6 +118,36 @@ def test_the_installed_verify_command_reports_success(tmp_path):
     assert result.returncode == 0, result.stderr
 
 
+def test_relocking_writes_both_records(tmp_path):
+    """Relocking is the legitimate answer to a lock failure, so it has to be a
+    command rather than a recipe -- the alternative anyone reaches for is
+    hand-editing the lock, which the rules forbid for good reason."""
+    from printing3d.cli import _relock
+    from printing3d.locks import hashes_of
+    from printing3d.registry import Project
+
+    def report_one_measurement():
+        print("  [PASS] a measurement  -- 1.000 mm")
+        return True
+
+    lock, measured = tmp_path / "LOCKED.txt", tmp_path / "MEASURED.txt"
+    _relock(
+        Project(
+            name=SOME_PROJECT,
+            summary="a project standing in for a real one",
+            parts=lambda: iter([]),
+            build=lambda: True,
+            verify=report_one_measurement,
+            lock=lock,
+            measured=measured,
+            config=PROJECTS[SOME_PROJECT].config,
+        )
+    )
+
+    assert measured.read_text() == "  [PASS] a measurement  -- 1.000 mm\n"
+    assert lock.read_text() == hashes_of(SOME_PROJECT)
+
+
 def test_the_build_command_exits_nonzero_when_a_part_is_not_printable(
     monkeypatch, capsys
 ):
@@ -132,6 +162,7 @@ def test_the_build_command_exits_nonzero_when_a_part_is_not_printable(
         build=lambda: False,
         verify=lambda: True,
         lock=PROJECTS[SOME_PROJECT].lock,
+        measured=PROJECTS[SOME_PROJECT].measured,
         config=PROJECTS[SOME_PROJECT].config,
     )
     monkeypatch.setattr("printing3d.cli.discover", lambda: {"broken": broken})
@@ -150,6 +181,7 @@ def test_the_build_command_exits_zero_when_everything_is_sound(monkeypatch):
         build=lambda: True,
         verify=lambda: True,
         lock=PROJECTS[SOME_PROJECT].lock,
+        measured=PROJECTS[SOME_PROJECT].measured,
         config=PROJECTS[SOME_PROJECT].config,
     )
     monkeypatch.setattr("printing3d.cli.discover", lambda: {"sound": sound})

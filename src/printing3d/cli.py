@@ -3,6 +3,7 @@
     build                       # every project
     build <project>             # one project
     verify                      # geometric checks before printing
+    relock                      # re-pin what a project ships, after a change
 
 Projects are discovered, not listed here. To add one, declare it in your own
 package -- see docs/build/project-contract.md. This file never changes.
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 
+from printing3d.locks import hashes_of, measurements_from
 from printing3d.parts import output_dir
 from printing3d.registry import Project, discover
 
@@ -24,6 +26,25 @@ def build(argv: list[str] | None = None) -> int:
 def verify(argv: list[str] | None = None) -> int:
     """Entry point for `verify`."""
     return _run(argv, verb="verify", step=lambda project: project.verify)
+
+
+def relock(argv: list[str] | None = None) -> int:
+    """Entry point for `relock`."""
+    return _run(argv, verb="relock", step=lambda project: lambda: _relock(project))
+
+
+def _relock(project: Project) -> bool:
+    """Rebuild a project, then pin both the bytes and the measurements.
+
+    Building first is what makes this safe to run: a lock taken over whatever
+    happened to be sitting in the output directory would pin a shape nobody
+    can reproduce.
+    """
+    built = project.build()
+    project.lock.write_text(hashes_of(project.name))
+    project.measured.write_text(measurements_from(project.verify))
+    print(f"\nre-pinned {project.lock.name} and {project.measured.name}")
+    return built
 
 
 def _run(argv, verb, step) -> int:
