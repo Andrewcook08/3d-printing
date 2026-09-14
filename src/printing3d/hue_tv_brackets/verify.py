@@ -11,7 +11,7 @@ same bracket, which is the claim the whole design rests on.
 
 from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import corners, parts, straights, trial_parts
-from printing3d.hue_tv_brackets.geometry import QUARTER_TURN
+from printing3d.hue_tv_brackets.geometry import QUARTER_TURN, straight
 from printing3d.probes import enclosed_void_count, straight_runs
 from printing3d.shapes import rect
 
@@ -41,6 +41,7 @@ def leaned_floor_angle(design):
 PROBE_BAND = 0.05
 
 CLEAR_OF_THE_END = 1.0  # degrees inside a corner's ends, to sample or to miss
+REFERENCE_LENGTH = 10.0  # any length: a straight's section does not vary along it
 MAX_EDGE_ERROR = 0.05  # mm, on a length read off the built profile
 MAX_ANGLE_ERROR = 0.01  # degrees
 MAX_SECTION_DRIFT = 1e-6  # mm2 between a corner's section and a straight's
@@ -135,8 +136,15 @@ def check_channel_clips(runner, section, design):
     Guessing a fraction of the strip width would put an invented number in
     front of a check and make it read as verified.
     """
-    bed = slot_width_at(section, PROBE_BAND, design)
-    mouth = slot_width_at(section, design.channel_depth - PROBE_BAND, design)
+    try:
+        bed = slot_width_at(section, PROBE_BAND, design)
+        mouth = slot_width_at(section, design.channel_depth - PROBE_BAND, design)
+    except ValueError as unmeasurable:
+        # A channel that cannot be found is a failed check, not a crashed run.
+        # Raising here took down every part queued behind this one, which is
+        # the moment the rest of the report is worth most.
+        runner.check("the channel necks down to a clip", False, str(unmeasurable))
+        return
     runner.check(
         "the channel necks down to a clip",
         mouth < bed,
@@ -165,13 +173,31 @@ def check_channel_clips(runner, section, design):
 
 
 def check_channel_aims_out(runner, section, design):
-    """The lean is what throws light along the wall instead of at it."""
+    """The lean is what throws light along the wall instead of at it.
+
+    Looks for a face of the bed's width at the bed's angle, rather than for the
+    longest face at that angle. Stand the channel upright and its walls become
+    parallel to its floor, so the longest face at that angle is one of them --
+    the floor is still exactly where it should be, and the older reading found
+    a 16 mm wall instead of the 15 mm bed.
+    """
     angle = leaned_floor_angle(design)
-    length = longest_face_at(section, angle)
+    at_angle = [
+        length
+        for length, found in straight_runs(section, MAX_EDGE_ERROR)
+        if abs(found - angle) < MAX_ANGLE_ERROR
+    ]
+    bed = [
+        length
+        for length in at_angle
+        if abs(length - design.channel_width) < MAX_EDGE_ERROR
+    ]
     runner.check(
         f"the channel still lies at {design.tilt:.0f} degrees",
-        abs(length - design.channel_width) < MAX_EDGE_ERROR,
-        f"floor edge {length:.2f} mm at {angle:.1f} deg in the profile",
+        bool(bed),
+        f"faces at {angle:.1f} deg: "
+        + (", ".join(f"{length:.2f}" for length in at_angle) or "none")
+        + f" mm, wanted one of {design.channel_width:.2f}",
     )
 
 
@@ -186,9 +212,9 @@ def check_base_is_flat(runner, section, design):
         f"{low_v:.3f} mm",
     )
     runner.check(
-        "the pad is the full base depth",
-        abs(pad - design.base_depth) < MAX_EDGE_ERROR,
-        f"{pad:.2f} mm",
+        "the pad is as wide as the design makes it",
+        abs(pad - design.pad_width) < MAX_EDGE_ERROR,
+        f"{pad:.2f} mm against {design.pad_width:.2f} mm",
     )
 
 
@@ -255,25 +281,25 @@ def _checked(brackets) -> bool:
         runner.section(part.name)
         check_the_channel(runner, straight_section(part), part.design)
 
-    # A corner is compared against a straight at its OWN lean: "the same
-    # bracket bent" only means anything between two brackets aimed alike. The
-    # straight may be declared in the other catalogue -- a 65-degree corner is
-    # matched by a 65-degree trial, a 45-degree one by the straight that ships
-    # -- so the references are drawn from everything the project can build.
-    references = {
-        part.design: straight_section(part)
-        for part in straights([*parts(), *trial_parts()])
-    }
     for part in corners(brackets):
         runner.section(part.name)
         section = corner_section(part)
         check_the_channel(runner, section, part.design)
         check_corner_turns_a_quarter(runner, part)
-        reference = references.get(part.design)
-        runner.check(
-            f"a {part.design.tilt:g}-degree straight exists to compare it against",
-            reference is not None,
+        check_corner_matches_the_straight(
+            runner, section, reference_section(part.design)
         )
-        if reference is not None:
-            check_corner_matches_the_straight(runner, section, reference)
     return runner.report()
+
+
+def reference_section(design):
+    """A straight's cross-section at this lean, built for the comparison.
+
+    Built rather than looked up among the parts. The claim being tested is that
+    a corner is the same profile as a straight at the same lean -- true whether
+    or not the project happens to ship such a straight, and requiring one tied
+    a corner's check to an unrelated entry in the catalogue. It broke the
+    moment corners and straights were wanted at different leans.
+    """
+    run = straight(design, REFERENCE_LENGTH)
+    return upright_section(run.translate((0.0, -REFERENCE_LENGTH / 2.0, 0.0)), 0.0)

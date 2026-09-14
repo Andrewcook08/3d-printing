@@ -30,6 +30,10 @@ SLOT_OVERSHOOT = 1.0
 QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
 
+# How close to vertical counts as vertical. Construction, not design: it only
+# decides which of two exact expressions describes the same shape.
+UPRIGHT = 1e-9
+
 
 class Point(NamedTuple):
     """A point of the profile: `u` outboard, `v` above the TV back."""
@@ -128,6 +132,29 @@ class Design:
     def to_outermost(self) -> float:
         """The furthest outboard the part reaches, at the block's top corner."""
         return self.leaned(self.block_width / 2, self.channel_depth).u
+
+    @property
+    def stands_upright(self) -> bool:
+        """Is the channel vertical, rather than leaning?
+
+        The shape changes character here, not just its angle. A leaning channel
+        is held up off the plate by the arm and touches the base plane at one
+        corner. A vertical one needs no holding up: the arm closes to nothing
+        and the block's outboard face lies down on the plane beside the plate.
+        """
+        return abs(math.cos(math.radians(self.tilt))) < UPRIGHT
+
+    @property
+    def pad_width(self) -> float:
+        """How wide the flat face the adhesive holds actually comes out.
+
+        The plate's own depth, normally: the block rests on the base plane at a
+        single corner, exactly where the plate's outboard edge already is.
+        Standing the channel upright lies the block's outboard face down on the
+        plane as well, and that face joins the pad.
+        """
+        outboard = self.to_outermost if self.stands_upright else self.to_base_edge
+        return self.to_tab_edge + outboard
 
     @property
     def to_tab_edge(self) -> float:
