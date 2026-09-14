@@ -33,6 +33,16 @@ for however long that is.
 Run all five steps. Steps 1, 3 and 4 are mechanical — do not skip them because
 step 2 felt conclusive.
 
+**Write each step's output down as you go**, one line per helper, rather than
+carrying it to step 5 in your head:
+
+```
+<helper>  <verdict>  <marker? y/n>  <second caller?>  <one-line reason>
+```
+
+Sixty helpers across two projects is already near the limit of what anyone
+holds at once, and the sweep is supposed to get longer as the repo does.
+
 ### 1. Enumerate
 
 **Every public function and class in every project package** — not only the ones
@@ -56,6 +66,21 @@ Both details are load-bearing, and both were wrong here once:
   Empty output is indistinguishable from "this change added no helpers", so
   that mistake fails in the direction of reassurance — the worst direction.
 
+**Private helpers are in scope here.** Enumerate everything and classify
+everything; visibility is a question for step 5, not for the sweep. Under the
+older reading a leading underscore excluded a helper twice over -- from the
+list and from the classification -- and one of the two helpers this procedure
+has found was private. The rule that settles it:
+
+- A **promotion candidate must be public.** Promotion is about surface another
+  project can call, so a private helper is made public as part of the move.
+- A **coupling finding has no visibility requirement.** Depending on more than
+  you need is a fact about behaviour, and it is just as true of a helper with
+  one caller in the same file.
+
+Not swept: `tests/`, whose helpers are fixtures for one project's suite, and
+module constants, which move by being derived rather than by being shared.
+
 Use the diff to decide what to look at *first*, never to decide what to look at
 *at all*. This step has no judgement in it, and skipping it is how the last one
 was missed.
@@ -68,6 +93,12 @@ in the kit" is not a reason to stop. `measure_cradle_walls` that takes two colum
 ranges and returns their highest points is domain in name only; it belongs in the
 kit under a better one. The same function that *works out* which ranges to
 measure from what a cradle is does not.
+
+**A docstring is name, not behaviour.** Prose mentioning the crescent, the
+cradle or the strip tells you what the author had in mind, not what the code
+requires. Read the arithmetic with the identifiers and comments stripped away;
+if what is left is plane geometry, it is plane geometry with a domain-flavoured
+description, and the description is the cheap half.
 
 For each, answer in order. The first **yes** settles it — with one deliberate
 exception, marked below, because taking a project's type is a fact about a
@@ -113,6 +144,15 @@ moved the bytes.
 | Two callers want *different* behaviour | **Two functions.** One with a mode argument is shallower than the two it replaced. |
 | The second caller must pass something saying which kind it is | **Stop.** A flag argument means two jobs in one function. |
 | One caller today, and a second imagined | **Stop.** That is guessing what the second needs. |
+| A method reading its own object's fields | **Not over-coupling.** Taking a domain object as an *argument* is coupling; reading `self` is cohesion, and is why the object exists. Read literally, 2a would flag every property a design has. |
+| A general algorithm with one domain call inside it | **Stop.** Hoisting that call out hands the caller a step it did not have, so the module got wider, not deeper. That is a redesign wanting its own justification, not a narrowing. |
+
+**A kit entry costs something, so not everything true is worth reporting.** The
+floor is not a line count: ask whether a second project calling it would be
+reusing a *decision* someone could get wrong, or only a shorthand it could
+rewrite correctly on the first try without thinking. Shared code exists to stop
+a mistake being made twice. A two-field tuple and a one-line loop clear every
+other test here and still belong where they are.
 
 The test that settles it: after the change, does the **caller** have fewer things
 to know, or more? Fewer means the module got deeper. More means it got wider, and
@@ -137,6 +177,16 @@ For each candidate, search every other project for something doing the same job
 under another name. **That is the promotion trigger, even though no test fired
 and the names differ.**
 
+Reading every pair does not survive a third project, and this is both the most
+valuable step and the first one anybody skips. **Group by what a helper returns**
+— a length, an angle, a point, a section — and compare only within a group. Two
+functions doing the same job almost always agree about what comes out of them,
+long before they agree about anything else.
+
+Search the candidate's **own** project too. Three copies of one idea in one
+package is the same finding with a different remedy: extract it locally, which
+is what makes it a single thing to promote later instead of three.
+
 ### 5. Report
 
 For each helper: its name, the verdict, the reason in one line, whether it
@@ -159,6 +209,11 @@ whose caveat no longer holds belongs in the second list below.
 - **helpers depending on more than they need** — general behaviour behind a
   parochial signature. Worth fixing on its own terms, and what would otherwise
   keep a genuinely reusable helper locked in one project forever
+
+**Say what a promotion would owe.** Promoted code arrives in the kit with its
+own tests, and a helper reached until now only through a project's parts has
+none of its own. That is part of the cost of the move, so it belongs in the
+report rather than being discovered by whoever acts on it.
 
 Report. Do not edit.
 
