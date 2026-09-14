@@ -10,6 +10,7 @@ from printing3d.probes import (
     highest_point_between,
     overlap,
     straight_edge_angles,
+    straight_runs,
     surface_height_below,
 )
 from printing3d.shapes import polygon, rect
@@ -75,6 +76,35 @@ def test_a_right_triangle_reports_its_slope():
     ramp = polygon([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])
     angles = [angle for _, angle in straight_edge_angles(ramp, 1.0)]
     assert any(angle == pytest.approx(45.0) for angle in angles)
+
+
+def test_a_face_split_by_a_seam_is_measured_as_one_face():
+    """The reason this exists. Two shapes butted together leave vertices along
+    the join, so one flat face arrives as several collinear pieces -- and each
+    piece then reads shorter than the face actually is."""
+    butted = rect(0.0, 0.0, 5.0, 3.0) + rect(5.0, 0.0, 10.0, 3.0)
+    assert [length for length, _ in straight_runs(butted, 1.0)] == [
+        10.0,
+        10.0,
+        3.0,
+        3.0,
+    ]
+
+
+def test_a_face_shorter_than_the_minimum_only_counts_once_merged():
+    """A face is measured before the length filter, not after: three 2 mm
+    pieces of one 6 mm face survive a 5 mm floor, where separately none would."""
+    strip = (
+        rect(0.0, 0.0, 2.0, 1.0) + rect(2.0, 0.0, 4.0, 1.0) + rect(4.0, 0.0, 6.0, 1.0)
+    )
+    assert [length for length, _ in straight_runs(strip, 5.0)] == [6.0, 6.0]
+
+
+def test_a_face_and_its_reverse_read_as_the_same_angle():
+    """Angles fold modulo 180, so which way round the outline was traversed
+    does not change what a face measures."""
+    angles = {angle for _, angle in straight_runs(rect(0.0, 0.0, 8.0, 3.0), 1.0)}
+    assert angles == {0.0, 90.0}
 
 
 def test_short_edges_are_ignored():

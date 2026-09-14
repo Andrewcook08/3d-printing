@@ -9,12 +9,10 @@ full quarter and no further -- and that a corner and a straight are still the
 same bracket, which is the claim the whole design rests on.
 """
 
-import math
-
 from printing3d.checks import CheckRunner
 from printing3d.hue_tv_brackets.catalog import corners, parts, straights
 from printing3d.hue_tv_brackets.geometry import QUARTER_TURN
-from printing3d.probes import enclosed_void_count
+from printing3d.probes import enclosed_void_count, straight_runs
 from printing3d.shapes import rect
 
 
@@ -45,7 +43,6 @@ PROBE_BAND = 0.05
 CLEAR_OF_THE_END = 1.0  # degrees inside a corner's ends, to sample or to miss
 MAX_EDGE_ERROR = 0.05  # mm, on a length read off the built profile
 MAX_ANGLE_ERROR = 0.01  # degrees
-COLLINEAR = 1e-6  # sine of the turn below which two segments are one face
 MAX_SECTION_DRIFT = 1e-6  # mm2 between a corner's section and a straight's
 
 
@@ -103,58 +100,6 @@ def slot_width_at(section, up, design):
     if left is None or right is None:
         raise ValueError(f"no channel walls found {up} mm above the slot floor")
     return right - left
-
-
-def straight_runs(section, min_length):
-    """Straight runs of the outline, collinear segments merged, longest first.
-
-    Promotable: domain-free measurement, currently only hue-tv-brackets. It
-    supersedes the kit's un-merged edge probe rather than sitting beside it --
-    promoting this means teaching that one to merge, and re-checking what the
-    other project's angle check then measures.
-
-    A section cut from a mesh carries vertices wherever the triangulation put
-    them, so one flat face arrives as several collinear segments. Merging them
-    is what makes a measured face comparable to the face as drawn.
-
-    Waiting on four choices nobody outside this repo made: COLLINEAR as the
-    turn below which two segments are one face; angles folded modulo 180, so a
-    face and its reverse read alike; longest first, with ties falling out of
-    the tuple order rather than from any decision; and a zero-length segment
-    counted as running straight through.
-    """
-    runs = []
-    for contour in section.to_polygons():
-        turning_points = _corners_of([tuple(point) for point in contour])
-        for start, end in zip(
-            turning_points, turning_points[1:] + turning_points[:1], strict=True
-        ):
-            length = math.hypot(end[0] - start[0], end[1] - start[1])
-            if length >= min_length:
-                angle = math.degrees(math.atan2(end[1] - start[1], end[0] - start[0]))
-                runs.append((length, angle % 180.0))
-    return sorted(runs, reverse=True)
-
-
-def _corners_of(points):
-    """The points where the outline actually turns, collinear ones dropped."""
-    return [
-        point
-        for index, point in enumerate(points)
-        if _turns_at(points[index - 1], point, points[(index + 1) % len(points)])
-    ]
-
-
-def _turns_at(before, point, after):
-    """Does the outline change direction here, or run straight through?"""
-    into = (point[0] - before[0], point[1] - before[1])
-    away = (after[0] - point[0], after[1] - point[1])
-    into_len = math.hypot(*into)
-    away_len = math.hypot(*away)
-    if into_len == 0.0 or away_len == 0.0:
-        return False
-    cross = into[0] * away[1] - into[1] * away[0]
-    return abs(cross) / (into_len * away_len) > COLLINEAR
 
 
 def longest_face_at(section, angle):
