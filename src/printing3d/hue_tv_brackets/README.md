@@ -11,14 +11,13 @@ Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
-> **Note.** The **print list below is incomplete, and its corners are wrong.**
-> The 45° ladder it recommends was printed and every rung bound; those three
-> parts have moved to `trials.toml`, along with eleven leaned corners and two
-> one-inch straights that replaced them, none of which are described here.
-> `uv run build` is the accurate list of what exists. What is still current is
-> the **channel** — the clip, its dimensions, and why it leans — since nothing
-> the printing disproved touched it. This README is rewritten once the corner's
-> design is settled.
+> **Note.** The corner's design is settled and this describes it; what is not
+> described is anything still under test, which builds outside the committed
+> output. `uv run build` is the accurate list of what exists. The passages
+> below arguing for a *leaning* corner at a chosen radius were overturned by
+> printing — every rung of that ladder bound — and are replaced rather than
+> kept. The **channel** is unchanged throughout: nothing the printing disproved
+> touched the clip, its dimensions, or why the straights lean.
 
 ## The problem these solve
 
@@ -39,22 +38,23 @@ so light goes out *and* back.
 | File | Size | Volume |
 |---|---|---|
 | **`output/hue-tv-brackets/straight-125mm-v1.stl`** | 26.2 × 125.0 × 17.0 mm | 18.8 cm³ |
+| **`output/hue-tv-brackets/corner-tight-v1.stl`** | 42.1 × 42.1 × 18.0 mm | 4.8 cm³ |
+| **`output/hue-tv-brackets/corner-wide-v1.stl`** | 80.2 × 80.2 × 18.0 mm | 10.5 cm³ |
 
-**No corner ships yet.** The 45° ladder listed here previously all bound — the
-strip will not take that curvature in its own plane — and the replacements are
-still being printed. They are trials, so they build outside the committed
-output and are not listed above; `uv run build` prints every one it writes and
-where. When one is chosen it moves into the shipped configuration and appears
-here.
+Two corners ship because the radius is a fitting choice rather than a
+structural one — see below. Print whichever suits the run you are covering;
+they are otherwise the same part. Anything under test builds outside the
+committed output and is not listed here, and `uv run build` prints every file
+it writes and where.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
 of the TV's corners or all four, follows from the TV and the strip in front of
 you.
 
-The three corners are a **radius ladder**, not three products. Print one of
-each, try the strip in all three, and keep the sharpest that does not fight it.
-See [Choosing the radius](#choosing-the-radius).
+The two corners differ only in radius, and neither is sharper on the strip than
+the other — at 90° there is nothing to be sharp about. Pick by how the strip
+has to sit on your TV; see [What picks the radius, then](#what-picks-the-radius-then).
 
 ### Slicer settings
 
@@ -90,18 +90,50 @@ actually feels corresponds to **R × √2**: a 40 mm bracket asks of it what a
 57 mm in-plane bend would.
 
 The 45° lean is therefore worth a factor of √2 over laying the strip flat. It
-is real relief, but not immunity — and how much in-plane bend a given strip
-tolerates is not something that can be derived. Hence the ladder.
+is real relief and not immunity, and how much in-plane bend a given strip
+tolerates cannot be derived — only found. It was found by printing: rungs at
+9.3%, 3.0% and below all bound, which is what sent the corners upright, where
+the cosine is zero and the question does not arise.
 
-| Radius | Inner edge | Outer edge | Strip spent per corner |
-|---|---|---|---|
-| 30 mm | 12.95 mm | 39.19 mm | 47 mm |
-| 40 mm | 22.95 mm | 49.19 mm | 63 mm |
-| 55 mm | 37.95 mm | 64.19 mm | 86 mm |
+### Why the corners stand upright
 
-Sharper is not only tidier. The arc eats strip that the straight runs then go
-without — across four corners, R30 spends 189 mm against R55's 345 mm. If your
-strip is close-fitted to the TV, that difference decides whether the ends meet.
+Leaning the channel relieves the in-plane bend but never removes it, and the
+45° ladder that argued otherwise was printed and bound at every rung. Standing
+the channel fully upright removes it outright: at 90° the cosine is zero, so
+none of the turn lands in the strip's own plane and the whole of it becomes the
+easy roll a flat strip is built for. The corners are 90° for that reason, while
+the straights keep the 45° lean that aims the light.
+
+The strip therefore has to twist between a straight and a corner. Leave it room
+to — butt the two brackets tight together and the twist has nowhere to go.
+
+### What picks the radius, then
+
+Not strain, which is zero at any radius here. Geometry.
+
+**Rounding a corner shortens the loop.** The arc replaces two legs of `r` with
+an arc of `πr/2`, so each corner gives back `(2 − π/2)r ≈ 0.43r`, and four give
+back `(8 − 2π)r ≈ 1.72r`. A *bigger* radius gives back *more*. Reading the arc
+length on its own suggests the opposite and is the easiest mistake to make
+here: the arc grows with `r`, but the sharp path it replaces grows faster.
+
+For a strip of length `L` running inset `x` from each edge of a mounting
+surface `W` by `H`, with four corners of radius `r`:
+
+```
+path = 2(W − 2x) + 2(H − 2x) − (8 − 2π)r
+```
+
+Setting `path = L` and writing `P = 2(W + H)` for the perimeter:
+
+```
+x = (P − L − (8 − 2π)r) / 8
+```
+
+So a larger radius buys a **shallower** inset, not a deeper one — the length it
+saves goes into a larger rectangle. And `x = 0` is the ceiling: a radius above
+`(P − L) / (8 − 2π)` would need a path outside the mounting surface, however
+much the corner itself would fit.
 
 Once you have picked one, move its entry from `trials.toml` into `parts.toml` and delete the rest. That is what makes it a part this project ships: committed, and covered by both records.
 
