@@ -11,13 +11,17 @@ Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
-> **Note.** The corner's design is settled and this describes it; what is not
-> described is anything still under test, which builds outside the committed
-> output. `uv run build` is the accurate list of what exists. The passages
-> below arguing for a *leaning* corner at a chosen radius were overturned by
-> printing — every rung of that ladder bound — and are replaced rather than
-> kept. The **channel** is unchanged throughout: nothing the printing disproved
-> touched the clip, its dimensions, or why the straights lean.
+> **Note. Nothing here is final yet.** Everything in `parts.toml` is there so
+> that it is built, committed and readable — not because the set is decided.
+> Which parts there are, their sizes and radii, and their names are all still
+> open, and this file is rewritten when that closes. `uv run build` is the
+> accurate list of what exists at any moment.
+>
+> What the printing did establish is narrower and does hold: every rung of the
+> leaning radius ladder bound, which is why the corners stand upright. The
+> passages that argued for a leaning corner are replaced rather than kept. The
+> **channel** is untouched throughout — nothing the printing disproved reached
+> the clip, its dimensions, or why the straights lean.
 
 ## The problem these solve
 
@@ -41,11 +45,13 @@ so light goes out *and* back.
 | **`output/hue-tv-brackets/corner-tight-v1.stl`** | 42.1 × 42.1 × 18.0 mm | 4.8 cm³ |
 | **`output/hue-tv-brackets/corner-wide-v1.stl`** | 80.2 × 80.2 × 18.0 mm | 10.5 cm³ |
 
-Two corners ship because the radius is a fitting choice rather than a
-structural one — see below. Print whichever suits the run you are covering;
-they are otherwise the same part. Anything under test builds outside the
-committed output and is not listed here, and `uv run build` prints every file
-it writes and where.
+**Provisional — see the note at the top.** There are two corners rather than
+one because the radius is a fitting choice rather than a structural one (see
+below); they are otherwise identical, so print whichever suits the run you are
+covering. The lengths, radii and names of all three are still open.
+
+Anything still under test builds outside the committed output and is not listed
+here. `uv run build` prints every file it writes and where.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
@@ -135,7 +141,10 @@ saves goes into a larger rectangle. And `x = 0` is the ceiling: a radius above
 `(P − L) / (8 − 2π)` would need a path outside the mounting surface, however
 much the corner itself would fit.
 
-Once you have picked one, move its entry from `trials.toml` into `parts.toml` and delete the rest. That is what makes it a part this project ships: committed, and covered by both records.
+Moving an entry from `trials.toml` into `parts.toml` is what commits to it:
+that is what gets it built into the committed output and covered by both
+records. Doing so is not the same as settling the design — an entry can sit
+there provisionally, as these corners do.
 
 ## Mount them
 
