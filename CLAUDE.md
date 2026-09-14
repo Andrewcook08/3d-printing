@@ -41,6 +41,7 @@ tests/
   <project>/test_*.py       tests for one project
 docs/                       how the system behaves, indexed by docs/README.md
 .claude/skills/             project skills, invoked by name
+.claude/agents/             the reviewers, and what each one looks for
 ```
 
 ## Commands
@@ -542,55 +543,47 @@ the work matches them — `refactoring-patterns` when restructuring existing cod
 
 ## Review
 
-**Before work is called finished, three subagents review it.** Fresh context is
-the point — each is given the skills it needs, this file, and the existing
-projects as the house style, and each **reports findings rather than editing**.
+**Before work is called finished, subagents review it.** Fresh context is the
+point, and each **reports findings rather than editing**.
+
+They are defined in `.claude/agents/`, so what each one loads, looks for and
+reports lives with the agent rather than here:
+
+| Agent | Runs when | Reads |
+|---|---|---|
+| `code-reviewer` | the change touched code | the change |
+| `docs-reviewer` | the change touched a doc **or changed behaviour a doc describes** | the change, and any doc describing what moved |
+| `promotion-sweeper` | the change added or altered a helper, **or added or reshaped a project** | the whole repo — the second caller may be old code nobody touched |
 
 **When: once, after the gates already pass** — lint, types, tests, verification,
 and the locks. Not before. A reviewer reading a tree with failing tests spends
-its findings on what you already know. Launch all three **in parallel**; they are
-independent enough, and three sequential waits is only slower.
+its findings on what you already know. Launch them **in parallel**.
 
-| Review | Rubric | Looking for |
-|---|---|---|
-| The code | `code-craftsmanship:clean-code`, plus `software-design-philosophy` and `refactoring-patterns` where the work restructures | Naming, function size, duplication, error handling, tests that cannot fail, anything over-built for the projects that exist |
-| The documentation | the `maintaining-docs` skill | Every claim traced to its source, every reference live, the framework followed, the rename test applied to each doc |
-| Promotions | the `finding-promotions` skill | A helper that belongs in the shared kit, enumerated rather than remembered |
+"Did I edit a doc" is the wrong question for the second row. A code change with
+no doc edit falsifies docs regularly: make a build construct everything before
+writing, and a guarantee about when failures surface goes stale without the doc
+being opened.
 
-Each runs only when its precondition is met — and the documentation one is
-broader than it looks:
-
-| Review | Runs when | Reads |
-|---|---|---|
-| The code | the change touched code | the change |
-| The documentation | the change touched a doc **or changed behaviour a doc describes** | the change, and any doc describing what moved |
-| Promotions | the change added or altered a helper, **or added or reshaped a project** | the whole repo — the second caller may be old code nobody touched |
-
-"Did I edit a doc" is the wrong question. A code change with no doc edit
-falsifies docs regularly: make a build construct everything before writing, and
-a guarantee about when failures surface goes stale without the doc being opened.
-
-The documentation one is not covered by the documentation tests. Those check
-that references resolve; whether a claim is still *true* is a question only a
-reader can settle, and the tests have already passed over a wrong measurement, a
+That one is also not covered by the documentation tests. Those check that
+references resolve; whether a claim is still *true* is a question only a reader
+can settle, and the tests have already passed over a wrong measurement, a
 contradicted count and a missing project.
 
 **Then judge what comes back.** A reviewer that has not run the code can be
 wrong, and has been — including once where the recommended fix would have
-shipped a silent dispatch bug. Verify each finding against the code before
-acting on it, and say which ones you are rejecting and why.
+shipped a silent dispatch bug, and once where the right finding came with the
+wrong reason. Verify each finding against the code before acting on it, and say
+which ones you are rejecting and why.
 
 Three things this catches often enough to expect: a fix that would change a
 hash-locked STL; a finding whose repair turns up something more interesting than
 the finding did; and a finding already fixed since the reviewer read the tree.
 
 **Each review reads a snapshot, and acting on one makes the others stale.** That
-is not hypothetical — it has happened three times in one sitting: a review
-reporting assertions already replaced, another noticing a file change underneath
-it mid-audit, a third flagging a doc claim a different fix had already made true.
-So: act on all three, re-run the gates, and if you substantially reworked an area
-another review covered, **re-run that one**. Its verdict was about code that no
-longer exists.
+is not hypothetical — it has happened three times in one sitting. So: act on all
+of them, re-run the gates, and if you substantially reworked an area another
+review covered, **re-run that one**. Its verdict was about code that no longer
+exists.
 
 ## Don't
 
