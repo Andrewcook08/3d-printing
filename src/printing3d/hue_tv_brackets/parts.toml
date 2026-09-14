@@ -44,23 +44,3 @@ base_depth = 22.0
 name = "straight-125mm-v1"
 length = 125.0
 note = "the long runs; one covers what five of the original 25 mm clips would"
-
-# The corners stand the channel fully upright. At 90 degrees the strip does no
-# in-plane bending at all -- the turn becomes the easy roll it is happy with --
-# so the radius stops being a physics question and is only about fit. Below
-# 24 mm the tab reaches the turn centre and the shape folds through itself.
-#
-# The straights lean at 45 and these do not, so the strip twists between them.
-# Leave it room to: butt them tight and the twist has nowhere to go.
-
-[[corner]]
-name = "corner-tight-v1"
-radius = 38.1
-tilt = 90.0
-note = "1.5 in radius -- hugs the corner, leaves the most straight run"
-
-[[corner]]
-name = "corner-wide-v1"
-radius = 76.2
-tilt = 90.0
-note = "3 in radius -- gentler sweep, easier on the strip's twist into the straights"

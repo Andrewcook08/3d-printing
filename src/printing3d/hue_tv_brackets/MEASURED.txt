@@ -10,32 +10,4 @@ straight-125mm-v1
   [PASS] the pad is as wide as the design makes it  -- 22.00 mm against 22.00 mm
   [PASS] the profile encloses no pockets  -- 0 found
 
-corner-tight-v1
-  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
-  [PASS] the bed is the full channel width  -- 15.000 mm
-  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
-  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
-  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
-  [PASS] the channel still lies at 90 degrees  -- faces at 90.0 deg: 16.00, 15.00, 3.00, 3.00, 2.00 mm, wanted one of 15.00
-  [PASS] the pad lies in the mounting plane  -- 0.000 mm
-  [PASS] the pad is as wide as the design makes it  -- 28.00 mm against 28.00 mm
-  [PASS] the profile encloses no pockets  -- 0 found
-  [PASS] the corner carries the strip across the quarter
-  [PASS] the corner stops at the quarter
-  [PASS] the corner's section is the straight's section  -- area off by 0.00e+00 mm2, outline by 1.49e-09 mm
-
-corner-wide-v1
-  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
-  [PASS] the bed is the full channel width  -- 15.000 mm
-  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
-  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
-  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
-  [PASS] the channel still lies at 90 degrees  -- faces at 90.0 deg: 16.00, 15.00, 3.00, 3.00, 2.00 mm, wanted one of 15.00
-  [PASS] the pad lies in the mounting plane  -- 0.000 mm
-  [PASS] the pad is as wide as the design makes it  -- 28.00 mm against 28.00 mm
-  [PASS] the profile encloses no pockets  -- 0 found
-  [PASS] the corner carries the strip across the quarter
-  [PASS] the corner stops at the quarter
-  [PASS] the corner's section is the straight's section  -- area off by 0.00e+00 mm2, outline by 2.98e-09 mm
-
 ALL CHECKS PASSED
