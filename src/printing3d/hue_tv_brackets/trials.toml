@@ -86,6 +86,15 @@ tilt = 70.0
 note = "1.54% strain -- the control for the 65-degree R197"
 
 # ---------------------------------------------------------------------------
+# The long run. Under test like everything else until the set is decided.
+# ---------------------------------------------------------------------------
+
+[[straight]]
+name = "straight-125mm-v1"
+length = 125.0
+note = "the long runs; one covers what five of the original 25 mm clips would"
+
+# ---------------------------------------------------------------------------
 # An inch of each lean, to feel the twist against a 45-degree run.
 # ---------------------------------------------------------------------------
 

@@ -43,14 +43,9 @@ so light goes out *and* back.
 
 ## Print these
 
-| File | Size | Volume |
-|---|---|---|
-| **`output/hue-tv-brackets/straight-125mm-v1.stl`** | 26.2 × 125.0 × 17.0 mm | 18.8 cm³ |
-
-**No corner ships yet.** The radius is a fitting choice rather than a structural
-one — see below — and which radii to offer has not been decided. Corners under
-test build outside the committed output and are not listed here; `uv run build`
-prints every file it writes and where.
+**Nothing ships yet.** Every part is still under test, so they build outside the
+committed output and none is listed here. `uv run build` prints every file it
+writes and where; that is the accurate list.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two

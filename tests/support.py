@@ -5,6 +5,7 @@ point of use. Fixtures belong in conftest.py.
 """
 
 import hashlib
+import os
 from pathlib import Path
 
 from printing3d.parts import digest_of
@@ -22,6 +23,22 @@ def locked_hashes(locked_file: Path) -> dict[str, str]:
             digest, path = line.split()
             hashes[Path(path).name] = digest
     return hashes
+
+
+def guarding_main() -> bool:
+    """Is this the run that stands between a change and `main`?
+
+    Continuous integration here has exactly one trigger -- a pull request to
+    `main` -- so the marker it sets is the question, not a proxy for it.
+    Nothing local sets it.
+
+    Only two kinds of run exist, and they want different things. A working copy
+    is where a project is still being worked out, and a rule that stops the
+    suite running while that is true costs more than it protects. `main` is
+    where the same rule has to hold without exception, because that is what
+    anyone cloning gets.
+    """
+    return os.environ.get("CI") == "true"
 
 
 def contour_digest(cross_section) -> str:

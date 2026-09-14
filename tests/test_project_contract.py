@@ -19,7 +19,7 @@ from printing3d.locks import measurements_from
 from printing3d.parts import existing_stls, output_dir
 from printing3d.registry import Project, discover
 from printing3d.stl import write_stl
-from tests.support import locked_hashes, sha256_of
+from tests.support import guarding_main, locked_hashes, sha256_of
 
 PROJECTS = discover()
 
@@ -76,8 +76,25 @@ def test_the_project_declares_everything_the_repo_needs(project):
     )
 
 
-def test_the_project_ships_at_least_one_part(shipped):
-    assert shipped
+def test_the_project_ships_at_least_one_part(project, shipped):
+    """Required of `main`, not of a working copy.
+
+    A project being designed legitimately declares nothing: every part is still
+    under test, which is what a trials file is for. Enforcing this locally
+    would make the suite unrunnable during exactly the work that gets a project
+    to the point of shipping something.
+
+    What it costs while it does not apply is worth knowing: several tests below
+    iterate over the declared parts, so they pass over an empty list without
+    examining anything. That is the reason this is deferred to the merge rather
+    than dropped.
+    """
+    if not shipped and not guarding_main():
+        pytest.skip(
+            f"{project.name} declares no parts. A pull request to main refuses "
+            f"this; run `CI=true uv run pytest` to see it fail here."
+        )
+    assert shipped, f"{project.name} declares no parts"
 
 
 def test_part_names_are_unique(shipped):

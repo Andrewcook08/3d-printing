@@ -41,6 +41,12 @@ ones the lock describes, so printing from a clone without regenerating is safe.
 build is unsound or its checks fail, so neither record can come to describe a
 state nobody would accept.
 
+**A record of nothing says so.** A project that declares no parts can still be
+re-locked — that is the honest record of a project mid-design — and what it
+writes is an empty list of files and a report that no check ran. What it does
+not write is a report claiming everything passed, which is what an empty run
+would otherwise say, and which reads as a guarantee.
+
 ## Re-locking
 
 A mismatch means **what the project produces changed**. That is a decision, not

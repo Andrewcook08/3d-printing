@@ -48,6 +48,16 @@ written per project.
 **Verification is not optional.** A project that cannot check its own parts
 fails the contract. A part that reaches the output directory has been measured.
 
+**Shipping something is required of the default branch, not of a working
+copy.** A project being designed declares no parts at all — every one of them
+is still under test — and that is allowed while it is being worked on. It is
+refused on a pull request, so nothing reaches the default branch declaring
+nothing. Running the suite the way that gate runs it reproduces the refusal
+locally.
+
+While a project declares nothing, the checks that iterate over its parts pass
+without examining anything. That is the cost the gate exists to bound.
+
 **The shared kit never depends on a project.** Shared code stays reusable only
 while it carries no project's assumptions, so the direction of that dependency
 is checked rather than trusted.

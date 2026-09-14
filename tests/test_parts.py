@@ -252,3 +252,11 @@ def test_a_duplicate_name_is_refused_before_anything_is_written(monkeypatch, tmp
     assert not list(output_dir("widgets").glob("*.stl")), (
         "the build wrote before failing"
     )
+
+
+def test_a_catalogue_that_asks_for_nothing_says_so(tmp_path, monkeypatch, capsys):
+    """Legitimate while a project is being worked out, and indistinguishable
+    from a configuration that has lost its entries. Saying which is the point."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [])
+    assert "declares no parts" in capsys.readouterr().out

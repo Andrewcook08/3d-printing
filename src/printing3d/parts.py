@@ -125,6 +125,11 @@ def build_project[P: Part](
     # fails mid-loop leaves the ones before it on disk.
     parts = list(parts)
     _refuse_duplicate_names(project, parts)
+    if not parts:
+        # Legitimate while a project is being worked out, and indistinguishable
+        # from a configuration that lost its entries. Saying so is the
+        # difference between the two.
+        print(f"  {project} declares no parts here")
     destination = output_dir(project) if into is None else into
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True

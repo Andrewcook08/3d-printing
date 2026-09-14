@@ -35,12 +35,3 @@ plate_thickness = 2.0
 # The adhesive footprint, and the tab: the plate's overhang past the arm, which
 # is the lever arm resisting the peel that pulled the strip's own adhesive off.
 base_depth = 22.0
-
-# ---------------------------------------------------------------------------
-# What ships
-# ---------------------------------------------------------------------------
-
-[[straight]]
-name = "straight-125mm-v1"
-length = 125.0
-note = "the long runs; one covers what five of the original 25 mm clips would"
