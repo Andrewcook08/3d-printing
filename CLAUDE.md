@@ -186,6 +186,13 @@ behavior must not touch them.
 Projects are **discovered, not registered** — never edit a shared file to add
 one. Everything goes in `src/printing3d/<new_project>/`:
 
+**A project may declare no parts while it is being designed.** Everything below
+still applies — it is still built, checked and locked — but `parts.toml` may
+list nothing while every part is still a trial. That is refused on a pull
+request to `main` and nowhere else, so the suite stays runnable through exactly
+the work that gets a project something to declare. Behavior:
+[docs/build/project-contract.md](docs/build/project-contract.md).
+
 1. `__init__.py` declares the project: its name (kebab-case), a one-line
    summary, its config file, its lock file, and callables for parts/build/verify.
    Every one is required. Import the heavy modules *inside* those callables, so

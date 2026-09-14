@@ -39,6 +39,10 @@ around; it is why a file can be trusted to identify itself.
 
 ## What building reports
 
+A project whose configuration asks for nothing says so and writes nothing. That
+is allowed while its parts are all still under test, and it is reported because
+it looks the same from outside as a configuration that has lost its entries.
+
 For each part: its overall dimensions, its volume, how many triangles it took,
 and whether the solid is sound. A project may add a line of its own above each
 part — a derived dimension worth seeing at build time, such as how far the part

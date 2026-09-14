@@ -25,7 +25,7 @@ concern it covers:
 | Lint | Code violates the agreed rules |
 | Format | Code is not in the agreed style |
 | Types | A type error is detectable statically |
-| Tests | Behavior changed — see [testing](../quality/testing.md) |
+| Tests | Behavior changed, or a project reached the merge declaring no parts — see [testing](../quality/testing.md) |
 
 They run independently: a failure in one does not stop the rest, so a single
 run reports every category that is broken rather than only the first.
@@ -54,7 +54,7 @@ checking runs only in CI.
 | | |
 |---|---|
 | Trigger | Opening or updating a pull request against the default branch |
-| Required to merge | Every gate green, and the branch up to date |
+| Required to merge | Every gate green, the branch up to date, and every project shipping at least one part |
 | Not required | Reviewer approval |
 | On merge | The branch is deleted automatically |
 

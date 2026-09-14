@@ -31,6 +31,13 @@ shape against a measurement of that object.
 **Every check reports its measurement, not just its verdict.** A near miss is
 visible before it becomes a failure.
 
+**A run that examined nothing says so**, rather than reporting that everything
+passed. It is vacuously true that no check failed when none of them ran, and a
+project mid-design — whose parts are all still under test — produces exactly
+that run. Printing success there is how an empty record comes to read as a
+guarantee, which matters most because the record is what gets
+[locked](locking.md).
+
 **Every check function can fail.** Each is exercised against something
 deliberately wrong, so one that has quietly stopped measuring anything is
 itself caught. This is guaranteed per *function*, not per reported line: a
@@ -62,7 +69,7 @@ is the shape of the guarantee above, not a list of questions.
 | | |
 |---|---|
 | Input | The built solids, generated fresh |
-| Output | One `PASS`/`FAIL` line per check, with the measured value |
+| Output | One `PASS`/`FAIL` line per check, with the measured value, and a closing verdict |
 | Exit code | `0` if every check passes, `1` otherwise |
 | Side effects | None. It reads; it never writes a file. |
 

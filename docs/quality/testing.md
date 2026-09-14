@@ -24,6 +24,12 @@ a new project is covered by existing rather than by copying tests, and a
 failure names the project it belongs to. See
 [project contract](../build/project-contract.md).
 
+**One rule binds only at the merge.** A project being designed declares no
+parts, and the suite allows that on a working copy while refusing it on a pull
+request to the default branch — so the same source can pass here and fail
+there, by design. It is the only rule that moves, and the contract doc says
+which.
+
 **Shared code stays shared.** Three rules hold the boundary. The kit may not
 depend on any project — it is reusable only while it carries no project's
 assumptions. No helper may be defined by two projects at once: that is the
@@ -60,6 +66,12 @@ Only the property layer asserts intent, and only for the relationships it
 covers. Nothing here knows whether a part survives its load or fits the real
 object.
 
+**A project that declares nothing is checked by almost none of this.** The
+contract, characterization, golden-master and measurement layers all iterate
+the parts a project declares, so with none they pass having examined nothing.
+That is allowed while a project is being designed, and it is the reason the
+rule above binds before anything merges.
+
 ## How to read a failure
 
 | Pattern | Meaning |
@@ -78,3 +90,10 @@ object.
 
 Before each commit (via hooks), on every pull request, and in the scheduled
 upgrade check described in [dependencies](../automation/dependencies.md).
+
+The three are the same suite, and one rule tells them apart: a pull request to
+the default branch is the only one of the three that guards what everyone
+clones, so it is the only one that refuses a project declaring no parts. The
+scheduled check deliberately does not, since a project mid-design is not a
+dependency problem and reporting it as one would spend that check's only
+signal.

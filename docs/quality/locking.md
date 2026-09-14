@@ -37,15 +37,15 @@ it does.
 **The committed files match the lock.** The STLs in the output directory are the
 ones the lock describes, so printing from a clone without regenerating is safe.
 
-**A lock only ever records something that passed.** Re-locking refuses when the
-build is unsound or its checks fail, so neither record can come to describe a
+**A lock never records something that failed.** Re-locking refuses when the
+build is unsound or a check fails, so neither record can come to describe a
 state nobody would accept.
 
-**A record of nothing says so.** A project that declares no parts can still be
-re-locked — that is the honest record of a project mid-design — and what it
-writes is an empty list of files and a report that no check ran. What it does
-not write is a report claiming everything passed, which is what an empty run
-would otherwise say, and which reads as a guarantee.
+That is narrower than it may read. A project that declares no parts can still
+be re-locked — the honest record of a project mid-design — and what it writes
+is an empty list of files beside a run that examined nothing. The record says
+which it is, because [verification](verification.md) reports a run with no
+checks in it differently from one where everything passed.
 
 ## Re-locking
 
@@ -74,8 +74,8 @@ Changing its bytes silently means the next print no longer matches it.
 |---|---|
 | Input | What the project currently builds, and what its checks report |
 | Output | Two records per project, beside that project's source |
-| Written by | The re-locking command only — never by hand, and only when the build is sound and the checks pass |
-| Invariant | A record describes a state that was built, checked and accepted |
+| Written by | The re-locking command only — never by hand, and never over a failure |
+| Invariant | A record describes a state that was built and accepted, and reports how much of it was checked |
 
 ## How it fails
 
