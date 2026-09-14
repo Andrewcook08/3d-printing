@@ -69,8 +69,9 @@ regenerating is safe.
 |---|---|
 | Output root | `output/`, or `PRINTING3D_OUTPUT` when set |
 | Per project | One subdirectory named for the project |
-| Lock file | One per project, listing sha256 per shipped file |
-| Written by | The build command only — never by hand |
+| Lock files | Two per project: one listing a sha256 per shipped file, one holding what the pre-print checks measured of those files |
+| Output written by | The build command only — never by hand |
+| Locks written by | The re-locking command only — never by hand, and only when the build is sound and its checks pass |
 
 ## Re-locking
 
@@ -79,8 +80,16 @@ build error:
 
 - If the change was **unintentional**, fix the cause. Never re-lock to get to
   green.
-- If it was **intentional**, regenerate, update the lock, and say in the pull
-  request what changed about the shape and why that is acceptable.
+- If it was **intentional**, re-lock the project with the re-locking command
+  and say in the pull request what changed about the shape and why that is
+  acceptable. It rebuilds first and rewrites both records together, so they
+  cannot drift apart, and it refuses to pin anything the build or the checks
+  reject — re-locking is the answer to a change you meant, never to a failure
+  you did not expect.
+
+Both records are equally off limits to hand-editing. The measured one is plain
+readable text, which makes it the easier of the two to fake and the more
+tempting; faking it is the same act as faking a digest.
 
 A locked part that has already been printed is a physical object someone owns.
 Changing its bytes silently means the next print no longer matches it.
@@ -96,3 +105,5 @@ the design is still correct however much the bytes moved.
 | Hash mismatch, the pinned outline also failing, relationships still holding | The outline's vertices moved but the design holds — typically a change in how finely curves are divided, or an intended reshape. |
 | Hash mismatch, a relationship failing | The design itself is wrong. Investigate before accepting anything. |
 | A locked file is missing | The output was never generated, or was redirected. |
+| Bytes match but a measurement moved | Shared code now reads something different off an unchanged shape. Nothing else can see this — the parts are identical and every check may still pass. |
+| Re-locking refuses | The build is unsound, its checks fail, or the output directory is redirected. Fix the cause; the records are left as they were. |

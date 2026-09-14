@@ -239,6 +239,7 @@ stops, and that every corner is still the straight bent.
 | `catalog.py` | How a configured entry becomes a printable bracket |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |
+| `MEASURED.txt` | What the pre-print checks read off those STLs |
 | `reference/` | The straight bracket every dimension was measured from |
 
 Building, locking, soundness and verification are covered by the repo-wide

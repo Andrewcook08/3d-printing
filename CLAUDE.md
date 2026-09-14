@@ -98,8 +98,10 @@ kebab-case:
 | `test/` | Tests only |
 | `chore/` | Dependencies, tooling, CI |
 
-A `refactor/` branch must leave every `LOCKED.txt` check passing. If a refactor
-changes an STL, it was not a refactor — either fix it or rename the branch.
+A `refactor/` branch must leave **both** locks passing — the bytes and the
+measurements. A shared-code refactor can leave every byte identical and still
+change what the checks read; that is what the second lock is for, and a
+refactor that trips it was not a refactor. Either fix it or rename the branch.
 
 The full cycle:
 
@@ -126,8 +128,10 @@ Notes:
 ## Dependency management
 
 `pyproject.toml` declares constraints; `uv.lock` pins exact versions. Both are
-generated — **never hand-edit either**, and never edit a `LOCKED.txt` to get a
-test to pass.
+generated — **never hand-edit either**, and never edit a lock file to get a
+test to pass. That goes for `MEASURED.txt` as much as `LOCKED.txt`: it is plain
+readable text rather than digests, which makes it the easier one to fake and
+the more tempting.
 
 ```sh
 uv add <package>                    # runtime dependency — ask first
@@ -453,8 +457,11 @@ rebuild the parts and compare. This is the safety net for every refactor — it
 has already caught nothing-should-change claims and survived a manifold3d
 version bump unchanged.
 
-- **Never edit `LOCKED.txt` to make a test pass.** A golden-master failure means
-  the exported shape changed. If that was intentional, say so explicitly, then
+- **Never edit either lock to make a test pass** — not `LOCKED.txt`, and not
+  `MEASURED.txt`, which being readable text is the easier one to fudge. A
+  golden-master failure means the exported shape changed; a measurement failure
+  means something reads differently off an unchanged shape. If it was
+  intentional, say so explicitly, then
   re-lock with `uv run relock <project>`, which rebuilds first and rewrites
   both records together.
 - **When refactoring geometry, preserve the exact sequence of boolean

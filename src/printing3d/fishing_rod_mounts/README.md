@@ -110,13 +110,21 @@ rather than read back from the parameters).
 The test suite covers the code rather than the physics. Its centerpiece is a
 golden master: `LOCKED.txt` holds the sha256 of both shipped STLs, the
 generator is deterministic, and the suite rebuilds the pair and compares.
-Anything that moves a single vertex fails immediately — so if you are changing
-the *shape* on purpose, expect that test to fail, and re-lock with:
+Anything that moves a single vertex fails immediately.
+
+`MEASURED.txt` pins the other half — what the pre-print checks read off those
+STLs. It catches the case the hashes cannot: shared code measuring an unchanged
+shape differently.
+
+So if you are changing the *shape* on purpose, expect both to fail, and re-lock
+with:
 
 ```sh
-shasum -a 256 output/fishing-rod-mounts/*.stl \
-    > src/printing3d/fishing_rod_mounts/LOCKED.txt
+uv run relock fishing-rod-mounts
 ```
+
+It rebuilds first and rewrites both together, and refuses to pin anything the
+build or the checks reject.
 
 ### The files
 
@@ -128,6 +136,7 @@ shasum -a 256 output/fishing-rod-mounts/*.stl \
 | `geometry.py` | The parametric shape: the cradle, the supports, the profile |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |
+| `MEASURED.txt` | What the pre-print checks read off those STLs |
 | `reference/` | The original wall hook the shape follows, and a photo of the pair |
 
 Everything else is shared and lives one level up: 2D construction, solid

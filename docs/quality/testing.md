@@ -4,7 +4,7 @@ What the tests guarantee, and how to read a failure.
 
 ## What it does
 
-Six layers, ordered by how precisely a failure points at its cause. When
+Seven layers, ordered by how precisely a failure points at its cause. When
 something changes, the narrowest layer that noticed tells you what moved.
 
 | Layer | Asserts | Catches |
@@ -67,6 +67,7 @@ object.
 | Properties pass, characterization passes, bytes differ | Meshing changed beneath the geometry. Design untouched. |
 | Properties pass, characterization fails | A part's outline moved. Usually an intended design change. |
 | Properties fail | The design itself is wrong. Investigate before anything else. |
+| Bytes identical, a measured number moved | Shared code reads something different off an unchanged shape. The only layer that can see this. |
 | Command test alone fails | The library is fine; the installed entry point is broken. |
 | Architecture test fails, naming two projects | Both define the same helper. Promote it to the shared kit, or rename one if they were never the same thing. |
 | Architecture test fails, naming shared code | Shared code has taken a dependency on one project, and is no longer shared. |
