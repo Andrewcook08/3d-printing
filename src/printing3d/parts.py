@@ -129,7 +129,7 @@ def build_project[P: Part](
         # Legitimate while a project is being worked out, and indistinguishable
         # from a configuration that lost its entries. Saying so is the
         # difference between the two.
-        print(f"  {project} declares no parts here")
+        print(f"  {project} declares no parts")
     destination = output_dir(project) if into is None else into
     destination.mkdir(parents=True, exist_ok=True)
     all_sound = True

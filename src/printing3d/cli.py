@@ -81,12 +81,11 @@ def _repin(project: Project) -> Callable[[], bool]:
         if not project.build():
             print("\nnot re-pinned: the build is not sound")
             return False
-        digests = hashes_of(project.name)
         passed, measurements = measurements_from(project.verify)
         if not passed:
             print("\nnot re-pinned: the checks do not pass")
             return False
-        project.lock.write_text(digests)
+        project.lock.write_text(hashes_of(project.name))
         project.measured.write_text(measurements)
         print(f"\nre-pinned {project.lock.name} and {project.measured.name}")
         return True

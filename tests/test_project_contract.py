@@ -92,7 +92,7 @@ def test_the_project_ships_at_least_one_part(project, shipped):
     if not shipped and not guarding_main():
         pytest.skip(
             f"{project.name} declares no parts. A pull request to main refuses "
-            f"this; run `CI=true uv run pytest` to see it fail here."
+            f"this; run `GITHUB_BASE_REF=main uv run pytest` to see it fail here."
         )
     assert shipped, f"{project.name} declares no parts"
 

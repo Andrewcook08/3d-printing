@@ -28,17 +28,19 @@ def locked_hashes(locked_file: Path) -> dict[str, str]:
 def guarding_main() -> bool:
     """Is this the run that stands between a change and `main`?
 
-    Continuous integration here has exactly one trigger -- a pull request to
-    `main` -- so the marker it sets is the question, not a proxy for it.
-    Nothing local sets it.
+    Reads the target branch of the pull request being checked, which the
+    automation sets on that event and no other. The generic "this is
+    automation" marker will not do: the scheduled upgrade check runs the same
+    suite and sets it too, and that run guards nothing -- failing it there
+    would report a project mid-design as though a dependency had broken.
 
-    Only two kinds of run exist, and they want different things. A working copy
-    is where a project is still being worked out, and a rule that stops the
-    suite running while that is true costs more than it protects. `main` is
-    where the same rule has to hold without exception, because that is what
-    anyone cloning gets.
+    Only two kinds of run matter here and they want different things. A working
+    copy is where a project is still being worked out, and a rule that stops
+    the suite running while that is true costs more than it protects. `main` is
+    where the same rule holds without exception, because that is what anyone
+    cloning gets.
     """
-    return os.environ.get("CI") == "true"
+    return os.environ.get("GITHUB_BASE_REF") == "main"
 
 
 def contour_digest(cross_section) -> str:
