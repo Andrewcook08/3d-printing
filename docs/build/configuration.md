@@ -68,7 +68,7 @@ than half rewritten. The reader checks a value's shape; only the project knows
 its limits.
 
 **Retiring a part is deleting its entry.** The next build moves the orphaned
-file aside; see [output and locking](output.md).
+file aside; see [output](output.md).
 
 ## The contract
 
@@ -98,4 +98,4 @@ written.
 
 A change to the file that changes a part's shape will also fail the hash lock,
 which is the intended second line: config says what to build, the lock says what
-was last agreed to. See [output and locking](output.md).
+was last agreed to. See [locking](../quality/locking.md).

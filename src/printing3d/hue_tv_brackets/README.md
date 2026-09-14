@@ -103,7 +103,7 @@ Sharper is not only tidier. The arc eats strip that the straight runs then go
 without — across four corners, R30 spends 189 mm against R55's 345 mm. If your
 strip is close-fitted to the TV, that difference decides whether the ends meet.
 
-Once you have picked one, delete the other two from the catalog and re-lock.
+Once you have picked one, move its entry from `trials.toml` into `parts.toml` and delete the rest. That is what makes it a part this project ships: committed, and covered by both records.
 
 ## Mount them
 

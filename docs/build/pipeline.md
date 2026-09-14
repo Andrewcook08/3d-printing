@@ -5,7 +5,7 @@ How a part that exists only as parameters becomes a file you can print.
 ## What it does
 
 Each project declares a set of parts. A part is a name and a solid. Building
-writes every declared part to that project's output directory as binary STL.
+writes every declared part as binary STL, to the project's output directory or, for a part still being tested, to the one kept apart from it.
 
 ```sh
 build                     # every project
@@ -27,7 +27,7 @@ build <project>           # one project
 | | |
 |---|---|
 | Input | The declared parts of one or more projects |
-| Output | One STL per part, under the project's output directory |
+| Output | One STL per part, under the project's output directory — or the trials directory for a part it has not committed to |
 | Also written | A report line per part, on standard output |
 | Exit code | `0` if every part is sound, `1` if one is not, `2` if the arguments were wrong |
 
@@ -54,4 +54,4 @@ cannot be trusted to do something sensible with one.
 |---|---|
 | Exit `1`, a part marked as needing checking | The solid is not watertight or is in more than one piece. Do not print it. |
 | Exit `2`, valid names listed | An unknown project was requested. |
-| Files appear somewhere unexpected | The output location was redirected; see [output and locking](output.md). |
+| Files appear somewhere unexpected | The output location was redirected; see [output](output.md). |

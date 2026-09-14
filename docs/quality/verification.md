@@ -42,8 +42,9 @@ it looks like it should, that gap is written down as a test asserting the gap
 still exists — so closing it later breaks a test rather than passing silently.
 
 **What the checks measure is pinned, not only whether they pass.** Every
-project records the numbers its checks reported, and a change that moves one
-fails and names it. This is what notices shared code quietly measuring
+project records the numbers its checks reported about the parts it ships, and a
+change that moves one fails and names it. Parts still being tested are checked
+the same way and recorded in neither place — see [locking](locking.md). This is what notices shared code quietly measuring
 differently — a case where the parts are byte-identical, every check still
 passes, and nothing else in the repo can tell. Re-pinning is deliberate and has
 its own command.

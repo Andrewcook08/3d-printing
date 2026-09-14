@@ -31,12 +31,19 @@ asks for them.
 command, checked by the verify command, and covered by the shared conformance
 tests, without writing any test code.
 
-Those tests assert, for every project: that it declares all of the above; that
-its part names are unique; that every locked file is still produced; that
-rebuilt bytes match the lock; that the committed output matches the lock; that
-its checks still report the numbers they last reported; that every part is a
-single watertight body; that building writes exactly the declared parts under
-the project's own name; and that its verification passes.
+Those tests assert, for every project: that it declares all of the above and
+that the declared files exist; that it genuinely reads the config it points at,
+and that the config says something; that its part names are unique; that every
+locked file is still produced; that rebuilt bytes match the lock; that the
+committed output matches the lock and holds nothing the project no longer
+declares; that its checks still report the numbers they last reported, and
+measured every part they were given; that every part is a single watertight
+body; that building writes exactly the declared parts under the project's own
+name; and that its verification passes.
+
+The list is long on purpose and is not the place to look things up — the point
+is that a project earns all of it by declaring itself, and that none of it is
+written per project.
 
 **Verification is not optional.** A project that cannot check its own parts
 fails the contract. A part that reaches the output directory has been measured.

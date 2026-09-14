@@ -20,6 +20,7 @@ subtraction.
 pyproject.toml              one package, one lockfile, one dependency set
 output/<project>/           generated STLs, committed
 output/trials/<project>/    parts still being tested, never committed
+output/archive/<project>/   parts no longer declared, never committed
 src/printing3d/            the shared kit -- never imports a project
   shapes.py                 2D construction (rect, polygon, fill, rounding)
   probes.py                 measuring built solids and profiles
@@ -51,7 +52,7 @@ never activate the venv by hand.
 uv run build                     # generate every project's STLs
 uv run build fishing-rod-mounts  # just one
 uv run verify                    # geometric checks before printing
-uv run relock                    # re-pin what a project ships, after a change
+uv run relock <project>          # re-pin what a project ships, after a change
 uv run pytest                    # tests
 uv run ruff check --fix .        # lint
 uv run ruff format .             # format
@@ -483,23 +484,21 @@ version bump unchanged.
 ## Testing
 
 Tests are behavioral and named as sentences:
-`test_the_countersink_opens_out_on_the_front_face`. The layers, in order of
-how specifically they localise a failure:
+`test_the_countersink_opens_out_on_the_front_face`.
 
-1. **Contract tests** (`tests/test_project_contract.py`) — run over every
-   discovered project. Never add project-specific assertions here, and never
-   copy them into a project: a new project is covered by existing.
-2. **Property tests** on derived values — assert the *relationship*, not a
-   magic number. The wedge test checks the line is genuinely tangent to the
-   crescent, rather than pinning `32.60°`.
-3. **Profile characterization** — vertex-count, area, and a vertex digest for
-   each shipped 2D profile, so a geometry change names the profile that moved.
-4. **Golden master** — the STL bytes, against `LOCKED.txt`. Lives in the
-   contract suite, so every project gets it.
-5. **Command tests** — the installed console scripts run as subprocesses and
-   compared against the library. Keep these free of project names: they own
-   "the command matches the library", while the golden master owns "the library
-   matches the lock".
+**[docs/quality/testing.md](docs/quality/testing.md) owns the layers** — what
+each asserts, what each catches, and how to read a given failure pattern. It is
+not repeated here; a list that has to be kept in step with another list is how
+this one came to be two layers behind.
+
+What is specific to writing them:
+
+- **Never add project-specific assertions to the contract suite**, and never
+  copy one into a project. A new project is covered by what already exists.
+- **Assert the relationship, not the number.** The wedge test checks the line
+  is genuinely tangent to the crescent rather than pinning `32.60°`.
+- **Keep the command tests free of project names.** They own "the command
+  matches the library"; the golden master owns "the library matches the lock".
 
 `tests/test_architecture.py` enforces that the shared kit never imports a
 project, that no helper is defined by two projects at once, and that no project

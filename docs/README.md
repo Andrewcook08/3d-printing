@@ -40,7 +40,7 @@ The properties that hold the whole thing together:
 | [Configuration](build/configuration.md) | Where a project's numbers live, and what reading them guarantees |
 | [Build pipeline](build/pipeline.md) | A declared part becoming an STL file, and what building reports |
 | [Geometry model](build/geometry.md) | How a part's shape is expressed, and why it prints without supports |
-| [Output and locking](build/output.md) | Where files land, determinism, and the hash lock |
+| [Output](build/output.md) | Where files land, what is committed, and what is not |
 
 ### Checking them
 
@@ -48,6 +48,7 @@ The properties that hold the whole thing together:
 |---|---|
 | [Testing strategy](quality/testing.md) | The test layers, and what a given failure pattern means |
 | [Pre-print verification](quality/verification.md) | What the physical checks guarantee about a part |
+| [Locking](quality/locking.md) | The two records of what a project last shipped, and what each catches |
 
 ### Automation
 
@@ -59,7 +60,7 @@ The properties that hold the whole thing together:
 ## Where to start
 
 Reading in order — [build pipeline](build/pipeline.md),
-[output and locking](build/output.md), [testing](quality/testing.md) — explains
+[output](build/output.md), [locking](quality/locking.md) — explains
 how a part is produced and why you can trust the file in `output/`. The rest can
 wait until you need it.
 
