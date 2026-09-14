@@ -21,7 +21,7 @@ from printing3d.probes import (
     has_material_at,
     highest_point_between,
     overlap,
-    straight_edge_angles,
+    straight_runs,
     surface_height_below,
 )
 
@@ -197,9 +197,12 @@ def check_derived_angles(runner, part):
     spec = part.spec
     cross_section = profile(spec)
     if spec.support is WEDGE:
-        longest = [
-            angle for _, angle in straight_edge_angles(cross_section, MIN_EDGE_LENGTH)
-        ][:4]
+        # Faces are merged before they are ranked, so a face split by a
+        # boolean seam cannot read short and push a real diagonal out of the
+        # longest four.
+        longest = [angle for _, angle in straight_runs(cross_section, MIN_EDGE_LENGTH)][
+            :4
+        ]
         diagonals = sorted(a for a in longest if 5.0 < a < 85.0)
         spread = abs(diagonals[0] - diagonals[-1]) if len(diagonals) >= 2 else None
         runner.check(

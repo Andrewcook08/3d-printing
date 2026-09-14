@@ -9,7 +9,6 @@ from printing3d.probes import (
     has_material_at,
     highest_point_between,
     overlap,
-    straight_edge_angles,
     straight_runs,
     surface_height_below,
 )
@@ -66,15 +65,13 @@ def test_a_punched_profile_reports_its_pocket():
 
 
 def test_edge_angles_come_back_longest_first():
-    lengths = [
-        length for length, _ in straight_edge_angles(rect(0.0, 0.0, 8.0, 3.0), 1.0)
-    ]
+    lengths = [length for length, _ in straight_runs(rect(0.0, 0.0, 8.0, 3.0), 1.0)]
     assert lengths == sorted(lengths, reverse=True)
 
 
 def test_a_right_triangle_reports_its_slope():
     ramp = polygon([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)])
-    angles = [angle for _, angle in straight_edge_angles(ramp, 1.0)]
+    angles = [angle for _, angle in straight_runs(ramp, 1.0)]
     assert any(angle == pytest.approx(45.0) for angle in angles)
 
 
@@ -108,7 +105,7 @@ def test_a_face_and_its_reverse_read_as_the_same_angle():
 
 
 def test_short_edges_are_ignored():
-    assert straight_edge_angles(rect(0.0, 0.0, 1.0, 1.0), min_len=5.0) == []
+    assert straight_runs(rect(0.0, 0.0, 1.0, 1.0), min_length=5.0) == []
 
 
 def test_the_highest_point_is_found_within_the_slice():

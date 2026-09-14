@@ -62,24 +62,6 @@ def surface_height_below(solid, u, w, start_v, step=0.25, limit=-5.0, rounds=40)
     return (air + floor) / 2.0
 
 
-def straight_edge_angles(cross_section, min_len):
-    """Angles of the straight edges in a profile, longest first.
-
-    Lets a check confirm two faces really are parallel by measuring the built
-    profile, rather than trusting that the same constant was used in both
-    places.
-    """
-    edges = []
-    for contour in cross_section.to_polygons():
-        for i in range(len(contour)):
-            (u0, v0), (u1, v1) = contour[i], contour[(i + 1) % len(contour)]
-            length = math.hypot(u1 - u0, v1 - v0)
-            if length >= min_len:
-                angle = math.degrees(math.atan2(v1 - v0, u1 - u0)) % 180.0
-                edges.append((length, angle))
-    return sorted(edges, reverse=True)
-
-
 COLLINEAR = 1e-6  # sine of the turn below which two segments are one face
 
 
