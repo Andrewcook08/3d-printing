@@ -265,6 +265,10 @@ report rather than being discovered by whoever acts on it.
 
 Report. Do not edit.
 
+**Acting on what you find is a different skill.** `changing-shared-code` owns
+carrying out a promotion, and everything that happens to a kit helper
+afterwards. This one decides *what* should move; that one governs the edit.
+
 ## What not to do
 
 - **Do not promote on one caller unless 2b says spec-able.** A candidate whose

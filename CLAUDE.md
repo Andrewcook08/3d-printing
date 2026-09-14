@@ -24,6 +24,7 @@ src/printing3d/            the shared kit -- never imports a project
   probes.py                 measuring built solids and profiles
   checks.py                 the pass/fail runner
   config.py                 reading a project's numbers into its own schema
+  locks.py                  producing the two records of what a project ships
   stl.py                    binary STL writer
   parts.py                  what a Part is, where its file lands
   registry.py               the Project contract + discovery
@@ -31,6 +32,8 @@ src/printing3d/            the shared kit -- never imports a project
   <project>/                one folder per 3D-printing project
     parts.toml              its measured and chosen numbers -- never its code
     trials.toml             parts being tested; optional, delete to retire them
+    LOCKED.txt              the bytes it last shipped
+    MEASURED.txt            what its checks read off those bytes
 tests/
   test_*.py                 tests for the shared modules
   <project>/test_*.py       tests for one project
@@ -47,6 +50,7 @@ never activate the venv by hand.
 uv run build                     # generate every project's STLs
 uv run build fishing-rod-mounts  # just one
 uv run verify                    # geometric checks before printing
+uv run relock                    # re-pin what a project ships, after a change
 uv run pytest                    # tests
 uv run ruff check --fix .        # lint
 uv run ruff format .             # format
@@ -202,7 +206,10 @@ one. Everything goes in `src/printing3d/<new_project>/`:
 4. `catalog.py` — how a configured entry becomes a `printing3d.parts.Part`.
 5. `verify.py` — physical checks, using `printing3d.checks.CheckRunner` and
    `printing3d.probes`. **Required**: the contract fails a project without them.
-6. `LOCKED.txt` — generate it once the shape is settled.
+6. `LOCKED.txt` and `MEASURED.txt` — `uv run relock <project>` writes both,
+   once the shape is settled. The first pins the bytes; the second pins what
+   the checks read off them, which is the only thing that notices a shared
+   helper quietly measuring differently.
 7. `tests/<new_project>/` — only what is specific to this project. The contract
    suite already covers building, locking, soundness and verification.
    Before writing a helper of your own, run the grep in
@@ -323,6 +330,51 @@ Don't pre-build abstractions for projects that don't exist yet. Moving a closed
 piece of mathematics is not pre-building one: the abstraction already exists,
 and the only question is which folder it sits in.
 
+### Changing something already in the kit
+
+Everything above is about getting code *into* the kit. This is the other half,
+and it is the dangerous one: a kit helper has every project downstream of it,
+and a promotion does not settle the judgement calls inside it — it multiplies
+who is affected by them.
+
+A real example, from the helper that measures the straight faces of a profile.
+It carries four decisions nobody outside this repo made: a collinearity
+threshold, angles folded modulo 180, an ordering, and how a zero-length segment
+is treated. One project used to live with those. Every project does now.
+
+So when a project finds one of them wrong, there are three different answers,
+and picking the wrong one breaks something silently:
+
+| The situation | The move |
+|---|---|
+| A caller needs a different **number**, same behaviour | Add a parameter whose default is the value it has now. Existing callers do not change and never learn it happened |
+| A caller needs a different **behaviour** | A second function. **Never a flag** — an argument selecting between behaviours makes every caller read a branch it does not use |
+| The behaviour is wrong **for everyone** | A bug fix, and **not yours to make alone** — see below |
+
+A tolerance is not a flag. The rule that a caller's knowledge may never grow is
+about arguments that *select between behaviours*; a number dimensioning a single
+behaviour is not one of those, and parameterising it changes nothing for anyone
+already calling.
+
+**The move that is always wrong: editing a kit constant because a new project
+needed it.** That is the third row taken while you are actually in the first,
+and it changes every other project without saying so.
+
+**Wrong for everyone means stop and ask.** Do not correct it and report
+afterwards. A behaviour wrong for every project has been wrong in every part
+those projects have already printed, and what that means for parts already in
+someone's hands is the user's call, not a detail of the fix. Bring the evidence,
+say what would change, and wait.
+
+**How you know which row you are in.** Not by reasoning about it — `MEASURED.txt`
+answers it. Make the change and run the tests: a clean run means existing callers
+get what they always got, and a failure names the measurement that moved. The
+question this rule turns on is a test result, not a judgement.
+
+The `changing-shared-code` skill walks this as a procedure, including the
+promotion and deletion cases. Load it before touching anything under
+`src/printing3d/`.
+
 ### Finding what already exists
 
 Before writing a helper, check whether one of the projects already has it:
@@ -395,7 +447,8 @@ version bump unchanged.
 
 - **Never edit `LOCKED.txt` to make a test pass.** A golden-master failure means
   the exported shape changed. If that was intentional, say so explicitly, then
-  re-lock with `shasum -a 256 output/<project>/*.stl > src/printing3d/<pkg>/LOCKED.txt`.
+  re-lock with `uv run relock <project>`, which rebuilds first and rewrites
+  both records together.
 - **When refactoring geometry, preserve the exact sequence of boolean
   operations.** Union is not associative in the output mesh: `(a + b) + c` can
   tessellate differently from `a + (b + c)`, changing the STL bytes even though

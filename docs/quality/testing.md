@@ -14,6 +14,7 @@ something changes, the narrowest layer that noticed tells you what moved.
 | **Properties** | Relationships that must hold for *any* input | A design that is geometrically wrong, including for sizes never built before |
 | **Characterization** | The exact vertices of each shipped cross-section | A change to a part's outline, naming which part moved |
 | **Golden master** | The exact bytes of each shipped file | Any change at all to a printable artifact |
+| **Measurement lock** | The numbers the pre-print checks report | Shared code measuring differently while the bytes, and every verdict, stay put |
 | **Command** | The installed commands behave like the library | Broken entry-point wiring that library tests cannot see |
 
 ## Guarantees

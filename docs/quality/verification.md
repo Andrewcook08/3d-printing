@@ -41,6 +41,16 @@ carry no mutation aimed at them alone.
 it looks like it should, that gap is written down as a test asserting the gap
 still exists — so closing it later breaks a test rather than passing silently.
 
+**What the checks measure is pinned, not only whether they pass.** Every
+project records the numbers its checks reported, and a change that moves one
+fails and names it. This is what notices shared code quietly measuring
+differently — a case where the parts are byte-identical, every check still
+passes, and nothing else in the repo can tell. Re-pinning is deliberate and has
+its own command.
+
+It pins what is *reported*, so drift below the precision a check prints does not
+register. It catches meaningful drift, not every conceivable drift.
+
 **What is checked is a project's own business.** One project asks whether a rod
 seats, lifts out and is trapped sideways; another asks whether a channel necks
 down to a clip, aims where it should, and turns a full corner. What they share
