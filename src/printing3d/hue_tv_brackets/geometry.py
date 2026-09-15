@@ -81,6 +81,33 @@ class Design:
     # strip's own adhesive off the TV.
     base_depth: float
 
+    # How far the plate reaches outboard of the strip's centre. Given rather
+    # than derived so that it, like the floor height, is the same at every
+    # lean: butting each bracket's outer edge to one marked line then puts the
+    # strip in the same place whatever the lean.
+    pad_outboard: float
+
+    def __post_init__(self) -> None:
+        """Refuse a reach the rest of the shape cannot live with.
+
+        Both bounds are about this lean in particular, so they are checked when
+        a leaned design is made rather than when the file is read -- an entry
+        may name its own lean, and the shipped reach has to suit all of them.
+        """
+        if self.pad_outboard < self.to_resting_corner:
+            raise ValueError(
+                f"pad_outboard {self.pad_outboard} mm is inside the block's "
+                f"resting corner at {self.tilt:g} degrees, which reaches "
+                f"{self.to_resting_corner:.4f} mm: the block would meet the TV "
+                f"back beyond the edge of the pad"
+            )
+        if self.pad_outboard >= self.base_depth:
+            raise ValueError(
+                f"pad_outboard {self.pad_outboard} mm leaves no tab within a "
+                f"base_depth of {self.base_depth} mm: the plate is the footprint "
+                f"and the tab is what remains of it inboard of the channel"
+            )
+
     @property
     def mouth_width(self) -> float:
         """The neck the strip has to flex past to be caught."""
@@ -92,19 +119,59 @@ class Design:
         return self.channel_width + 2 * self.wall
 
     @property
-    def floor_height(self) -> float:
-        """How high the slot floor's centre sits above the TV back.
+    def resting_height(self) -> float:
+        """The height at which the block's outboard-bottom corner would touch.
 
-        Forced, not chosen: it is what rests the block's outboard-bottom corner
-        ON the base plane, and every dimension below follows from it. Half the
-        block leans up by the sine while the floor's own thickness leans by the
-        cosine -- two different terms, equal only at 45 degrees. Writing it as
-        one of them doubled would be right at that lean and wrong at all others.
+        What the floor height used to be, and the reason the strip used to move
+        when the lean changed. Half the block leans up by the sine while the
+        floor's own thickness leans by the cosine -- two different terms, equal
+        only at 45 degrees.
+
+        Kept because it is the floor below which a bracket at this lean would
+        dip through the TV back, which is what `floor_height` has to clear.
         """
         lean = math.radians(self.tilt)
         return (self.block_width / 2) * math.sin(
             lean
         ) + self.floor_thickness * math.cos(lean)
+
+    @property
+    def tallest_resting_height(self) -> float:
+        """The tallest `resting_height` any lean can ask for.
+
+        `a*sin + b*cos` is `hypot(a, b)*sin(angle + phase)`, so its maximum over
+        every lean is that hypotenuse -- reached near 77 degrees for this
+        channel, not at 90. The curve is not monotonic, which is what makes
+        reading the value off the steepest bracket in use the wrong answer.
+        """
+        return math.hypot(self.block_width / 2, self.floor_thickness)
+
+    @property
+    def channel_clearing_height(self) -> float:
+        """The height at which the channel's low end clears the plate.
+
+        The plate reaches outboard past the strip, so at a steep lean it passes
+        underneath the low end of the channel. Too low and it fills the bottom
+        of the slot -- the strip's bed measurably shortens rather than anything
+        visibly breaking. The low end sits half the channel's width below the
+        floor at worst, so clearing the plate's own thickness is the bound.
+        """
+        return self.plate_thickness + self.channel_width / 2
+
+    @property
+    def floor_height(self) -> float:
+        """How high the slot floor's centre sits above the TV back.
+
+        Chosen rather than forced, and the same at every lean, so that changing
+        the lean does not move the strip. It is the lowest height that clears
+        both bounds above at every lean, so no bracket dips through the TV back
+        and no plate intrudes into a channel.
+
+        It used to be whatever rested the block's corner on the plane, which
+        made the strip's height a consequence of the lean: 7.78 mm at 45
+        degrees against 9.00 at 90, so the strip stepped out at every corner.
+        """
+        return max(self.tallest_resting_height, self.channel_clearing_height)
 
     def leaned(self, across: float, up: float) -> Point:
         """A point of the channel's own frame, placed in the profile's frame.
@@ -124,8 +191,13 @@ class Design:
     # datum a corner's radius is quoted to.
 
     @property
-    def to_base_edge(self) -> float:
-        """Where the plate's outboard edge sits: under the block's resting corner."""
+    def to_resting_corner(self) -> float:
+        """How far outboard the block's underside corner reaches.
+
+        It no longer decides where the plate ends -- `pad_outboard` does -- but
+        the plate still has to reach at least this far, or the block would meet
+        the TV back beyond the pad's edge.
+        """
         return self.leaned(self.block_width / 2, -self.floor_thickness).u
 
     @property
@@ -134,32 +206,13 @@ class Design:
         return self.leaned(self.block_width / 2, self.channel_depth).u
 
     @property
-    def stands_upright(self) -> bool:
-        """Is the channel vertical, rather than leaning?
-
-        The shape changes character here, not just its angle. A leaning channel
-        is held up off the plate by the arm and touches the base plane at one
-        corner. A vertical one needs no holding up: the arm closes to nothing
-        and the block's outboard face lies down on the plane beside the plate.
-        """
-        return abs(math.cos(math.radians(self.tilt))) < UPRIGHT
-
-    @property
-    def pad_width(self) -> float:
-        """How wide the flat face the adhesive holds actually comes out.
-
-        The plate's own depth, normally: the block rests on the base plane at a
-        single corner, exactly where the plate's outboard edge already is.
-        Standing the channel upright lies the block's outboard face down on the
-        plane as well, and that face joins the pad.
-        """
-        outboard = self.to_outermost if self.stands_upright else self.to_base_edge
-        return self.to_tab_edge + outboard
-
-    @property
     def to_tab_edge(self) -> float:
-        """How far inboard the plate runs -- the innermost material."""
-        return self.base_depth - self.to_base_edge
+        """How far inboard the plate runs -- the innermost material.
+
+        The pad is the whole plate at every lean now, so the tab is simply what
+        is left of the footprint once the outboard reach is taken off it.
+        """
+        return self.base_depth - self.pad_outboard
 
     @property
     def arm_apex(self) -> Point:
@@ -202,17 +255,27 @@ def profile(design: Design):
 
 def _plate(design):
     """The flat pad the adhesive holds, running inboard from under the arm."""
-    return rect(-design.to_tab_edge, 0.0, design.to_base_edge, design.plate_thickness)
+    return rect(-design.to_tab_edge, 0.0, design.pad_outboard, design.plate_thickness)
 
 
 def _arm(design):
     """The wedge carrying the channel up off the plate.
 
-    Its hypotenuse is the channel block's own underside, so the arm meets the
-    block flush however the block is dimensioned.
+    Its long face is the channel block's own underside, so the arm meets the
+    block flush however the block is dimensioned. Four corners rather than
+    three: the floor sits above what would rest the block on the plane, so the
+    arm has to climb from the plane to the block's underside corner before it
+    can follow that underside inboard. A triangle straight to the corner leaves
+    a notch under the block -- one that reads as solid, because it is open to
+    the outside rather than enclosed.
+
+    At a right angle the underside stands vertical and the four corners fall on
+    one line. The arm contributes nothing there, which is correct: the plate
+    reaches past the block and carries it directly.
     """
     apex = design.arm_apex
-    return polygon([(design.to_base_edge, 0.0), apex, (apex.u, 0.0)])
+    resting = design.leaned(design.block_width / 2, -design.floor_thickness)
+    return polygon([(resting.u, 0.0), resting, apex, (apex.u, 0.0)])
 
 
 def _channel_block(design):

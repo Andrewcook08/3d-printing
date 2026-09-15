@@ -32,6 +32,12 @@ tilt = 45.0
 
 plate_thickness = 2.0
 
+# How far the plate reaches outboard of the strip's centre, the same at every
+# lean. It has to cover the block's resting corner, which reaches furthest at
+# the shallowest lean in use -- 4.95 mm at 45 degrees -- and it has to leave a
+# tab within base_depth below.
+pad_outboard = 5.0
+
 # The adhesive footprint, and the tab: the plate's overhang past the arm, which
 # is the lever arm resisting the peel that pulled the strip's own adhesive off.
 base_depth = 22.0

@@ -212,9 +212,9 @@ def check_base_is_flat(runner, section, design):
         f"{low_v:.3f} mm",
     )
     runner.check(
-        "the pad is as wide as the design makes it",
-        abs(pad - design.pad_width) < MAX_EDGE_ERROR,
-        f"{pad:.2f} mm against {design.pad_width:.2f} mm",
+        "the pad is the full base depth",
+        abs(pad - design.base_depth) < MAX_EDGE_ERROR,
+        f"{pad:.2f} mm against {design.base_depth:.2f} mm",
     )
 
 

@@ -73,8 +73,14 @@ def test_a_pad_lifted_off_the_mounting_plane_is_caught():
 
 
 def test_a_corner_that_does_not_match_its_straight_is_caught():
-    """The claim the whole design rests on has to be falsifiable."""
-    mismatched = replace(DESIGN, channel_width=DESIGN.channel_width + 2.0)
+    """The claim the whole design rests on has to be falsifiable.
+
+    Deepened rather than widened: widening the channel widens the block with
+    it, which moves the resting corner outboard of the pad and gets the design
+    refused before it can be measured. The depth changes the channel without
+    disturbing anything the pad has to cover.
+    """
+    mismatched = replace(DESIGN, channel_depth=DESIGN.channel_depth + 2.0)
     assert objections_to(
         check_corner_matches_the_straight, profile(mismatched), profile(DESIGN)
     )
