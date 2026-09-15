@@ -60,27 +60,27 @@ base_depth = 22.0
 # ---------------------------------------------------------------------------
 
 [[straight]]
-name = "hue-strip-tv-straight-8-45"
+name = "hue-strip-tv-straight-8in-45"
 length = 203.2
 note = "8 in"
 
 [[straight]]
-name = "hue-strip-tv-straight-5-45"
+name = "hue-strip-tv-straight-5in-45"
 length = 127.0
 note = "5 in"
 
 [[straight]]
-name = "hue-strip-tv-straight-3-45"
+name = "hue-strip-tv-straight-3in-45"
 length = 76.2
 note = "3 in"
 
 [[straight]]
-name = "hue-strip-tv-straight-2-45"
+name = "hue-strip-tv-straight-2in-45"
 length = 50.8
 note = "2 in -- the shortest, for trimming a run to length"
 
 [[corner]]
-name = "hue-strip-tv-corner-1.5-90"
+name = "hue-strip-tv-corner-1.5in-90"
 radius = 38.1
 tilt = 90.0
 note = "1.5 in radius, upright"

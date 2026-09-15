@@ -1,5 +1,5 @@
-218cd1d85657f8ada353733d52f761c40b2cc896812219708026a4704efbb897  output/hue-tv-brackets/hue-strip-tv-corner-1.5-90.stl
-d6eb87f38d3e052fb7de00eb267051d6f8f79f7656ea2a9aca899f1dbe5ed062  output/hue-tv-brackets/hue-strip-tv-straight-2-45.stl
-34ce6138d2e72d51549a8414c23d562e82b2122a00a6dc645870df015d33a17b  output/hue-tv-brackets/hue-strip-tv-straight-3-45.stl
-5e2bf5f3d2a21047e9099f5a3de5629b1e958a69d376afe3daff664acfc0a996  output/hue-tv-brackets/hue-strip-tv-straight-5-45.stl
-82e737e8626fe0c88c89ccebb1e673fbd31c828cc6197d724cade9d79df1f3c0  output/hue-tv-brackets/hue-strip-tv-straight-8-45.stl
+e0fd248257fdb80dfb25dc097b8de57735613e6cba2118054e0a2a183915a4c1  output/hue-tv-brackets/hue-strip-tv-corner-1.5in-90.stl
+eb8e264e1db6b373e2e7268aede4f3a0d6089a5291e75dd3c7dfa88930275de2  output/hue-tv-brackets/hue-strip-tv-straight-2in-45.stl
+46565c7163a6e1e16e89b45f647d87aaaa747445c183ec6894b6e3bb4822c0ed  output/hue-tv-brackets/hue-strip-tv-straight-3in-45.stl
+2b9a09abbf0ce40526c01bcf7c21da4dec12fa052b51163d264a479b1896f7a4  output/hue-tv-brackets/hue-strip-tv-straight-5in-45.stl
+999f91ec8b35300cbc5c40673e92a6d9c64fd58411c2127f61b1eb8277acd84a  output/hue-tv-brackets/hue-strip-tv-straight-8in-45.stl

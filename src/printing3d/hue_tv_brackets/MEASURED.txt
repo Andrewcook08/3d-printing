@@ -1,5 +1,5 @@
 
-hue-strip-tv-straight-8-45
+hue-strip-tv-straight-8in-45
   [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
   [PASS] the bed is the full channel width  -- 15.000 mm
   [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
@@ -10,7 +10,7 @@ hue-strip-tv-straight-8-45
   [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
   [PASS] the profile encloses no pockets  -- 0 found
 
-hue-strip-tv-straight-5-45
+hue-strip-tv-straight-5in-45
   [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
   [PASS] the bed is the full channel width  -- 15.000 mm
   [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
@@ -21,7 +21,7 @@ hue-strip-tv-straight-5-45
   [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
   [PASS] the profile encloses no pockets  -- 0 found
 
-hue-strip-tv-straight-3-45
+hue-strip-tv-straight-3in-45
   [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
   [PASS] the bed is the full channel width  -- 15.000 mm
   [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
@@ -32,7 +32,7 @@ hue-strip-tv-straight-3-45
   [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
   [PASS] the profile encloses no pockets  -- 0 found
 
-hue-strip-tv-straight-2-45
+hue-strip-tv-straight-2in-45
   [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
   [PASS] the bed is the full channel width  -- 15.000 mm
   [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
@@ -43,7 +43,7 @@ hue-strip-tv-straight-2-45
   [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
   [PASS] the profile encloses no pockets  -- 0 found
 
-hue-strip-tv-corner-1.5-90
+hue-strip-tv-corner-1.5in-90
   [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
   [PASS] the bed is the full channel width  -- 15.000 mm
   [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
