@@ -88,18 +88,19 @@ class Design:
     pad_outboard: float
 
     def __post_init__(self) -> None:
-        """Refuse a reach the rest of the shape cannot live with.
+        """Refuse a shape that would come apart or leave nothing to stick down.
 
         Both bounds are about this lean in particular, so they are checked when
         a leaned design is made rather than when the file is read -- an entry
-        may name its own lean, and the shipped reach has to suit all of them.
+        may name its own lean, and the shipped numbers have to suit all of them.
         """
-        if self.pad_outboard < self.to_resting_corner:
+        if self.block_float > self.plate_thickness:
             raise ValueError(
-                f"pad_outboard {self.pad_outboard} mm is inside the block's "
-                f"resting corner at {self.tilt:g} degrees, which reaches "
-                f"{self.to_resting_corner:.4f} mm: the block would meet the TV "
-                f"back beyond the edge of the pad"
+                f"at {self.tilt:g} degrees the channel floats "
+                f"{self.block_float:.4f} mm above where it would rest, which is "
+                f"clear of a {self.plate_thickness} mm plate: the block would "
+                f"meet the plate along a line rather than sitting into it, and "
+                f"the two come out as separate pieces"
             )
         if self.pad_outboard >= self.base_depth:
             raise ValueError(
@@ -191,6 +192,17 @@ class Design:
     # datum a corner's radius is quoted to.
 
     @property
+    def block_float(self) -> float:
+        """How far the block hangs above where this lean would have rested it.
+
+        Zero at the lean whose resting height the floor was set from, and
+        largest at the shallowest lean. The plate has to be at least this thick
+        to still overlap the block: below that the two touch along a line, and
+        a line of contact is not a join -- the pieces separate.
+        """
+        return self.floor_height - self.resting_height
+
+    @property
     def to_resting_corner(self) -> float:
         """How far outboard the block's underside corner reaches.
 
@@ -264,7 +276,14 @@ def _arm(design):
     """
     apex = design.arm_apex
     resting = design.leaned(design.block_width / 2, -design.floor_thickness)
-    return polygon([(resting.u, 0.0), resting, apex, (apex.u, 0.0)])
+    beneath = polygon([(resting.u, 0.0), resting, apex, (apex.u, 0.0)])
+    # Never outboard of the plate. At a shallow lean the block's resting corner
+    # reaches past the plate's edge, and an arm that followed it there would
+    # put its own foot on the TV outboard of the pad -- which is the thing the
+    # fixed reach exists to stop. The block overhangs instead, in the air.
+    inboard = min(apex.u, resting.u)
+    tallest = max(apex.v, resting.v)
+    return beneath ^ rect(inboard, 0.0, design.pad_outboard, tallest)
 
 
 def _channel_block(design):

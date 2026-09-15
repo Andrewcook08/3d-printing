@@ -17,7 +17,7 @@ from printing3d.hue_tv_brackets.verify import (
     slot_width_at,
     upright_section,
 )
-from printing3d.shapes import polygon, signed_area
+from printing3d.shapes import polygon, rect, signed_area
 from tests.support import contour_digest
 
 # The shape these tests measure is the one the project ships, so its numbers
@@ -198,7 +198,9 @@ def test_nothing_is_hollow_beneath_the_channel(tilt):
     channel needs carrying.
 
     The region is built from the block's own corners rather than from the arm,
-    so it describes what must be solid without assuming how.
+    so it describes what must be solid without assuming how. It stops at the
+    plate's edge: past that the block deliberately overhangs, because an arm
+    following it out would stand on the TV outboard of the pad.
     """
     leaning = replace(DESIGN, tilt=tilt)
     resting = leaning.leaned(leaning.block_width / 2, -leaning.floor_thickness)
@@ -206,30 +208,39 @@ def test_nothing_is_hollow_beneath_the_channel(tilt):
     beneath = polygon(
         [(resting.u, 0.0), (resting.u, resting.v), (apex.u, apex.v), (apex.u, 0.0)]
     )
-    missing = (beneath - profile_at(tilt)).area()
+    over_the_plate = rect(
+        min(apex.u, resting.u), 0.0, leaning.pad_outboard, max(apex.v, resting.v)
+    )
+    missing = ((beneath ^ over_the_plate) - profile_at(tilt)).area()
     assert missing == pytest.approx(0.0, abs=1e-9), f"{missing:.4f} mm2 unfilled"
 
 
-def test_a_reach_that_leaves_the_block_off_the_pad_is_refused():
-    """The lean the pad cannot cover has to say so rather than build."""
-    with pytest.raises(ValueError, match="resting corner"):
+def test_a_lean_that_would_come_apart_is_refused():
+    """The block has to sit into the plate, not rest a line on it.
+
+    Shallow enough and the block floats clear of the plate's top surface, and
+    the only thing left joining them is the arm meeting the block along a line.
+    A line of contact is not a join: the profile comes out as two separate
+    pieces.
+    """
+    with pytest.raises(ValueError, match="separate pieces"):
         replace(DESIGN, tilt=30.0)
 
 
-def test_the_shallowest_lean_the_pad_covers_is_where_it_says_it_is():
-    """Straddles the refusal rather than testing well inside it.
-
-    The shipped lean clears the bound by about a third of a degree, which is
-    close enough that a change to the channel's own numbers can cross it: half
-    a millimetre more wall pushes the resting corner past the reach and refuses
-    the shipped design itself. Pinning both sides of the edge means a change
-    that moves it fails here, naming the lean, rather than somewhere further
-    on.
-    """
-    boundary = 44.63
+def test_the_shallowest_lean_that_holds_together_is_where_it_says_it_is():
+    """Straddles the refusal rather than testing well inside it, so a change
+    that moves the edge fails here and names the lean."""
+    boundary = 41.91
     replace(DESIGN, tilt=boundary + 0.05)
-    with pytest.raises(ValueError, match="resting corner"):
+    with pytest.raises(ValueError, match="separate pieces"):
         replace(DESIGN, tilt=boundary - 0.05)
+
+
+@pytest.mark.parametrize("tilt", EVERY_LEAN)
+def test_the_profile_is_one_connected_piece(tilt):
+    """The failure the bound above guards is silent in every other measure:
+    two pieces, no enclosed void, each bed its full width."""
+    assert len(profile_at(tilt).to_polygons()) == 1
 
 
 def test_a_reach_that_leaves_no_tab_is_refused():
@@ -347,9 +358,9 @@ def test_a_corner_just_wider_than_the_profile_is_built():
 
 # Pinned so a change to the outline names itself here, before the golden master
 # reports it as a difference in bytes.
-PINNED_VERTICES = 14
-PINNED_AREA = 172.446699
-PINNED_DIGEST = "6d0787ef9da2002e"
+PINNED_VERTICES = 15
+PINNED_AREA = 172.272601
+PINNED_DIGEST = "619ddd5f80795cab"
 
 
 def test_the_shipped_profile_is_unchanged():
