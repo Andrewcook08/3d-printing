@@ -36,6 +36,12 @@ plate_thickness = 2.0
 # lean. It has to cover the block's resting corner, which reaches furthest at
 # the shallowest lean in use -- 4.95 mm at 45 degrees -- and it has to leave a
 # tab within base_depth below.
+#
+# The margin over that 45-degree reach is deliberately thin -- fifty microns,
+# so a quarter-millimetre more wall would refuse the shipped lean. Widening it
+# was considered and declined: every millimetre of reach comes out of the tab
+# within the same footprint, and the tab is what resists the peel. The refusal
+# is loud and names both numbers if it ever fires.
 pad_outboard = 5.0
 
 # The adhesive footprint, and the tab: the plate's overhang past the arm, which
