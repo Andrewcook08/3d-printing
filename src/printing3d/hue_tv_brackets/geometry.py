@@ -226,17 +226,6 @@ class Design:
         centre."""
         return self.to_tab_edge
 
-    def chord_inset(self, radius: float) -> float:
-        """How far a cut between two facets falls inside the true arc.
-
-        The revolve approximates the arc with flat facets, so a section taken
-        between two of them sits a chord's sagitta short of the radius. This is
-        the most a corner's section can differ from the straight's it was swept
-        from.
-        """
-        half_facet = math.radians(360.0 / CORNER_SEGMENTS / 2.0)
-        return (radius + self.to_outermost) * (1.0 - math.cos(half_facet))
-
 
 # ---------------------------------------------------------------------------
 # Profile: plate + arm + channel block

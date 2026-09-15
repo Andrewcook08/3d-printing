@@ -82,6 +82,19 @@ def test_the_channel_block_clears_the_base_plane_at_any_lean(tilt):
 EVERY_LEAN = (45.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 77.5, 80.0, 85.0, 90.0)
 
 
+def chord_inset(design, radius):
+    """How far a cut between two facets falls inside the true arc.
+
+    The revolve approximates the arc with flat facets, so a section taken
+    between two of them sits a chord's sagitta short of the radius. It is the
+    bound on how much a corner's section may differ from the straight's it was
+    swept from -- an error budget for the two tests below, which is why it
+    lives with them rather than on the shape they measure.
+    """
+    half_facet = math.radians(360.0 / CORNER_SEGMENTS / 2.0)
+    return (radius + design.to_outermost) * (1.0 - math.cos(half_facet))
+
+
 def profile_at(tilt):
     return profile(replace(DESIGN, tilt=tilt))
 
@@ -203,6 +216,22 @@ def test_a_reach_that_leaves_the_block_off_the_pad_is_refused():
         replace(DESIGN, tilt=30.0)
 
 
+def test_the_shallowest_lean_the_pad_covers_is_where_it_says_it_is():
+    """Straddles the refusal rather than testing well inside it.
+
+    The shipped lean clears the bound by about a third of a degree, which is
+    close enough that a change to the channel's own numbers can cross it: half
+    a millimetre more wall pushes the resting corner past the reach and refuses
+    the shipped design itself. Pinning both sides of the edge means a change
+    that moves it fails here, naming the lean, rather than somewhere further
+    on.
+    """
+    boundary = 44.63
+    replace(DESIGN, tilt=boundary + 0.05)
+    with pytest.raises(ValueError, match="resting corner"):
+        replace(DESIGN, tilt=boundary - 0.05)
+
+
 def test_a_reach_that_leaves_no_tab_is_refused():
     with pytest.raises(ValueError, match="no tab"):
         replace(DESIGN, pad_outboard=DESIGN.base_depth)
@@ -259,14 +288,14 @@ def test_between_facets_a_corner_falls_short_by_a_chord_and_no_more(radius, degr
     arc. That inset is the revolve's whole error, and it is bounded."""
     cut = upright_section(corner(DESIGN, radius), degrees).translate((-radius, 0.0))
     assert cut.bounds() == pytest.approx(
-        profile(DESIGN).bounds(), abs=DESIGN.chord_inset(radius)
+        profile(DESIGN).bounds(), abs=chord_inset(DESIGN, radius)
     )
 
 
 @pytest.mark.parametrize("radius", RADII)
 def test_the_facets_are_finer_than_the_printer_can_resolve(radius):
     """Which is what makes the inset above a curiosity rather than a defect."""
-    assert DESIGN.chord_inset(radius) < NOZZLE_WIDTH / 10.0
+    assert chord_inset(DESIGN, radius) < NOZZLE_WIDTH / 10.0
 
 
 def test_the_chosen_angles_really_do_sit_where_they_claim():
