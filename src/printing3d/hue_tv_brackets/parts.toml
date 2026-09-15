@@ -43,3 +43,44 @@ pad_outboard = 4.0
 # The adhesive footprint, and the tab: the plate's overhang past the arm, which
 # is the lever arm resisting the peel that pulled the strip's own adhesive off.
 base_depth = 22.0
+
+# ---------------------------------------------------------------------------
+# What ships
+#
+# One corner and four straight lengths. The lengths are a kit rather than a
+# ladder: a run is made up from whatever combination covers it, so four sizes
+# fit a range of TVs without a size being cut to length or printed to order.
+#
+# The straights lean at 45 degrees, which is what throws light along the wall
+# as well as at it. The corner stands upright, where none of the turn lands in
+# the strip's own plane and the radius stops being a question about strain.
+# Both hold the strip at the same height and the same distance from the edge
+# butted to the marked line -- that is what the lean no longer moving the strip
+# bought, and it is why these mix freely.
+# ---------------------------------------------------------------------------
+
+[[straight]]
+name = "hue-strip-tv-straight-8-45"
+length = 203.2
+note = "8 in"
+
+[[straight]]
+name = "hue-strip-tv-straight-5-45"
+length = 127.0
+note = "5 in"
+
+[[straight]]
+name = "hue-strip-tv-straight-3-45"
+length = 76.2
+note = "3 in"
+
+[[straight]]
+name = "hue-strip-tv-straight-2-45"
+length = 50.8
+note = "2 in -- the shortest, for trimming a run to length"
+
+[[corner]]
+name = "hue-strip-tv-corner-1.5-90"
+radius = 38.1
+tilt = 90.0
+note = "1.5 in radius, upright"
