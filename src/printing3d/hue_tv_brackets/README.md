@@ -15,11 +15,8 @@ off that mesh.
 > This file is rewritten once they are. `uv run build` is the accurate list of
 > what exists at any moment.
 >
-> Two corner entries currently sit in `parts.toml` for an unrelated reason:
-> parts under test are not committed, and they needed to be readable from
-> outside this machine. That is a temporary arrangement and will be undone. It
-> is not a shipping decision, and it does not change what `parts.toml` means
-> anywhere else in this repo.
+> `parts.toml` declares nothing at present. Every part is still under test, so
+> they build outside the committed output and none of them is committed to.
 >
 > What the printing did establish is narrower and does hold: every rung of the
 > leaning radius ladder bound, which is why the corners stand upright. The
@@ -185,13 +182,32 @@ two unrelated designs in step by hand forever.
 The strip flexes past the 15 → 12 mm neck and is then held mechanically. Every
 other number in the part follows from this block and the 45° lean.
 
-### Everything derives from one constraint
+### The strip's place is chosen, so the lean is free
 
-The channel block rests **on** the base plane at its outboard-bottom corner.
-That single constraint fixes the channel's height above the TV back (7.78 mm),
-where the arm's wall drops (7.78 mm inboard of the channel's own datum), the tab
-length (9.27 mm) and the profile's overall depth (26.24 mm) — all four matching
-the reference mesh to under 0.01 mm, with no coordinate transcribed from it.
+The block used to rest **on** the base plane at its outboard-bottom corner, and
+everything else followed from that. It made the strip's height a consequence of
+the lean: 7.78 mm at 45°, 9.00 mm at 90°. Build a straight at one lean and a
+corner at another and the strip steps out at every corner and back in.
+
+So the strip's place is now the fixed thing and the plastic adapts to it. The
+channel sits **9.50 mm** above the TV back and the plate reaches **5.0 mm**
+outboard of the strip's centre, at every lean. The block floats above where it
+would have rested — 1.72 mm at 45° — and the arm carries it.
+
+The height is not a free number. It is the lowest that clears two bounds at
+once, and both are computed rather than chosen:
+
+- **The block must not dip through the TV back.** What would rest it on the
+  plane is `(block/2)·sin + floor·cos`, which peaks near 77.5° rather than at
+  either end — so the steepest bracket is not the worst case. Its maximum over
+  every lean is `hypot(block/2, floor)` = 9.22 mm.
+- **The plate must not intrude into the channel.** Reaching outboard past the
+  strip puts the plate under the channel's low end, and too low a floor fills
+  the bottom of the slot — the bed measures short while nothing looks wrong.
+  Clearing it takes `plate + channel/2` = 9.50 mm.
+
+The second is the binding one here. The tab length (17.0 mm) and the profile's
+overall depth (26.19 mm) then follow from the reach.
 
 ### Two things the reference had that this does not
 
@@ -205,8 +221,9 @@ slicer setting you can change per print.
 
 ### The tab earns its length
 
-The plate runs 9.27 mm past the arm on the inboard side. That overhang is not
-decoration. The strip sits in a channel leaning outboard, so its weight and its
+The plate runs 17.0 mm past the strip's centre on the inboard side — whatever
+is left of the 22 mm footprint once the 5.0 mm outboard reach is taken off it.
+That overhang is not decoration. The strip sits in a channel leaning outboard, so its weight and its
 springiness apply a moment that tries to lift the *outboard* edge of the pad off
 the panel, pivoting about the arm's outer edge. The tab sits on the far side of
 that pivot, and its length is the lever arm resisting the lift.
@@ -250,16 +267,19 @@ uv run verify                  # check geometry before printing
 uv run pytest                  # check the code
 ```
 
-**Changing the lean is a trade, not a free choice.** A shallower lean makes the
-bracket sit lower and reach less far past its pad — 3.0 mm at 30° against
-4.2 mm at 45° — and it eases the lip's overhang, from 8° off the bed to 23°.
-But the lean is also what buys corner relief, and that falls with it: at 30° the
-relief is 1.155× instead of 1.414×, so an R30 corner would bend the strip like
-an in-plane R34.6 rather than R42.4. Tilting down 15° costs about what tightening
-R30 to R24 would. Less light reaches the wall, too, which was the point of the
-lean to begin with.
+**The lean no longer moves the strip, but it is still a trade.** A shallower
+lean eases the lip's overhang and throws less light at the wall, which was the
+point of leaning in the first place. It also buys less corner relief: relief
+scales with the cosine, so 30° would give 1.155× against 45°'s 1.414× — an R30
+corner bending the strip like an in-plane R34.6 rather than R42.4.
 
-A corner tighter than 17.05 mm is refused rather than built: below that the
+**Below about 45° the design refuses itself.** The block's resting corner
+reaches further outboard as the lean shallows, and once it passes the plate's
+5.0 mm reach the block would meet the TV back beyond the edge of the pad. The
+error names the lean and the distance. Raising `pad_outboard` buys shallower
+leans, at the cost of a shorter tab within the same footprint.
+
+A corner tighter than 17.0 mm is refused rather than built: below that the
 pad's inner edge reaches the revolve axis and the part would fold through
 itself. A turn cannot be made by a part that reaches past its own centre.
 
