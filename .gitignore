@@ -19,3 +19,10 @@ output/archive/
 
 # Parts still being tested -- built and checked, never committed
 output/trials/
+
+# Slicer projects and sliced output. The repo's job ends at the STL; how a
+# given printer was told to make it is not a fact about the part, and the
+# files are large and per-machine.
+*.3mf
+*.gcode
+BambuProjects/
