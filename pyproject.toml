@@ -14,6 +14,7 @@ dependencies = [
 [project.scripts]
 build = "printing3d.cli:build"
 verify = "printing3d.cli:verify"
+relock = "printing3d.cli:relock"
 
 [build-system]
 requires = ["uv_build>=0.8.10,<0.13.0"]

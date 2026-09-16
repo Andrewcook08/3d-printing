@@ -1,0 +1,44 @@
+# Parts being tested, not parts that ship. What these produce is built and
+# checked like anything else but written outside the committed output, so
+# deleting this file retires all of them and changes nothing else.
+#
+# A part may lean differently from the design; anything it does not say is
+# taken from parts.toml.
+#
+# The twenty entries that were here are gone: the 45-degree radius ladder that
+# bound, the 65- and 70-degree ladders that bound at every rung, and the
+# 1.0%-strain rungs at 70, 80 and 85 degrees that were never printed because
+# standing the corners fully upright removed the strain question entirely.
+# Restoring any of them is a git operation -- this file is committed even
+# though what it builds is not.
+
+# ---------------------------------------------------------------------------
+# The first print with the strip's place fixed. A straight and two corners,
+# which is everything needed to check that a corner and a straight now hold the
+# strip at the same height and the same distance from their outer edge.
+#
+# Two inches of straight rather than the full run: the cross-section does not
+# vary along it, so a short piece answers the same question for a fifth of the
+# filament. The 125 mm length belongs in parts.toml when the set is settled.
+# ---------------------------------------------------------------------------
+
+[[straight]]
+name = "trial-straight-2in-v1"
+length = 50.8
+note = "2 in, at the shipped 45-degree lean"
+
+# Upright, where the turn puts none of itself into the strip's own plane. The
+# radius is a fitting choice rather than a structural one, so these two bracket
+# the range worth handling rather than laddering toward a limit.
+
+[[corner]]
+name = "trial-corner-1.5in-v1"
+radius = 38.1
+tilt = 90.0
+note = "1.5 in radius -- the tighter of the two, leaves the most straight run"
+
+[[corner]]
+name = "trial-corner-3in-v1"
+radius = 76.2
+tilt = 90.0
+note = "3 in radius -- the gentler sweep, and an easier twist into the straights"

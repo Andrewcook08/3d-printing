@@ -33,6 +33,7 @@ def test_one_failure_among_many_still_fails():
 
 
 def test_the_report_announces_success(capsys):
+    """Also guards the empty-run test below from passing by breaking this."""
     runner = CheckRunner()
     runner.check("fine", True)
     assert runner.report()
@@ -49,3 +50,17 @@ def test_the_report_names_what_failed(capsys):
 def test_a_section_heading_is_printed(capsys):
     CheckRunner().section("cross-part alignment")
     assert "cross-part alignment" in capsys.readouterr().out
+
+
+def test_a_run_that_examined_nothing_does_not_claim_success(capsys):
+    """It is vacuously true that every check passed when none of them ran, and
+    printing that is how an empty record comes to read as a guarantee.
+
+    This is not hypothetical: re-locking a project that declares no parts wrote
+    a record whose entire content was the words announcing success.
+    """
+    runner = CheckRunner()
+    runner.report()
+    printed = capsys.readouterr().out
+    assert "NOTHING CHECKED" in printed
+    assert "ALL CHECKS PASSED" not in printed

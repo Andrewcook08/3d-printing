@@ -1,0 +1,32 @@
+
+spinning-85in-butt-26.15mm-v3  (rod 26.15 mm, 1 screw, 11 mm wide)
+  [PASS] rod fits the cradle without interference  -- 0.0000 mm3
+  [PASS] rod lifts straight out  -- 0.0000 mm3
+  [PASS] rod clears the wall  -- 4.93 mm
+  [PASS] rod cannot roll back toward the wall  -- 83.1 mm3 interference
+  [PASS] rod cannot roll forward off the lip  -- 105.3 mm3 interference
+  [PASS] screw 27.5: bore open, countersunk front only
+  [PASS] screw 27.5: clear of the cradle, on flat plate
+  [PASS] screw 27.5: fits under the plate top  -- 3.3 mm of plate above it
+  [PASS] single connected body
+  [PASS] no enclosed voids in the profile  -- 0 found
+
+spinning-85in-tip-5.80mm-v3  (rod 5.8 mm, 1 screw, 11 mm wide)
+  [PASS] rod fits the cradle without interference  -- 0.0000 mm3
+  [PASS] rod lifts straight out  -- 0.0000 mm3
+  [PASS] rod clears the wall  -- 15.10 mm
+  [PASS] rod cannot roll back toward the wall  -- 18.0 mm3 interference
+  [PASS] rod cannot roll forward off the lip  -- 18.0 mm3 interference
+  [PASS] screw 27.5: bore open, countersunk front only
+  [PASS] screw 27.5: clear of the cradle, on flat plate
+  [PASS] screw 27.5: fits under the plate top  -- 3.3 mm of plate above it
+  [PASS] single connected body
+  [PASS] no enclosed voids in the profile  -- 0 found
+  [PASS] the wedge's two diagonals are parallel  -- 32.60, 32.60 deg
+  [PASS] cradle walls level with each other  -- wall side 17.50 mm, outer 17.50 mm
+
+cross-part alignment: spinning-85in
+  [PASS] butt + tip seat the rod at the same height  -- butt 17.22 mm vs tip 17.22 mm
+  [PASS] rod tilt over a 1250 mm span  -- 0.0000 deg
+
+ALL CHECKS PASSED
