@@ -60,3 +60,16 @@ tilt = 90.0
 lead = 101.6
 twist = 76.2
 note = "4 in leads, turning over the last 3 in, into the 1.5 in corner"
+
+# The same corner with the turn packed into a single inch, and no straight
+# part at all -- the run starts turning the moment it leaves the open end.
+# Printed beside the four-inch one, it answers how short the lead-in can get
+# before the twist is more than the strip wants to follow.
+
+[[corner]]
+name = "trial-corner-1.5in-90-lead1in-v1"
+radius = 38.1
+tilt = 90.0
+lead = 25.4
+twist = 25.4
+note = "1 in lead, turning over the whole of it"
