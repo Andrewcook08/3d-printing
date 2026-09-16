@@ -6,8 +6,11 @@ How a part's shape is expressed, and the properties that fall out of it.
 
 A part is described as a **two-dimensional cross-section**, and the solid is
 that profile swept — along a line for a straight part, around an axis for a
-curved one. The whole shape is decided in a flat profile before it ever becomes
-a solid, and holes are cut afterwards where a part needs them.
+curved one. Where the profile has to *change* along the way, the solid is
+stacked from thin slabs of it rather than swept in one operation: an outline
+whose features merge into each other as it changes offers nothing to
+interpolate between. The whole shape is still decided in flat profiles before
+it ever becomes a solid, and holes are cut afterwards where a part needs them.
 
 One consequence is worth stating on its own: two parts swept from the *same*
 profile cannot disagree about anything the profile describes. Where a project

@@ -258,13 +258,15 @@ def check_leads_run_out_straight(runner, part):
     the way there -- a run built short leaves a gap and still reaches, and it
     is being one connected solid that catches that instead.
     """
-    reaches = -min(part.solid.bounding_box()[0], part.solid.bounding_box()[1])
-    overshoots = -max(part.solid.bounding_box()[0], part.solid.bounding_box()[1])
+    # One run leaves along each axis, so how far the part reaches back along
+    # both is how far each of them goes.
+    low_x, low_y = part.solid.bounding_box()[0], part.solid.bounding_box()[1]
+    along_x, along_y = -low_x, -low_y
     runner.check(
         "the runs reach their full length past the corner",
-        abs(reaches - part.lead) < MAX_EDGE_ERROR
-        and abs(overshoots - part.lead) < MAX_EDGE_ERROR,
-        f"{reaches:.2f} mm and {overshoots:.2f} mm against {part.lead:.2f} mm",
+        abs(along_x - part.lead) < MAX_EDGE_ERROR
+        and abs(along_y - part.lead) < MAX_EDGE_ERROR,
+        f"{along_x:.2f} mm and {along_y:.2f} mm against {part.lead:.2f} mm",
     )
 
 

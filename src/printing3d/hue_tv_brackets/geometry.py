@@ -32,10 +32,17 @@ QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
 
 # A twisting run is stacked from slabs, one per this much turn. Construction,
-# not design, and measured at both bounds: at two thirds of this step the
-# stack stops merging and comes back as three pieces, while at twice it the
-# scalloping where one slab meets the next doubles.
+# not design, and measured at both bounds on a 3 in run turning 45 degrees to
+# upright: at two thirds of this step the stack stops merging, coming back as
+# two pieces and as three once a corner is assembled from them. At twice this
+# step it still merges, but the scalloping where one slab meets the next
+# doubles with it.
 TWIST_PER_SLAB = 45.0 / 64.0
+
+# How far the surround in `_air_around` stands off the outline it negates.
+# Any positive margin does the same job; this one is a millimetre because the
+# surround is thrown away and only has to enclose what it is cutting against.
+SURROUND_MARGIN = 1.0
 
 # Each slab is extruded this many steps long, so consecutive slabs overlap in
 # volume rather than meeting face to face. Solids that only touch do not merge
@@ -415,9 +422,29 @@ def _leaning_lump(design, by: float):
 
 def _squared_end(design, by: float, depth: float):
     """A prism of everything `depth` deep that the lean `by` does not fill."""
-    outline = _leaning_lump(design, by)
+    return _air_around(_leaning_lump(design, by), depth)
+
+
+def _air_around(outline, depth: float):
+    """A prism `depth` deep of everything around `outline` but not in it.
+
+    Subtracting one of these from a solid pares it back to the outline over
+    that depth, which is how a sweep built from slabs gets an end that is
+    exactly the outline it claims rather than approximately.
+
+    Promotable: domain-free 2D construction, currently only hue-tv-brackets.
+    Waiting on two choices nobody outside this repo made: how far the surround
+    stands off the outline, here a millimetre and the same on every side; and
+    what an empty outline should give, which today is whatever a bounding box
+    of the whole representable plane produces.
+    """
     left, bottom, right, top = outline.bounds()
-    surround = rect(left - 1.0, bottom - 1.0, right + 1.0, top + 1.0)
+    surround = rect(
+        left - SURROUND_MARGIN,
+        bottom - SURROUND_MARGIN,
+        right + SURROUND_MARGIN,
+        top + SURROUND_MARGIN,
+    )
     return (surround - outline).extrude(depth)
 
 

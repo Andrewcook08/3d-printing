@@ -159,8 +159,9 @@ inward.
 ### One profile, three sweeps
 
 A bracket is a 2D profile swept. Extrude it and you have a straight run;
-revolve it about an axis standing off to one side and you have a corner; sweep
-it while its lean changes and you have a run that turns from one to the other.
+revolve it about an axis standing off to one side and you have a corner; carry
+it along while its lean changes and you have a run that turns from one to the
+other — that third one is stacked rather than swept, for the reason below.
 All three come from the same profile, so a corner cannot disagree with a
 straight about the channel — there is only one channel. `uv run verify` asserts
 this directly: it cuts a section through each corner's arc and checks it comes
