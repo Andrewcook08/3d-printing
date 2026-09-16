@@ -7,10 +7,15 @@ How a part's shape is expressed, and the properties that fall out of it.
 A part is described as a **two-dimensional cross-section**, and the solid is
 that profile swept — along a line for a straight part, around an axis for a
 curved one. Where the profile has to *change* along the way, the solid is
-stacked from thin slabs of it rather than swept in one operation: an outline
-whose features merge into each other as it changes offers nothing to
-interpolate between. The whole shape is still decided in flat profiles before
-it ever becomes a solid, and holes are cut afterwards where a part needs them.
+**lofted**: the profile is drawn at each of a run of positions and the surface
+runs straight from one to the next. The whole shape is still decided in flat
+profiles before it ever becomes a solid, and holes are cut afterwards where a
+part needs them.
+
+Lofting is what makes a changing profile come out smooth. Building such a part
+by stacking, from short pieces that each hold one profile, puts a ledge
+wherever two pieces meet — and shorter pieces only make the ledges smaller,
+never flat. A lofted surface has no ledge to shrink.
 
 One consequence is worth stating on its own: two parts swept from the *same*
 profile cannot disagree about anything the profile describes. Where a project

@@ -7,9 +7,9 @@ Rebuilt parametrically rather than traced, because the point of the exercise is
 a matching corner, and a traced outline cannot be bent.
 
 A bracket is one 2D profile swept three ways -- extruded for a straight run,
-revolved about an offset axis for a corner, and stacked in slabs for a run that
-turns from one lean to another. There is only one channel, so no two of them
-can disagree about it.
+revolved about an offset axis for a corner, and lofted through a run of
+profiles for a corner the strip turns into rather than meets. There is only
+one channel, so no two of them can disagree about it.
 
 Every measured number arrives from the project's config file as a Design. What
 this module adds is everything derived from those numbers, and the sweeping.
@@ -21,7 +21,10 @@ import math
 from dataclasses import dataclass, replace
 from typing import NamedTuple
 
-from printing3d.shapes import polygon, rect
+import manifold3d as m
+import numpy as np
+
+from printing3d.shapes import polygon, rect, signed_area
 
 # Cut past the block's face so the mouth opens cleanly rather than meeting it
 # on a coincident edge. Construction, not design: it changes no dimension of
@@ -31,31 +34,13 @@ SLOT_OVERSHOOT = 1.0
 QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
 
-# A twisting run is stacked from slabs, one per this much turn. Construction,
-# not design: it buys smoothness, since where one slab meets the next stands
-# proud of the shape the run is approximating and that step is visible on the
-# finished surface. It shrinks in proportion, measured on a 3 in run turning
-# 45 degrees to upright: 0.18 mm a slab per degree and a half, 0.05 mm at a
-# quarter of that, and 0.03 mm here -- an eighth of a printed layer, and past
-# the point where finer slabs buy anything but triangles.
-TWIST_PER_SLAB = 45.0 / 384.0
-
-# How far the surround in `_air_around` stands off the outline it negates.
-# Any positive margin does the same job; this one is a millimetre because the
-# surround is thrown away and only has to enclose what it is cutting against.
-SURROUND_MARGIN = 1.0
-
-# Unioning slabs this close in shape leaves zero-volume slivers behind, and a
-# stack of them reports as several bodies while only one of them has any
-# volume at all. Collapsing everything smaller than this clears them out. It
-# is four orders of magnitude below anything a printer resolves, so it changes
-# no dimension of the finished part.
-DEGENERATE = 1e-6
-
-# Each slab is extruded this many steps long, so consecutive slabs overlap in
-# volume rather than meeting face to face. Solids that only touch do not merge
-# -- a stack built without this comes back as one body per slab.
-SLAB_SPAN = 2.0
+# How far the lean may move between one station of a turning sweep and the
+# next. Construction, not design. The sweep is lofted, so the surface between
+# two stations is ruled and carries no step; what is left is only the
+# difference between interpolating a profile and leaning it, which falls away
+# as the square of this. At this figure that difference is 0.0002 mm, which is
+# three orders below what the printer resolves.
+LEAN_PER_STATION = 45.0 / 64.0
 
 # How close to vertical counts as vertical. Construction, not design: it only
 # decides which of two exact expressions describes the same shape.
@@ -320,7 +305,12 @@ def _channel_block(design):
 
 
 def _slot(design):
-    """The void the strip clips into, drawn upright about its own bed.
+    """The void the strip clips into, drawn upright about its own bed."""
+    return polygon(_slot_points(design))
+
+
+def _slot_points(design):
+    """That void's corners, in the channel's own frame.
 
     Its origin is the middle of the bed, which is where the strip sits. A
     sweep that turns this outline about that origin therefore turns the
@@ -329,18 +319,16 @@ def _slot(design):
     half_bed, half_mouth = design.channel_width / 2, design.mouth_width / 2
     depth = design.channel_depth
     lip_shoulder = depth - design.lip_height
-    return polygon(
-        [
-            (-half_bed, 0.0),
-            (half_bed, 0.0),
-            (half_bed, lip_shoulder),
-            (half_mouth, depth),
-            (half_mouth, depth + SLOT_OVERSHOOT),
-            (-half_mouth, depth + SLOT_OVERSHOOT),
-            (-half_mouth, depth),
-            (-half_bed, lip_shoulder),
-        ]
-    )
+    return [
+        (-half_bed, 0.0),
+        (half_bed, 0.0),
+        (half_bed, lip_shoulder),
+        (half_mouth, depth),
+        (half_mouth, depth + SLOT_OVERSHOOT),
+        (-half_mouth, depth + SLOT_OVERSHOOT),
+        (-half_mouth, depth),
+        (-half_bed, lip_shoulder),
+    ]
 
 
 def _block_outline(design):
@@ -366,105 +354,17 @@ def straight(design: Design, length: float):
     return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
 
 
-def twisting(design: Design, length: float, to_tilt: float):
-    """A straight run of `length` that carries the channel to a new lean.
+class Station(NamedTuple):
+    """Where the profile sits along a sweep, and how it leans there.
 
-    Where the strip ends up does not depend on the lean, and must not depend
-    on the twist either. That holds by construction rather than by check: the
-    channel is one twisted extrusion about the middle of its own bed, which is
-    the strip's axis, and it is cut from the body last. So the channel turns
-    around the strip instead of carrying the strip around with it, and nothing
-    approximate in the body can reach the strip's seat.
-
-    The body is stacked from slabs because there is nothing to sweep it with.
-    The profile's outline changes shape as it leans -- features merge and its
-    corner count moves -- so there is no correspondence to loft along, and a
-    twisted extrusion of the whole profile would turn the plate off the TV.
-    Each slab is the profile with its slot left in, which keeps the thin lips
-    out of the merges; they are what a stack of slabs fails on.
+    `origin` is a point of the strip's own centre line and `outboard` the
+    direction the profile's `u` runs in from it, both in the mounting plane.
+    Together they say where to put a profile; `tilt` says which one to put.
     """
-    turn = to_tilt - design.tilt
-    slabs = max(1, math.ceil(abs(turn) / TWIST_PER_SLAB))
-    step = length / slabs
-    stacked = [_slab(design, turn, index, slabs, step) for index in range(slabs)]
-    # Unioned in order, lowest first, because union is not associative in the
-    # output mesh and a stack folded the other way tessellates differently.
-    stack = stacked[0]
-    for slab in stacked[1:]:
-        stack = stack + slab
-    stack = stack.trim_by_plane((0.0, 0.0, -1.0), -length)
-    # Square both ends back to the lean they claim. A slab spans a step of
-    # lean but two steps of length, so the first one carries the next lean's
-    # outline into the very start and the last one does the same at the end.
-    # That surplus is small, but it lands on the lips, and a neighbour joined
-    # to a lip at the wrong angle has its mouth roofed over -- the open slot
-    # becomes a tunnel. Paring it off is what lets the runs meet the corner.
-    stack = stack - _squared_end(design, 0.0, step)
-    stack = stack - _squared_end(design, turn, step).translate(
-        (0.0, 0.0, length - step)
-    )
-    upright = stack - _twisted_channel(design, length, turn, slabs)
-    upright = upright.simplify(DEGENERATE)
-    # Lying on its base, as a straight run of the same profile comes out.
-    return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
 
-
-def _slab(design, turn: float, index: int, slabs: int, step: float):
-    """One slab of a twisting run, reaching past the next so the two merge.
-
-    Taken at both ends of the lean it spans rather than at one: a slab built
-    on a single lean trails the channel through its own length, and it is the
-    lips that the lag shows up on.
-    """
-    spanned = _leaning_lump(design, turn * index / slabs) + _leaning_lump(
-        design, turn * (index + 1) / slabs
-    )
-    return spanned.extrude(step * SLAB_SPAN).translate((0.0, 0.0, index * step))
-
-
-def _leaning_lump(design, by: float):
-    """The profile leaned further `by`, with the slot left solid."""
-    leaned = replace(design, tilt=design.tilt + by)
-    block = _block_outline(leaned).rotate(-leaned.tilt)
-    return _plate(leaned) + _arm(leaned) + block.translate((0.0, leaned.floor_height))
-
-
-def _squared_end(design, by: float, depth: float):
-    """A prism of everything `depth` deep that the lean `by` does not fill."""
-    return _air_around(_leaning_lump(design, by), depth)
-
-
-def _air_around(outline, depth: float):
-    """A prism `depth` deep of everything around `outline` but not in it.
-
-    Subtracting one of these from a solid pares it back to the outline over
-    that depth, which is how a sweep built from slabs gets an end that is
-    exactly the outline it claims rather than approximately.
-
-    Promotable: domain-free 2D construction, currently only hue-tv-brackets.
-    Waiting on two choices nobody outside this repo made: how far the surround
-    stands off the outline, here a millimetre and the same on every side; and
-    what an empty outline should give, which today is whatever a bounding box
-    of the whole representable plane produces.
-    """
-    left, bottom, right, top = outline.bounds()
-    surround = rect(
-        left - SURROUND_MARGIN,
-        bottom - SURROUND_MARGIN,
-        right + SURROUND_MARGIN,
-        top + SURROUND_MARGIN,
-    )
-    return (surround - outline).extrude(depth)
-
-
-def _twisted_channel(design, length: float, turn: float, slabs: int):
-    """The slot swept along `length` while turning `turn`, about the strip."""
-    return (
-        _slot(design)
-        .rotate(-design.tilt)
-        .extrude(length, n_divisions=slabs, twist_degrees=-turn)
-        .translate((0.0, design.floor_height, 0.0))
-    )
+    origin: tuple[float, float]
+    outboard: tuple[float, float]
+    tilt: float
 
 
 def led_corner(
@@ -474,12 +374,13 @@ def led_corner(
 
     Each run meets the strip at `from_tilt`, holds that lean for the first
     `lead - twist` of its length, and turns to the corner's own lean over the
-    last `twist`. The twist is measured back from the corner rather than
+    last `twist`. The turn is measured back from the corner rather than
     forward from the open end, so the channel arrives upright however long
     either is -- lengthening the run moves the straight part, never the turn.
 
-    The exit is the entry mirrored: a corner's two sides are one shape
-    approached from either direction.
+    Swept in one piece rather than assembled from three. A run, the turn and
+    the run out are stations of one sweep, so there is no seam between them to
+    take or to show, and the channel is one cut along the whole of it.
     """
     if lead <= 0.0 or twist <= 0.0:
         raise ValueError(f"lead {lead} and twist {twist} must both be positive")
@@ -488,16 +389,173 @@ def led_corner(
             f"twist {twist} is longer than the {lead} mm lead it has to turn "
             f"within: the turn has to finish before the corner starts"
         )
-    running = replace(design, tilt=from_tilt)
-    # The twisting run finishes its turn at y=0, which is the face the corner
-    # presents; mirroring lays it back along the way the lead comes in.
-    run = twisting(running, twist, design.tilt).mirror((0.0, 1.0, 0.0))
-    run = run.translate((radius, 0.0, 0.0))
+    body = _along(design, radius, lead, twist, from_tilt, 0.0)
+    # The channel is cut from a sweep that runs past both ends, so it opens
+    # out rather than meeting the end faces on a coincident plane.
+    cut = _along(design, radius, lead, twist, from_tilt, SLOT_OVERSHOOT)
+    # Union order fixed deliberately, matching profile(): the pad, then what
+    # it carries. Union is not associative in the resulting mesh.
+    outer = _swept(design, body, _plate_points) + _swept(design, body, _lump_points)
+    return outer - _swept(design, cut, _leaning_slot_points)
+
+
+def _along(design, radius, lead, twist, from_tilt, overshoot):
+    """Every station of a led corner: in along one run, round, and out.
+
+    `overshoot` carries the first and last stations past the ends of the part,
+    which is what the channel is cut with.
+    """
     held = lead - twist
-    if held > 0.0:
-        run = run + straight(running, held).translate((radius, -lead, 0.0))
-    # Union order is fixed deliberately, as everywhere else here.
-    return corner(design, radius) + run + run.mirror((1.0, -1.0, 0.0))
+    turning = max(1, math.ceil(abs(design.tilt - from_tilt) / LEAN_PER_STATION))
+    arc = max(1, round(CORNER_SEGMENTS * QUARTER_TURN / 360.0))
+
+    def entering(along):
+        share = 0.0 if along <= held else (along - held) / twist
+        lean = from_tilt + (design.tilt - from_tilt) * share
+        return Station((radius, along - lead), (1.0, 0.0), lean)
+
+    def leaving(along):
+        share = min(along, twist) / twist
+        lean = design.tilt - (design.tilt - from_tilt) * share
+        return Station((-along, radius), (0.0, 1.0), lean)
+
+    def turned(step):
+        about = math.radians(QUARTER_TURN * step / arc)
+        reach = (math.cos(about), math.sin(about))
+        return Station((radius * reach[0], radius * reach[1]), reach, design.tilt)
+
+    # The lean holds until `held`, so one station at each end of that stretch
+    # describes it exactly however long it is.
+    places = [entering(mark) for mark in sorted({-overshoot, 0.0, held})]
+    places += [entering(held + twist * k / turning) for k in range(1, turning + 1)]
+    places += [turned(k) for k in range(1, arc + 1)]
+    places += [leaving(twist * k / turning) for k in range(1, turning + 1)]
+    places += [leaving(mark) for mark in sorted({lead, lead + overshoot})]
+    return _once_each(places)
+
+
+def _once_each(places):
+    """The same stations with any repeat of the one before it dropped.
+
+    Where a run holds its lean, or spends none of itself turning, two of the
+    marks above land on the same place. A sweep through a station twice would
+    carry a ring of zero-length edges.
+    """
+    kept = [places[0]]
+    for place in places[1:]:
+        if place != kept[-1]:
+            kept.append(place)
+    return kept
+
+
+def _swept(design, places, points_of):
+    """`points_of` swept along `places`, lofted rather than stacked.
+
+    The outline is asked for again at every station, so a sweep is not limited
+    to shapes that merely rotate: what changes as the lean changes -- which
+    corner of the block the pad reaches, whether the arm is there at all -- is
+    described once, by the outline, and the sweep follows it.
+    """
+    rings = []
+    for place in places:
+        points = points_of(replace(design, tilt=place.tilt))
+        # Wound against the way the sweep runs, so the loft faces outwards.
+        if signed_area(points) > 0.0:
+            points = points[::-1]
+        (across, along), (out_u, out_v) = place.origin, place.outboard
+        rings.append([(across + out_u * u, along + out_v * u, v) for u, v in points])
+    return _lofted(rings)
+
+
+def _lofted(rings):
+    """A solid through `rings`, each a closed loop of the same length.
+
+    The surface between one ring and the next is ruled. That is the whole
+    point of lofting rather than stacking: a stack of prisms leaves a ledge
+    wherever two of them meet, and no number of prisms turns a ledge into a
+    smooth surface -- it only makes it smaller.
+    """
+    width = len(rings[0])
+    points = [list(point) for ring in rings for point in ring]
+    faces = []
+    for index in range(len(rings) - 1):
+        near, far = index * width, (index + 1) * width
+        for here in range(width):
+            after = (here + 1) % width
+            corners = (
+                points[near + here],
+                points[near + after],
+                points[far + after],
+                points[far + here],
+            )
+            # A quad spanning a change of lean is not planar, and cutting it
+            # along one diagonal leaves its middle standing off the surface it
+            # stands for -- by a quarter of how much the edge moved, which is
+            # a ledge again by another name. A centre point keeps all four
+            # triangles on the ruled patch.
+            points.append([sum(c[axis] for c in corners) / 4.0 for axis in range(3)])
+            middle = len(points) - 1
+            faces.append((near + here, near + after, middle))
+            faces.append((near + after, far + after, middle))
+            faces.append((far + after, far + here, middle))
+            faces.append((far + here, near + here, middle))
+    last = (len(rings) - 1) * width
+    for here in range(1, width - 1):
+        faces.append((0, here + 1, here))
+        faces.append((last, last + here, last + here + 1))
+    mesh = m.Mesh64(
+        np.array(points, dtype=np.float64), np.array(faces, dtype=np.uint64)
+    )
+    return m.Manifold(mesh)
+
+
+def _plate_points(design):
+    """The flat pad, as four corners."""
+    return [
+        (-design.to_tab_edge, 0.0),
+        (design.pad_outboard, 0.0),
+        (design.pad_outboard, design.plate_thickness),
+        (-design.to_tab_edge, design.plate_thickness),
+    ]
+
+
+def _lump_points(design):
+    """The arm and the channel block as one outline, seven corners.
+
+    One outline rather than two solids because the arm's top face is the
+    block's underside: swept apart and unioned, those two coincident faces
+    leave the channel roofed over in places. Swept together there is no seam
+    between them at all.
+
+    Seven corners at every lean, which is what lets one ring be lofted to the
+    next. Where the block's underside does not reach outboard of the pad, two
+    of them land on each other and the corner is simply not there.
+    """
+    half, deep = design.block_width / 2, design.channel_depth
+    floor = -design.floor_thickness
+    out, inboard = design.leaned(half, floor), design.leaned(-half, floor)
+    over, under = design.leaned(half, deep), design.leaned(-half, deep)
+    if out.u > design.pad_outboard:
+        # The arm may not stand on the TV outboard of the pad, so it stops at
+        # the pad's edge and the block overhangs it, in the air.
+        share = (out.u - design.pad_outboard) / (out.u - inboard.u)
+        reached = (design.pad_outboard, out.v + share * (inboard.v - out.v))
+    else:
+        reached = (out.u, out.v)
+    return [
+        (reached[0], 0.0),
+        reached,
+        (out.u, out.v),
+        (over.u, over.v),
+        (under.u, under.v),
+        (inboard.u, inboard.v),
+        (inboard.u, 0.0),
+    ]
+
+
+def _leaning_slot_points(design):
+    """The slot's corners, leaned into the profile's frame."""
+    return [tuple(design.leaned(across, up)) for across, up in _slot_points(design)]
 
 
 def corner(design: Design, radius: float):

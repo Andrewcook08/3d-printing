@@ -8,11 +8,12 @@ import pytest
 from printing3d.hue_tv_brackets.catalog import shipping
 from printing3d.hue_tv_brackets.geometry import (
     CORNER_SEGMENTS,
+    LEAN_PER_STATION,
+    QUARTER_TURN,
     corner,
     led_corner,
     profile,
     straight,
-    twisting,
 )
 from printing3d.hue_tv_brackets.verify import (
     PROBE_BAND,
@@ -374,10 +375,11 @@ def test_the_shipped_profile_is_unchanged():
 
 
 # ---------------------------------------------------------------------------
-# A run that twists from one lean to another
+# A corner whose runs twist into it
 # ---------------------------------------------------------------------------
 
-TWIST_LENGTH = 76.2  # 3 in, the run the trial turns over
+LEAD = 101.6  # 4 in of straight run either side
+LEAD_TWIST = 76.2  # of which the last 3 in turns
 ALONG_THE_TWIST = (0.1, 0.25, 0.4, 0.55, 0.7, 0.85)
 
 # How far either side of a face to look for material. Small enough that a bed
@@ -391,20 +393,23 @@ CLEAR_OF_THE_FACE = 0.15
 SOLID, AIR = 1.0, 0.0
 
 
-def twisting_run(length=TWIST_LENGTH, to_tilt=90.0):
-    """A twisting run stood back up, so it can be sliced across the strip.
+def led_corner_part(lead=LEAD, twist=LEAD_TWIST, radius=38.1):
+    return led_corner(UPRIGHT, radius, lead, twist, DESIGN.tilt)
 
-    It is built lying down like every other part, which puts the strip along
-    Y; sections across the strip are what these tests read, so it goes back up
-    and the run's own length becomes the height sliced through.
+
+def entry_run(part, radius=38.1):
+    """The part stood up with its entry run along Z, measured from the turn.
+
+    Slicing at a height then cuts across the strip that far back from where
+    the corner begins, which is the direction the twist is described in.
     """
-    run = twisting(DESIGN, length, to_tilt)
-    return run.translate((0.0, -length, 0.0)).rotate((-90.0, 0.0, 0.0))
+    return part.rotate((-90.0, 0.0, 0.0)).translate((-radius, 0.0, 0.0))
 
 
-def lean_at(fraction, to_tilt=90.0):
-    """The lean a twisting run has reached this far along itself."""
-    return DESIGN.tilt + (to_tilt - DESIGN.tilt) * fraction
+def lean_at(distance, twist=LEAD_TWIST):
+    """The lean a run has reached this far back from the corner."""
+    turned = min(distance, twist) / twist
+    return QUARTER_TURN - (QUARTER_TURN - DESIGN.tilt) * turned
 
 
 def material_at(section, point):
@@ -434,16 +439,15 @@ def test_the_strip_sits_in_the_same_place_all_the_way_through_a_twist(fraction):
     """The promise the whole part exists to keep.
 
     The lean stops moving the strip, and the twist must not move it either.
-    Asked of the built solid at its own seat rather than of a measured outline:
-    a bed sliced out of a stack of slabs arrives as several collinear pieces
-    and no single edge to measure, but whether there is plastic just under the
-    bed and air just above it is exact however the mesh was cut.
+    Asked of the built solid at its own seat rather than of a measured
+    outline: whether there is plastic just under the bed and air just above it
+    is exact however the mesh was cut.
 
     All four faces, because three of them can be right while the strip has
     slid sideways along the fourth.
     """
-    section = twisting_run().slice(fraction * TWIST_LENGTH)
-    lean = lean_at(fraction)
+    section = entry_run(led_corner_part()).slice(fraction * LEAD_TWIST)
+    lean = lean_at(fraction * LEAD_TWIST)
     half_bed = DESIGN.channel_width / 2.0
     beneath = material_at(section, off_the_seat(lean, 0.0, -CLEAR_OF_THE_FACE))
     above = material_at(section, off_the_seat(lean, 0.0, CLEAR_OF_THE_FACE))
@@ -456,56 +460,71 @@ def test_the_strip_sits_in_the_same_place_all_the_way_through_a_twist(fraction):
         assert material_at(section, outside) == pytest.approx(SOLID), f"no wall {side}"
 
 
-@pytest.mark.parametrize("to_tilt", [90.0, 67.5])
-def test_a_twisting_run_ends_at_the_leans_it_joins(to_tilt):
-    """A run is only useful if its ends are the profile of what it meets.
+# How far a section may differ in area from the profile it should be. The
+# sweep interpolates between stations, so a section taken between two of them
+# is not exactly any drawn profile; this is what that costs, with room to
+# spare. Spread around the outline it is some six microns. A sweep that held
+# each lean for a stretch instead -- which is what put ridges on the surface
+# -- misses by more than twenty times this.
+SECTION_DRIFT = 0.3
 
-    They are not free to be approximately right: a neighbour joined to a lip
-    sitting at the wrong angle has its mouth roofed over, and the open channel
-    becomes a closed tunnel.
+# Where in a span between stations to look. Not the middle: the loft is exact
+# at both ends of a span AND at its middle, so a test sampling there would
+# report a sweep as perfect whatever it did in between. The quarters are
+# where the interpolation is actually worst.
+WORST_OF_A_SPAN = 0.25
+
+
+@pytest.mark.parametrize("fraction", ALONG_THE_TWIST)
+def test_a_run_is_the_profile_at_its_own_lean_the_whole_way_through(fraction):
+    """What having no ridges means, stated as a measurement.
+
+    A surface with a ledge in it is a surface whose section jumps: hold one
+    lean for a stretch and the section is the profile at the wrong lean for
+    most of that stretch, and steps to the next at the join. So asking that
+    every section is the profile at the lean belonging to it is the same as
+    asking that nothing steps.
+
+    Sampled off the stations on purpose, and off the middles between them
+    too. Any sweep is exact on a station, and this one is exact half way
+    between two as well, so a test looking at either would pass the ridges it
+    exists to catch.
     """
-    run = twisting_run(to_tilt=to_tilt)
-    for fraction, lean in ((0.0, DESIGN.tilt), (1.0, to_tilt)):
-        # Just inside, because a slice exactly on the end face is ambiguous.
-        section = run.slice(fraction * TWIST_LENGTH + (1.0 - 2.0 * fraction) * 0.001)
-        assert section.area() == pytest.approx(profile_at(lean).area(), abs=1e-2)
+    stations = round((QUARTER_TURN - DESIGN.tilt) / LEAN_PER_STATION)
+    step = LEAD_TWIST / stations
+    run = entry_run(led_corner_part())
+    for quarter in (WORST_OF_A_SPAN, 1.0 - WORST_OF_A_SPAN):
+        distance = step * (round(fraction * stations) + quarter)
+        section = run.slice(distance)
+        wanted = profile_at(lean_at(distance))
+        drift = (section - wanted).area() + (wanted - section).area()
+        assert drift < SECTION_DRIFT, f"{drift:.4f} mm2 off at {distance:.2f} mm"
 
 
-@pytest.mark.parametrize("to_tilt", [90.0, 67.5, 50.0])
-def test_a_twisting_run_is_one_solid_piece(to_tilt):
-    """Stacked slabs come apart into one body per slab unless they overlap,
-    and thin features left in them tunnel. Both show up here."""
-    run = twisting(DESIGN, TWIST_LENGTH, to_tilt)
-    assert len(run.decompose()) == 1
-    assert run.genus() == 0
+def test_the_straight_part_of_a_run_is_exactly_the_straights_profile():
+    """Past the twist the run holds one lean, so there is nothing to
+    interpolate and nothing to excuse: it is the profile or it is wrong."""
+    run = entry_run(led_corner_part())
+    for distance in (LEAD_TWIST + 4.0, LEAD_TWIST + 12.0, LEAD - 0.5):
+        section = run.slice(distance)
+        wanted = profile_at(DESIGN.tilt)
+        drift = (section - wanted).area() + (wanted - section).area()
+        assert drift == pytest.approx(0.0, abs=1e-6), f"at {distance} mm"
 
 
-def test_a_run_that_turns_through_nothing_is_the_straight_it_started_from():
-    """Pins the twisting machinery to the sweep that was already trusted.
-
-    With no turn to make there is one right answer and it is already built by
-    another route, so the two are compared against each other rather than the
-    new one being asked to agree with itself.
-    """
-    turned = twisting(DESIGN, 50.0, DESIGN.tilt)
-    plain = straight(DESIGN, 50.0)
-    assert (turned - plain).volume() == pytest.approx(0.0, abs=1e-4)
-    assert (plain - turned).volume() == pytest.approx(0.0, abs=1e-4)
-
-
-# ---------------------------------------------------------------------------
-# A corner with runs led into it
-# ---------------------------------------------------------------------------
-
-LEAD = 101.6  # 4 in
-LEAD_TWIST = 76.2  # of which 3 in turns
+def test_a_run_that_spends_its_whole_length_turning_is_built():
+    """`lead == twist` leaves no straight part, which is a corner case in the
+    stations rather than an error: the turn simply starts at the open end."""
+    part = led_corner(UPRIGHT, 38.1, 76.2, 76.2, DESIGN.tilt)
+    assert len(part.decompose()) == 1
+    assert part.genus() == 0
 
 
 def test_a_corner_with_leads_is_one_solid_piece():
     """Five sweeps unioned: the turn, and a twisting run and a straight either
     side of it. Any seam that failed to take shows up as a second body or a
     tunnel."""
-    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    part = led_corner_part()
     assert len(part.decompose()) == 1
     assert part.genus() == 0
 
@@ -513,7 +532,7 @@ def test_a_corner_with_leads_is_one_solid_piece():
 def test_a_corner_with_leads_sits_on_the_tv_back_the_whole_way_round():
     """Anything below the plane is plastic the bracket would rock on, and a
     run joined on at the wrong angle is exactly how that happens."""
-    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    part = led_corner_part()
     assert part.bounding_box()[2] == pytest.approx(0.0, abs=1e-9)
 
 
@@ -526,7 +545,7 @@ def test_a_corner_puts_a_run_on_both_sides_of_its_turn():
     top of the entry -- which leaves the part one sound solid, sitting flat,
     with its channel unbroken, and wrong.
     """
-    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    part = led_corner_part()
     low_x, low_y = part.bounding_box()[0], part.bounding_box()[1]
     assert low_x == pytest.approx(-LEAD, abs=1e-6)
     assert low_y == pytest.approx(-LEAD, abs=1e-6)
@@ -535,7 +554,7 @@ def test_a_corner_puts_a_run_on_both_sides_of_its_turn():
 def test_the_runs_leave_a_corner_at_the_lean_the_straights_are_drawn_at():
     """The far end of each run is what a straight section butts against, so it
     has to be that straight's own section."""
-    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    part = led_corner_part()
     # Stood up with the entry run along Z, its open end at the bottom.
     entry = part.rotate((-90.0, 0.0, 0.0)).translate((-38.1, 0.0, 0.0))
     assert entry.slice(LEAD - 0.001).area() == pytest.approx(
