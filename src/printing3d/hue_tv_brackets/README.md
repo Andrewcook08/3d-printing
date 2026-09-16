@@ -4,25 +4,24 @@ Clip brackets that carry a Philips Hue gradient lightstrip around the back of a
 TV without any adhesive on the strip itself, and hold it at 45° so it throws
 light along the wall rather than straight at it.
 
-Two shapes — a straight run and a 90° corner — generated from one profile, so
-they are the same bracket swept two ways and cannot drift apart.
+A straight run and a 90° corner, generated from one profile, so they are the
+same bracket swept and cannot drift apart. A corner may also be asked for with
+straight runs led into and out of it, which turn from the straights' lean to
+the corner's inside the plastic rather than leaving the strip to do it across
+a gap.
 
 Shape follows `reference/Hue LED Strip with Angle straight section.stl`,
 rebuilt parametrically rather than traced. Every dimension below was measured
 off that mesh.
 
-> **Note. The corner is not settled, and neither are the names or lengths.**
-> This file is rewritten once they are. `uv run build` is the accurate list of
-> what exists at any moment.
+> **Note.** The printing established why the corners stand upright: every rung
+> of the leaning radius ladder bound. The passages that argued for a leaning
+> corner are replaced rather than kept. The **channel** is untouched throughout
+> — nothing the printing disproved reached the clip, its dimensions, or why the
+> straights lean.
 >
-> `parts.toml` declares nothing at present. Every part is still under test, so
-> they build outside the committed output and none of them is committed to.
->
-> What the printing did establish is narrower and does hold: every rung of the
-> leaning radius ladder bound, which is why the corners stand upright. The
-> passages that argued for a leaning corner are replaced rather than kept. The
-> **channel** is untouched throughout — nothing the printing disproved reached
-> the clip, its dimensions, or why the straights lean.
+> The corner with runs led into it is still a trial. It is not in `parts.toml`
+> and nothing here claims it has been printed.
 
 ## The problem these solve
 
@@ -40,18 +39,19 @@ so light goes out *and* back.
 
 ## Print these
 
-**Nothing ships yet.** Every part is still under test, so they build outside the
-committed output and none is listed here. `uv run build` prints every file it
-writes and where; that is the accurate list.
+Five parts ship: straight runs at 8, 5, 3 and 2 inches, all leaning 45°, and
+one upright corner at a 1.5 inch radius. `uv run build` prints every file it
+writes and where, which stays accurate as the set changes.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
 of the TV's corners or all four, follows from the TV and the strip in front of
 you.
 
-The two corners differ only in radius, and neither is sharper on the strip than
-the other — at 90° there is nothing to be sharp about. Pick by how the strip
-has to sit on your TV; see [What picks the radius, then](#what-picks-the-radius-then).
+A corner's radius is a fitting choice rather than a structural one — standing
+upright, the turn puts none of itself into the strip's own plane, so there is
+nothing to be sharp about. Pick by how the strip has to sit on your TV; see
+[What picks the radius, then](#what-picks-the-radius-then).
 
 ### Slicer settings
 
@@ -156,14 +156,25 @@ inward.
 
 ## How it works
 
-### One profile, two sweeps
+### One profile, three sweeps
 
 A bracket is a 2D profile swept. Extrude it and you have a straight run;
-revolve it about an axis standing off to one side and you have a corner. Both
-come from the same `CrossSection` object, so a corner cannot disagree with a
+revolve it about an axis standing off to one side and you have a corner; sweep
+it while its lean changes and you have a run that turns from one to the other.
+All three come from the same profile, so a corner cannot disagree with a
 straight about the channel — there is only one channel. `uv run verify` asserts
 this directly: it cuts a section through each corner's arc and checks it comes
 back as the straight's section.
+
+The turning run is the one that cannot be swept in a single operation. The
+profile's outline does not merely rotate as it leans — features merge into each
+other and its corner count changes — so there is nothing to interpolate
+between, and turning the whole profile instead would lift the mounting plate
+off the TV. It is built as a stack of thin slabs, and the channel is cut from
+that stack afterwards, in one piece, turning about the middle of its own bed.
+That last part is what keeps the promise below: the channel turns around the
+strip rather than carrying the strip around with it, so no approximation in the
+stack can move where the strip sits.
 
 That is also why the reference corner brackets are not used here. Measured,
 their curve turns only 37–48°, is not a true arc, and shares no feature with
@@ -190,8 +201,9 @@ the lean: 7.78 mm at 45°, 9.00 mm at 90°. Build a straight at one lean and a
 corner at another and the strip steps out at every corner and back in.
 
 So the strip's place is now the fixed thing and the plastic adapts to it. The
-channel sits **9.50 mm** above the TV back and the plate reaches **5.0 mm**
-outboard of the strip's centre, at every lean. The block floats above where it
+channel sits **9.50 mm** above the TV back and the plate reaches **4.0 mm**
+outboard of the strip's centre, at every lean — and through a turning run as
+well, not only across leans. The block floats above where it
 would have rested — 1.72 mm at 45° — and the arm carries it.
 
 The height is not a free number. It is the lowest that clears two bounds at
@@ -206,8 +218,8 @@ once, and both are computed rather than chosen:
   the bottom of the slot — the bed measures short while nothing looks wrong.
   Clearing it takes `plate + channel/2` = 9.50 mm.
 
-The second is the binding one here. The tab length (17.0 mm) and the profile's
-overall depth (26.19 mm) then follow from the reach.
+The second is the binding one here. The tab length (18.0 mm) and the profile's
+overall depth (27.19 mm) then follow from the reach.
 
 ### Two things the reference had that this does not
 
@@ -221,8 +233,8 @@ slicer setting you can change per print.
 
 ### The tab earns its length
 
-The plate runs 17.0 mm past the strip's centre on the inboard side — whatever
-is left of the 22 mm footprint once the 5.0 mm outboard reach is taken off it.
+The plate runs 18.0 mm past the strip's centre on the inboard side — whatever
+is left of the 22 mm footprint once the 4.0 mm outboard reach is taken off it.
 That overhang is not decoration. The strip sits in a channel leaning outboard, so its weight and its
 springiness apply a moment that tries to lift the *outboard* edge of the pad off
 the panel, pivoting about the arm's outer edge. The tab sits on the far side of
@@ -248,7 +260,22 @@ length = 125.0
 name = "corner-r101-v1"
 radius = 101.0
 tilt = 65.0        # this corner only; everything else takes the design's lean
+
+[[corner]]
+name = "corner-r38-lead4in-v1"
+radius = 38.1
+tilt = 90.0
+lead = 101.6       # straight run either side of the turn
+twist = 76.2       # of which this much turns, measured back from the corner
 ```
+
+`lead` and `twist` are optional and go together. A corner naming neither is the
+bare turn, to be butted against straight sections by hand. Naming both gives it
+a run at each end that meets the strip at the straights' lean, holds it for
+`lead - twist`, and turns to the corner's lean over the last `twist`. The turn
+is measured back from the corner, so the channel is upright before the turn
+starts whatever the two lengths are — lengthening the run moves the straight
+part of it, never the turn.
 
 Parts still being tested live in `trials.toml` instead. What they produce is
 written to `output/trials/hue-tv-brackets/`, which is not committed and is
@@ -275,19 +302,22 @@ corner bending the strip like an in-plane R34.6 rather than R42.4.
 
 **Below about 45° the design refuses itself.** The block's resting corner
 reaches further outboard as the lean shallows, and once it passes the plate's
-5.0 mm reach the block would meet the TV back beyond the edge of the pad. The
+4.0 mm reach the block would meet the TV back beyond the edge of the pad. The
 error names the lean and the distance. Raising `pad_outboard` buys shallower
 leans, at the cost of a shorter tab within the same footprint.
 
-A corner tighter than 17.0 mm is refused rather than built: below that the
+A corner tighter than 18.0 mm is refused rather than built: below that the
 pad's inner edge reaches the revolve axis and the part would fold through
 itself. A turn cannot be made by a part that reaches past its own centre.
 
 `uv run verify` measures the built solids rather than reading the parameters
 back. It checks that the channel still necks down to a clip rather than an open
 trough, that it still lies at its lean, that the adhesive pad is flat and full
-depth, that nothing encloses a pocket, that each corner turns a full quarter and
-stops, and that every corner is still the straight bent.
+depth, that nothing encloses a pocket, and that every corner is still the
+straight bent. A bare corner is checked to turn a full quarter and stop there;
+one with runs led into it is checked to carry the quarter and then reach its
+full lead past the turn on both sides, which is what a corner with runs does
+instead of stopping.
 
 ### The files
 
@@ -296,7 +326,7 @@ stops, and that every corner is still the straight bent.
 | `__init__.py` | Declares this project so the repo discovers it |
 | `parts.toml` | Every measured or chosen number, and the parts that ship |
 | `trials.toml` | Parts being tested; their STLs are never committed, and deleting this retires all of them |
-| `geometry.py` | The channel, the lean, and the two sweeps |
+| `geometry.py` | The channel, the lean, and the three sweeps |
 | `catalog.py` | How a configured entry becomes a printable bracket |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |

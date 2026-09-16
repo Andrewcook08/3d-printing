@@ -9,8 +9,10 @@ from printing3d.hue_tv_brackets.catalog import shipping
 from printing3d.hue_tv_brackets.geometry import (
     CORNER_SEGMENTS,
     corner,
+    led_corner,
     profile,
     straight,
+    twisting,
 )
 from printing3d.hue_tv_brackets.verify import (
     PROBE_BAND,
@@ -23,6 +25,7 @@ from tests.support import contour_digest
 # The shape these tests measure is the one the project ships, so its numbers
 # come from the same place the build gets them.
 DESIGN = shipping().design
+UPRIGHT = replace(DESIGN, tilt=90.0)  # how a corner stands, as parts.toml asks
 RADII = [30.0, 55.0, 101.0]
 
 # A section taken where two facets meet is the profile itself; one taken
@@ -368,3 +371,186 @@ def test_the_shipped_profile_is_unchanged():
     assert cross_section.num_vert() == PINNED_VERTICES
     assert cross_section.area() == pytest.approx(PINNED_AREA, abs=1e-6)
     assert contour_digest(cross_section) == PINNED_DIGEST
+
+
+# ---------------------------------------------------------------------------
+# A run that twists from one lean to another
+# ---------------------------------------------------------------------------
+
+TWIST_LENGTH = 76.2  # 3 in, the run the trial turns over
+ALONG_THE_TWIST = (0.1, 0.25, 0.4, 0.55, 0.7, 0.85)
+
+# How far either side of a face to look for material. Small enough that a bed
+# 0.3 mm out of place would put the wrong answer in one of these windows.
+PROBE = 0.02
+CLEAR_OF_THE_FACE = 0.15
+
+# What `material_at` reads for a window entirely inside the plastic, and one
+# entirely in the air. Compared with a tolerance because it is a ratio of two
+# measured areas, not a count.
+SOLID, AIR = 1.0, 0.0
+
+
+def twisting_run(length=TWIST_LENGTH, to_tilt=90.0):
+    """A twisting run stood back up, so it can be sliced across the strip.
+
+    It is built lying down like every other part, which puts the strip along
+    Y; sections across the strip are what these tests read, so it goes back up
+    and the run's own length becomes the height sliced through.
+    """
+    run = twisting(DESIGN, length, to_tilt)
+    return run.translate((0.0, -length, 0.0)).rotate((-90.0, 0.0, 0.0))
+
+
+def lean_at(fraction, to_tilt=90.0):
+    """The lean a twisting run has reached this far along itself."""
+    return DESIGN.tilt + (to_tilt - DESIGN.tilt) * fraction
+
+
+def material_at(section, point):
+    """How much of a small window around `point` is solid: 1 all, 0 none."""
+    u, v = point
+    window = rect(u - PROBE, v - PROBE, u + PROBE, v + PROBE)
+    return (section ^ window).area() / window.area()
+
+
+def off_the_seat(lean, across, above):
+    """A point `across` and `above` the strip's seat, in the leaned frame.
+
+    The seat is the middle of the bed. Everything the strip cares about is
+    measured from there along the bed and normal to it, which is the frame
+    that turns with the lean -- so these tests can ask about the bed's own
+    faces without knowing where the lean has carried them to.
+    """
+    radians = math.radians(lean)
+    return (
+        across * math.cos(radians) + above * math.sin(radians),
+        DESIGN.floor_height - across * math.sin(radians) + above * math.cos(radians),
+    )
+
+
+@pytest.mark.parametrize("fraction", ALONG_THE_TWIST)
+def test_the_strip_sits_in_the_same_place_all_the_way_through_a_twist(fraction):
+    """The promise the whole part exists to keep.
+
+    The lean stops moving the strip, and the twist must not move it either.
+    Asked of the built solid at its own seat rather than of a measured outline:
+    a bed sliced out of a stack of slabs arrives as several collinear pieces
+    and no single edge to measure, but whether there is plastic just under the
+    bed and air just above it is exact however the mesh was cut.
+
+    All four faces, because three of them can be right while the strip has
+    slid sideways along the fourth.
+    """
+    section = twisting_run().slice(fraction * TWIST_LENGTH)
+    lean = lean_at(fraction)
+    half_bed = DESIGN.channel_width / 2.0
+    beneath = material_at(section, off_the_seat(lean, 0.0, -CLEAR_OF_THE_FACE))
+    above = material_at(section, off_the_seat(lean, 0.0, CLEAR_OF_THE_FACE))
+    assert beneath == pytest.approx(SOLID), "the bed has nothing under it"
+    assert above == pytest.approx(AIR), "the bed is buried"
+    for side in (-1.0, 1.0):
+        inside = off_the_seat(lean, side * (half_bed - 0.3), CLEAR_OF_THE_FACE)
+        outside = off_the_seat(lean, side * (half_bed + 0.3), CLEAR_OF_THE_FACE)
+        assert material_at(section, inside) == pytest.approx(AIR), f"blocked at {side}"
+        assert material_at(section, outside) == pytest.approx(SOLID), f"no wall {side}"
+
+
+@pytest.mark.parametrize("to_tilt", [90.0, 67.5])
+def test_a_twisting_run_ends_at_the_leans_it_joins(to_tilt):
+    """A run is only useful if its ends are the profile of what it meets.
+
+    They are not free to be approximately right: a neighbour joined to a lip
+    sitting at the wrong angle has its mouth roofed over, and the open channel
+    becomes a closed tunnel.
+    """
+    run = twisting_run(to_tilt=to_tilt)
+    for fraction, lean in ((0.0, DESIGN.tilt), (1.0, to_tilt)):
+        # Just inside, because a slice exactly on the end face is ambiguous.
+        section = run.slice(fraction * TWIST_LENGTH + (1.0 - 2.0 * fraction) * 0.001)
+        assert section.area() == pytest.approx(profile_at(lean).area(), abs=1e-2)
+
+
+@pytest.mark.parametrize("to_tilt", [90.0, 67.5, 50.0])
+def test_a_twisting_run_is_one_solid_piece(to_tilt):
+    """Stacked slabs come apart into one body per slab unless they overlap,
+    and thin features left in them tunnel. Both show up here."""
+    run = twisting(DESIGN, TWIST_LENGTH, to_tilt)
+    assert len(run.decompose()) == 1
+    assert run.genus() == 0
+
+
+def test_a_run_that_turns_through_nothing_is_the_straight_it_started_from():
+    """Pins the twisting machinery to the sweep that was already trusted.
+
+    With no turn to make there is one right answer and it is already built by
+    another route, so the two are compared against each other rather than the
+    new one being asked to agree with itself.
+    """
+    turned = twisting(DESIGN, 50.0, DESIGN.tilt)
+    plain = straight(DESIGN, 50.0)
+    assert (turned - plain).volume() == pytest.approx(0.0, abs=1e-4)
+    assert (plain - turned).volume() == pytest.approx(0.0, abs=1e-4)
+
+
+# ---------------------------------------------------------------------------
+# A corner with runs led into it
+# ---------------------------------------------------------------------------
+
+LEAD = 101.6  # 4 in
+LEAD_TWIST = 76.2  # of which 3 in turns
+
+
+def test_a_corner_with_leads_is_one_solid_piece():
+    """Five sweeps unioned: the turn, and a twisting run and a straight either
+    side of it. Any seam that failed to take shows up as a second body or a
+    tunnel."""
+    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    assert len(part.decompose()) == 1
+    assert part.genus() == 0
+
+
+def test_a_corner_with_leads_sits_on_the_tv_back_the_whole_way_round():
+    """Anything below the plane is plastic the bracket would rock on, and a
+    run joined on at the wrong angle is exactly how that happens."""
+    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    assert part.bounding_box()[2] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_a_corner_puts_a_run_on_both_sides_of_its_turn():
+    """A corner has an entry and an exit, and they are the same shape laid
+    down either side of the turn.
+
+    Reaching the same distance along both axes is what says so. Built by
+    mirroring one run, and a mirror about the wrong plane drops the exit on
+    top of the entry -- which leaves the part one sound solid, sitting flat,
+    with its channel unbroken, and wrong.
+    """
+    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    low_x, low_y = part.bounding_box()[0], part.bounding_box()[1]
+    assert low_x == pytest.approx(-LEAD, abs=1e-6)
+    assert low_y == pytest.approx(-LEAD, abs=1e-6)
+
+
+def test_the_runs_leave_a_corner_at_the_lean_the_straights_are_drawn_at():
+    """The far end of each run is what a straight section butts against, so it
+    has to be that straight's own section."""
+    part = led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, DESIGN.tilt)
+    # Stood up with the entry run along Z, its open end at the bottom.
+    entry = part.rotate((-90.0, 0.0, 0.0)).translate((-38.1, 0.0, 0.0))
+    assert entry.slice(LEAD - 0.001).area() == pytest.approx(
+        profile_at(DESIGN.tilt).area(), abs=1e-6
+    )
+
+
+def test_a_twist_longer_than_the_lead_it_turns_within_is_refused():
+    """The turn has to finish before the corner starts, so it cannot be longer
+    than the run it happens in."""
+    with pytest.raises(ValueError, match="longer than"):
+        led_corner(UPRIGHT, 38.1, 50.8, 76.2, DESIGN.tilt)
+
+
+@pytest.mark.parametrize(("lead", "twist"), [(0.0, 10.0), (10.0, 0.0), (10.0, -1.0)])
+def test_a_lead_or_twist_that_is_not_a_length_is_refused(lead, twist):
+    with pytest.raises(ValueError, match="positive"):
+        led_corner(UPRIGHT, 38.1, lead, twist, DESIGN.tilt)

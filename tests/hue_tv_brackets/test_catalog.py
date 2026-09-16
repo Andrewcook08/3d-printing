@@ -7,6 +7,7 @@ What is left is what the code actually decides: how an entry's own lean beats
 the design's, and what a corner's radius implies about the arc it sweeps.
 """
 
+import math
 from dataclasses import replace
 
 import pytest
@@ -21,6 +22,7 @@ from printing3d.hue_tv_brackets.catalog import (
     trial_parts,
     trials,
 )
+from printing3d.hue_tv_brackets.geometry import QUARTER_TURN, corner
 
 
 @pytest.fixture(scope="module")
@@ -139,3 +141,51 @@ def test_every_trial_corner_is_wider_than_the_part_reaching_into_it(design):
     for entry in trials().corner:
         leaning = design if entry.tilt is None else replace(design, tilt=entry.tilt)
         assert entry.radius > leaning.min_corner_radius, entry.name
+
+
+# ---------------------------------------------------------------------------
+# Runs led into a corner, which an entry may ask for and need not
+# ---------------------------------------------------------------------------
+
+
+def test_a_corner_naming_no_runs_is_the_bare_turn(design):
+    """The constraint that keeps every corner already shipped buildable.
+
+    An entry saying nothing about runs has to come out as the turn on its own,
+    through the path it always took. Compared as solids rather than by trusting
+    the branch: what ships is pinned by its hash, and this says why that hash
+    is allowed to be unchanged.
+    """
+    entry = CornerEntry(name="bare", radius=38.1, tilt=90.0)
+    (built,) = only(design, corner=[entry])
+    bare = corner(replace(design, tilt=90.0), 38.1)
+    assert (built.solid - bare).volume() == pytest.approx(0.0, abs=1e-9)
+    assert (bare - built.solid).volume() == pytest.approx(0.0, abs=1e-9)
+
+
+def test_a_corner_naming_runs_is_bigger_than_the_bare_turn(design):
+    """Otherwise the entry could be read and quietly ignored."""
+    led = CornerEntry(name="led", radius=38.1, tilt=90.0, lead=101.6, twist=76.2)
+    (built,) = only(design, corner=[led])
+    bare = corner(replace(design, tilt=90.0), 38.1)
+    assert built.solid.volume() > bare.volume()
+
+
+def test_a_corner_naming_only_one_of_lead_and_twist_is_refused(design):
+    """They are one decision in two numbers: how far the run goes, and how
+    much of that it spends turning. Either alone says nothing buildable."""
+    for entry in (
+        CornerEntry(name="half", radius=38.1, tilt=90.0, lead=101.6),
+        CornerEntry(name="half", radius=38.1, tilt=90.0, twist=76.2),
+    ):
+        with pytest.raises(ValueError, match="only one of lead and twist"):
+            only(design, corner=[entry])
+
+
+def test_a_corner_with_runs_spends_the_strip_they_carry(design):
+    """A led corner takes the strip through its runs as well as its turn, so
+    what it spends has to count both -- that is the number a run is cut to."""
+    led = CornerEntry(name="led", radius=38.1, tilt=90.0, lead=101.6, twist=76.2)
+    (built,) = only(design, corner=[led])
+    bare_turn = math.radians(QUARTER_TURN) * 38.1
+    assert built.strip_spent == pytest.approx(bare_turn + 2 * 101.6)

@@ -1,8 +1,9 @@
 """What actually gets printed.
 
 Two shapes, swept from the one profile in geometry.py: straight runs for the
-sides of the TV, and 90-degree corners. The brackets are universal, so how many
-of each a TV needs is the TV's business, not this catalog's.
+sides of the TV, and 90-degree corners, which may be asked for with straight
+runs led into and out of them. The brackets are universal, so how many of each
+a TV needs is the TV's business, not this catalog's.
 
 The numbers live in parts.toml, and parts still being tested live in
 trials.toml. A part may lean differently from the shipped design; anything it
@@ -23,6 +24,7 @@ from printing3d.hue_tv_brackets.geometry import (
     QUARTER_TURN,
     Design,
     corner,
+    led_corner,
     straight,
 )
 from printing3d.parts import Part, build_project, trials_dir
@@ -44,11 +46,17 @@ class StraightEntry:
 
 @dataclass(frozen=True, kw_only=True)
 class CornerEntry:
-    """One corner, as parts.toml describes it."""
+    """One corner, as parts.toml describes it.
+
+    `lead` and `twist` are optional and go together: a corner naming neither
+    is the bare turn, to be joined to straight runs by hand.
+    """
 
     name: str
     radius: float
     tilt: float | None = None
+    lead: float | None = None
+    twist: float | None = None
     note: str = ""
 
 
@@ -107,6 +115,8 @@ class CornerBracket(Bracket):
     """A quarter turn, carrying the radius it was built from."""
 
     radius: float
+    lead: float = 0.0
+    twist: float = 0.0
 
     @property
     def inner_radius(self) -> float:
@@ -120,14 +130,19 @@ class CornerBracket(Bracket):
 
     @property
     def strip_spent(self) -> float:
-        """Strip consumed by the turn, which the straight runs then go without."""
-        return math.radians(QUARTER_TURN) * self.radius
+        """Strip consumed by this part, which the straight runs then go without."""
+        return math.radians(QUARTER_TURN) * self.radius + 2 * self.lead
 
     def footprint_line(self) -> str:
+        led = (
+            f", leads {self.lead:.1f} mm turning over the last {self.twist:.1f}"
+            if self.lead
+            else ""
+        )
         return self.annotated(
             f"    corner    r{self.radius:<5.1f} {self.design.tilt:.0f} deg, "
             f"inner {self.inner_radius:5.2f} mm, outer {self.outer_radius:5.2f} mm, "
-            f"spends {self.strip_spent:5.1f} mm"
+            f"spends {self.strip_spent:5.1f} mm{led}"
         )
 
 
@@ -182,11 +197,31 @@ def _brackets(design: Design, catalogue) -> Iterator[Bracket]:
         leaning = _leaning(design, entry)
         yield CornerBracket(
             name=entry.name,
-            solid=corner(leaning, entry.radius),
+            solid=_turn(design, leaning, entry),
             design=leaning,
             note=entry.note,
             radius=entry.radius,
+            lead=entry.lead or 0.0,
+            twist=entry.twist or 0.0,
         )
+
+
+def _turn(design: Design, leaning: Design, entry: CornerEntry):
+    """The solid an entry asks for: a bare turn, or one with runs led into it.
+
+    The runs start at the lean the project's straights are drawn at, which is
+    the shipped design's rather than the corner's own -- a corner naming a
+    lean is saying how the turn stands, not how the strip reaches it.
+    """
+    if entry.lead is None and entry.twist is None:
+        return corner(leaning, entry.radius)
+    if entry.lead is None or entry.twist is None:
+        raise ValueError(
+            f"corner {entry.name!r} gives only one of lead and twist: a run "
+            f"leading into a corner needs both its length and how much of "
+            f"that length turns"
+        )
+    return led_corner(leaning, entry.radius, entry.lead, entry.twist, design.tilt)
 
 
 def _leaning(design: Design, entry) -> Design:

@@ -232,14 +232,40 @@ def check_the_channel(runner, section, design):
     check_profile_is_solid(runner, section)
 
 
-def check_corner_turns_a_quarter(runner, part):
-    """Measured by cutting just inside each end of the arc, and just outside."""
+def check_corner_carries_the_quarter(runner, part):
+    """Measured by cutting just inside each end of the arc."""
     inside = [CLEAR_OF_THE_END, QUARTER_TURN - CLEAR_OF_THE_END]
-    outside = [-CLEAR_OF_THE_END, QUARTER_TURN + CLEAR_OF_THE_END]
     carries = all(upright_section(part.solid, deg).area() > 0.0 for deg in inside)
-    stops = all(upright_section(part.solid, deg).area() == 0.0 for deg in outside)
     runner.check("the corner carries the strip across the quarter", carries)
+
+
+def check_corner_stops_at_the_quarter(runner, part):
+    """Measured by cutting just outside each end, where there must be nothing."""
+    outside = [-CLEAR_OF_THE_END, QUARTER_TURN + CLEAR_OF_THE_END]
+    stops = all(upright_section(part.solid, deg).area() == 0.0 for deg in outside)
     runner.check("the corner stops at the quarter", stops)
+
+
+def check_leads_run_out_straight(runner, part):
+    """A corner with runs led into it does not stop at the quarter.
+
+    It leaves along the tangent at each end, so instead of nothing outside the
+    arc there is a straight run reaching exactly its lead beyond the turn.
+    Both sides, which is what catches a run mirrored about the wrong plane and
+    so laid down over its own entry.
+
+    How far the part reaches says nothing about whether it is continuous on
+    the way there -- a run built short leaves a gap and still reaches, and it
+    is being one connected solid that catches that instead.
+    """
+    reaches = -min(part.solid.bounding_box()[0], part.solid.bounding_box()[1])
+    overshoots = -max(part.solid.bounding_box()[0], part.solid.bounding_box()[1])
+    runner.check(
+        "the runs reach their full length past the corner",
+        abs(reaches - part.lead) < MAX_EDGE_ERROR
+        and abs(overshoots - part.lead) < MAX_EDGE_ERROR,
+        f"{reaches:.2f} mm and {overshoots:.2f} mm against {part.lead:.2f} mm",
+    )
 
 
 def check_corner_matches_the_straight(runner, section, reference):
@@ -285,7 +311,11 @@ def _checked(brackets) -> bool:
         runner.section(part.name)
         section = corner_section(part)
         check_the_channel(runner, section, part.design)
-        check_corner_turns_a_quarter(runner, part)
+        check_corner_carries_the_quarter(runner, part)
+        if part.lead:
+            check_leads_run_out_straight(runner, part)
+        else:
+            check_corner_stops_at_the_quarter(runner, part)
         check_corner_matches_the_straight(
             runner, section, reference_section(part.design)
         )

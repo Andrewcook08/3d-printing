@@ -16,8 +16,9 @@ from printing3d.hue_tv_brackets.verify import (
     check_base_is_flat,
     check_channel_aims_out,
     check_channel_clips,
+    check_corner_carries_the_quarter,
     check_corner_matches_the_straight,
-    check_corner_turns_a_quarter,
+    check_corner_stops_at_the_quarter,
     check_profile_is_solid,
     corner_section,
 )
@@ -86,9 +87,19 @@ def test_a_corner_that_does_not_match_its_straight_is_caught():
     )
 
 
-@pytest.mark.parametrize("turn", [45.0, 200.0])
-def test_a_corner_that_does_not_turn_a_quarter_is_caught(turn):
+@pytest.mark.parametrize(
+    ("turn", "check"),
+    [
+        (45.0, check_corner_carries_the_quarter),
+        (200.0, check_corner_stops_at_the_quarter),
+    ],
+)
+def test_a_corner_that_does_not_turn_a_quarter_is_caught(turn, check):
     """Swept through the wrong angle, the arc either stops short or runs on.
+
+    Which of the two catches it is named rather than left open: an assertion
+    that merely something objected passes just as well when the wrong check
+    fires, and both of these have a way of firing for the wrong reason.
 
     Built by revolving directly rather than by patching the constant the check
     reads: patched, the sweep and the check would move together and agree
@@ -102,7 +113,7 @@ def test_a_corner_that_does_not_turn_a_quarter_is_caught(turn):
         note="",
         radius=101.0,
     )
-    assert objections_to(check_corner_turns_a_quarter, part)
+    assert objections_to(check, part)
 
 
 def test_a_profile_with_a_pocket_walled_into_it_is_caught():

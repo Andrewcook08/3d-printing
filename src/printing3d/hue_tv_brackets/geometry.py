@@ -6,9 +6,10 @@ over that channel so the strip clips in and needs no adhesive of its own.
 Rebuilt parametrically rather than traced, because the point of the exercise is
 a matching corner, and a traced outline cannot be bent.
 
-A bracket is one 2D profile swept two ways -- extruded for a straight run,
-revolved about an offset axis for a corner. There is only one channel, so a
-corner and a straight cannot disagree about it.
+A bracket is one 2D profile swept three ways -- extruded for a straight run,
+revolved about an offset axis for a corner, and stacked in slabs for a run that
+turns from one lean to another. There is only one channel, so no two of them
+can disagree about it.
 
 Every measured number arrives from the project's config file as a Design. What
 this module adds is everything derived from those numbers, and the sweeping.
@@ -17,7 +18,7 @@ See README.md for why the channel leans and why the tab stays.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import NamedTuple
 
 from printing3d.shapes import polygon, rect
@@ -29,6 +30,17 @@ SLOT_OVERSHOOT = 1.0
 
 QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
+
+# A twisting run is stacked from slabs, one per this much turn. Construction,
+# not design, and measured at both bounds: at two thirds of this step the
+# stack stops merging and comes back as three pieces, while at twice it the
+# scalloping where one slab meets the next doubles.
+TWIST_PER_SLAB = 45.0 / 64.0
+
+# Each slab is extruded this many steps long, so consecutive slabs overlap in
+# volume rather than meeting face to face. Solids that only touch do not merge
+# -- a stack built without this comes back as one body per slab.
+SLAB_SPAN = 2.0
 
 # How close to vertical counts as vertical. Construction, not design: it only
 # decides which of two exact expressions describes the same shape.
@@ -288,10 +300,21 @@ def _arm(design):
 
 def _channel_block(design):
     """The slot and its two lips, described square and then leaned."""
+    block = _block_outline(design) - _slot(design)
+    return block.rotate(-design.tilt).translate((0.0, design.floor_height))
+
+
+def _slot(design):
+    """The void the strip clips into, drawn upright about its own bed.
+
+    Its origin is the middle of the bed, which is where the strip sits. A
+    sweep that turns this outline about that origin therefore turns the
+    channel around the strip rather than carrying the strip around with it.
+    """
     half_bed, half_mouth = design.channel_width / 2, design.mouth_width / 2
     depth = design.channel_depth
     lip_shoulder = depth - design.lip_height
-    slot = polygon(
+    return polygon(
         [
             (-half_bed, 0.0),
             (half_bed, 0.0),
@@ -303,16 +326,16 @@ def _channel_block(design):
             (-half_bed, lip_shoulder),
         ]
     )
-    block = (
-        rect(
-            -design.block_width / 2,
-            -design.floor_thickness,
-            design.block_width / 2,
-            depth,
-        )
-        - slot
+
+
+def _block_outline(design):
+    """The block the slot is cut from, upright and about the same origin."""
+    return rect(
+        -design.block_width / 2,
+        -design.floor_thickness,
+        design.block_width / 2,
+        design.channel_depth,
     )
-    return block.rotate(-design.tilt).translate((0.0, design.floor_height))
 
 
 # ---------------------------------------------------------------------------
@@ -326,6 +349,119 @@ def straight(design: Design, length: float):
     # Exported lying on its base, which is how it prints and how the corner
     # comes out of the revolve. The profile is authored standing up.
     return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
+
+
+def twisting(design: Design, length: float, to_tilt: float):
+    """A straight run of `length` that carries the channel to a new lean.
+
+    Where the strip ends up does not depend on the lean, and must not depend
+    on the twist either. That holds by construction rather than by check: the
+    channel is one twisted extrusion about the middle of its own bed, which is
+    the strip's axis, and it is cut from the body last. So the channel turns
+    around the strip instead of carrying the strip around with it, and nothing
+    approximate in the body can reach the strip's seat.
+
+    The body is stacked from slabs because there is nothing to sweep it with.
+    The profile's outline changes shape as it leans -- features merge and its
+    corner count moves -- so there is no correspondence to loft along, and a
+    twisted extrusion of the whole profile would turn the plate off the TV.
+    Each slab is the profile with its slot left in, which keeps the thin lips
+    out of the merges; they are what a stack of slabs fails on.
+    """
+    turn = to_tilt - design.tilt
+    slabs = max(1, math.ceil(abs(turn) / TWIST_PER_SLAB))
+    step = length / slabs
+    stacked = [_slab(design, turn, index, slabs, step) for index in range(slabs)]
+    # Unioned in order, lowest first, because union is not associative in the
+    # output mesh and a stack folded the other way tessellates differently.
+    stack = stacked[0]
+    for slab in stacked[1:]:
+        stack = stack + slab
+    stack = stack.trim_by_plane((0.0, 0.0, -1.0), -length)
+    # Square both ends back to the lean they claim. A slab spans a step of
+    # lean but two steps of length, so the first one carries the next lean's
+    # outline into the very start and the last one does the same at the end.
+    # That surplus is small, but it lands on the lips, and a neighbour joined
+    # to a lip at the wrong angle has its mouth roofed over -- the open slot
+    # becomes a tunnel. Paring it off is what lets the runs meet the corner.
+    stack = stack - _squared_end(design, 0.0, step)
+    stack = stack - _squared_end(design, turn, step).translate(
+        (0.0, 0.0, length - step)
+    )
+    upright = stack - _twisted_channel(design, length, turn, slabs)
+    # Lying on its base, as a straight run of the same profile comes out.
+    return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
+
+
+def _slab(design, turn: float, index: int, slabs: int, step: float):
+    """One slab of a twisting run, reaching past the next so the two merge.
+
+    Taken at both ends of the lean it spans rather than at one: a slab built
+    on a single lean trails the channel through its own length, and it is the
+    lips that the lag shows up on.
+    """
+    spanned = _leaning_lump(design, turn * index / slabs) + _leaning_lump(
+        design, turn * (index + 1) / slabs
+    )
+    return spanned.extrude(step * SLAB_SPAN).translate((0.0, 0.0, index * step))
+
+
+def _leaning_lump(design, by: float):
+    """The profile leaned further `by`, with the slot left solid."""
+    leaned = replace(design, tilt=design.tilt + by)
+    block = _block_outline(leaned).rotate(-leaned.tilt)
+    return _plate(leaned) + _arm(leaned) + block.translate((0.0, leaned.floor_height))
+
+
+def _squared_end(design, by: float, depth: float):
+    """A prism of everything `depth` deep that the lean `by` does not fill."""
+    outline = _leaning_lump(design, by)
+    left, bottom, right, top = outline.bounds()
+    surround = rect(left - 1.0, bottom - 1.0, right + 1.0, top + 1.0)
+    return (surround - outline).extrude(depth)
+
+
+def _twisted_channel(design, length: float, turn: float, slabs: int):
+    """The slot swept along `length` while turning `turn`, about the strip."""
+    return (
+        _slot(design)
+        .rotate(-design.tilt)
+        .extrude(length, n_divisions=slabs, twist_degrees=-turn)
+        .translate((0.0, design.floor_height, 0.0))
+    )
+
+
+def led_corner(
+    design: Design, radius: float, lead: float, twist: float, from_tilt: float
+):
+    """A quarter turn with a straight run leading into it and out of it.
+
+    Each run meets the strip at `from_tilt`, holds that lean for the first
+    `lead - twist` of its length, and turns to the corner's own lean over the
+    last `twist`. The twist is measured back from the corner rather than
+    forward from the open end, so the channel arrives upright however long
+    either is -- lengthening the run moves the straight part, never the turn.
+
+    The exit is the entry mirrored: a corner's two sides are one shape
+    approached from either direction.
+    """
+    if lead <= 0.0 or twist <= 0.0:
+        raise ValueError(f"lead {lead} and twist {twist} must both be positive")
+    if twist > lead:
+        raise ValueError(
+            f"twist {twist} is longer than the {lead} mm lead it has to turn "
+            f"within: the turn has to finish before the corner starts"
+        )
+    running = replace(design, tilt=from_tilt)
+    # The twisting run finishes its turn at y=0, which is the face the corner
+    # presents; mirroring lays it back along the way the lead comes in.
+    run = twisting(running, twist, design.tilt).mirror((0.0, 1.0, 0.0))
+    run = run.translate((radius, 0.0, 0.0))
+    held = lead - twist
+    if held > 0.0:
+        run = run + straight(running, held).translate((radius, -lead, 0.0))
+    # Union order is fixed deliberately, as everywhere else here.
+    return corner(design, radius) + run + run.mirror((1.0, -1.0, 0.0))
 
 
 def corner(design: Design, radius: float):

@@ -42,3 +42,21 @@ name = "trial-corner-3in-v1"
 radius = 76.2
 tilt = 90.0
 note = "3 in radius -- the gentler sweep, and an easier twist into the straights"
+
+# One piece where there were three. The strip already twists from the 45-degree
+# straights into an upright corner when the parts are butted together -- it
+# bends that way on its own -- so this carries the twist inside the plastic
+# instead of leaving it to the air across a gap.
+#
+# The lead is the whole straight run either side; the twist is the last part of
+# it, measured back from the corner, so the channel is upright before the turn
+# starts. Four inches of lead turning over the last three leaves an inch at 45
+# degrees to meet a straight section.
+
+[[corner]]
+name = "trial-corner-1.5in-90-lead4in-v1"
+radius = 38.1
+tilt = 90.0
+lead = 101.6
+twist = 76.2
+note = "4 in leads, turning over the last 3 in, into the 1.5 in corner"
