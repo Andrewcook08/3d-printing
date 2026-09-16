@@ -32,17 +32,25 @@ QUARTER_TURN = 90.0  # what a corner of a rectangular TV turns the strip through
 CORNER_SEGMENTS = 128  # per full turn, so 32 across the quarter
 
 # A twisting run is stacked from slabs, one per this much turn. Construction,
-# not design, and measured at both bounds on a 3 in run turning 45 degrees to
-# upright: at two thirds of this step the stack stops merging, coming back as
-# two pieces and as three once a corner is assembled from them. At twice this
-# step it still merges, but the scalloping where one slab meets the next
-# doubles with it.
-TWIST_PER_SLAB = 45.0 / 64.0
+# not design: it buys smoothness, since where one slab meets the next stands
+# proud of the shape the run is approximating and that step is visible on the
+# finished surface. It shrinks in proportion, measured on a 3 in run turning
+# 45 degrees to upright: 0.18 mm a slab per degree and a half, 0.05 mm at a
+# quarter of that, and 0.03 mm here -- an eighth of a printed layer, and past
+# the point where finer slabs buy anything but triangles.
+TWIST_PER_SLAB = 45.0 / 384.0
 
 # How far the surround in `_air_around` stands off the outline it negates.
 # Any positive margin does the same job; this one is a millimetre because the
 # surround is thrown away and only has to enclose what it is cutting against.
 SURROUND_MARGIN = 1.0
+
+# Unioning slabs this close in shape leaves zero-volume slivers behind, and a
+# stack of them reports as several bodies while only one of them has any
+# volume at all. Collapsing everything smaller than this clears them out. It
+# is four orders of magnitude below anything a printer resolves, so it changes
+# no dimension of the finished part.
+DEGENERATE = 1e-6
 
 # Each slab is extruded this many steps long, so consecutive slabs overlap in
 # volume rather than meeting face to face. Solids that only touch do not merge
@@ -396,6 +404,7 @@ def twisting(design: Design, length: float, to_tilt: float):
         (0.0, 0.0, length - step)
     )
     upright = stack - _twisted_channel(design, length, turn, slabs)
+    upright = upright.simplify(DEGENERATE)
     # Lying on its base, as a straight run of the same profile comes out.
     return upright.rotate((90.0, 0.0, 0.0)).translate((0.0, length, 0.0))
 
