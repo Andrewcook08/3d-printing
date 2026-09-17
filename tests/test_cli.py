@@ -58,8 +58,12 @@ def test_every_discovered_project_is_keyed_by_its_own_name():
 
 
 def test_building_with_no_arguments_builds_every_project(tmp_path):
+    from printing3d.parts import TRIALS_DIR
+
     assert build([]) == 0
-    assert sorted(p.name for p in tmp_path.iterdir()) == sorted(PROJECTS)
+    # A project with parts still under test writes them beside the output
+    # directories rather than into one of them.
+    assert {p.name for p in tmp_path.iterdir()} == set(PROJECTS) | {TRIALS_DIR}
 
 
 def test_building_one_project_by_name(tmp_path):
@@ -116,3 +120,149 @@ def test_the_installed_command_produces_what_the_library_produces(
 def test_the_installed_verify_command_reports_success(tmp_path):
     result = run_installed("verify", tmp_path)
     assert result.returncode == 0, result.stderr
+
+
+def a_cube():
+    from manifold3d import Manifold
+
+    return Manifold.cube((10.0, 10.0, 10.0), False)
+
+
+def stand_in_project(tmp_path, *, builds=True, checks_pass=True):
+    """A project whose build and checks can be told to fail on command.
+
+    Its build writes a real STL, so the digest the lock ends up holding is a
+    digest of something rather than the empty string two ways.
+    """
+    from printing3d.parts import output_dir
+    from printing3d.registry import Project
+    from printing3d.stl import write_stl
+
+    def report():
+        print("  [PASS] a measurement  -- 1.000 mm")
+        return checks_pass
+
+    def make() -> bool:
+        if builds:
+            written = output_dir(SOME_PROJECT)
+            written.mkdir(parents=True, exist_ok=True)
+            write_stl(a_cube(), written / "stand-in.stl", "stand-in")
+        return builds
+
+    return Project(
+        name=SOME_PROJECT,
+        summary="a project standing in for a real one",
+        parts=lambda: iter([]),
+        build=make,
+        verify=report,
+        lock=tmp_path / "LOCKED.txt",
+        measured=tmp_path / "MEASURED.txt",
+        config=PROJECTS[SOME_PROJECT].config,
+    )
+
+
+def test_relocking_writes_both_records(tmp_path):
+    """Relocking is the legitimate answer to a lock failure, so it has to be a
+    command rather than a recipe -- the alternative anyone reaches for is
+    hand-editing the lock, which the rules forbid for good reason."""
+    from printing3d.cli import _repin
+    from printing3d.locks import hashes_of
+
+    project = stand_in_project(tmp_path)
+    assert _repin(project)()
+
+    assert project.measured.read_text() == "  [PASS] a measurement  -- 1.000 mm\n"
+    locked = project.lock.read_text()
+    assert "stand-in.stl" in locked, f"the byte lock recorded nothing: {locked!r}"
+    assert locked == hashes_of(SOME_PROJECT)
+
+
+def test_an_unsound_build_is_not_pinned(tmp_path):
+    """A lock records something that was right. Pinning a shape the build
+    itself rejected would turn every gate downstream green against it."""
+    from printing3d.cli import _repin
+
+    project = stand_in_project(tmp_path, builds=False)
+    assert not _repin(project)()
+    assert not project.lock.exists() and not project.measured.exists()
+
+
+def test_a_failing_check_is_not_pinned(tmp_path):
+    """The nastier half: the build is fine and a check is not.
+
+    Writing that run into the record makes the failure the new baseline, and
+    the contract test -- which compares text -- would agree with it forever.
+    """
+    from printing3d.cli import _repin
+
+    project = stand_in_project(tmp_path, checks_pass=False)
+    assert not _repin(project)()
+    assert not project.lock.exists() and not project.measured.exists()
+
+
+def test_relocking_refuses_a_redirected_output_directory(monkeypatch, capsys):
+    """The lock's paths are written relative to the repo; read back from
+    somewhere else they name files that are not there."""
+    from printing3d.cli import relock
+    from printing3d.parts import OUTPUT_DIR_ENV
+
+    monkeypatch.setenv(OUTPUT_DIR_ENV, "/tmp/somewhere-else")
+    assert relock([SOME_PROJECT]) == 1
+    assert OUTPUT_DIR_ENV in capsys.readouterr().out
+
+
+def test_relocking_requires_a_project_to_be_named(monkeypatch):
+    """Unlike build and verify, this one overwrites committed records -- the
+    version that defaults to everything re-pins the repo for anyone who types
+    it bare.
+
+    Steps outside this module's output sandbox deliberately: the refusal above
+    fires before any argument is parsed, so the sandbox would hide what this is
+    testing. Nothing is written either way -- argparse exits first.
+    """
+    from printing3d.cli import relock
+    from printing3d.parts import OUTPUT_DIR_ENV
+
+    monkeypatch.delenv(OUTPUT_DIR_ENV)
+    with pytest.raises(SystemExit):
+        relock([])
+
+
+def test_the_build_command_exits_nonzero_when_a_part_is_not_printable(
+    monkeypatch, capsys
+):
+    """The exit code is the only thing an automated caller sees, and nothing
+    else exercises the path where a build reports a geometry problem."""
+    from printing3d.registry import Project
+
+    broken = Project(
+        name="broken",
+        summary="a project whose geometry does not hold together",
+        parts=lambda: iter([]),
+        build=lambda: False,
+        verify=lambda: True,
+        lock=PROJECTS[SOME_PROJECT].lock,
+        measured=PROJECTS[SOME_PROJECT].measured,
+        config=PROJECTS[SOME_PROJECT].config,
+    )
+    monkeypatch.setattr("printing3d.cli.discover", lambda: {"broken": broken})
+
+    assert build([]) == 1
+    assert "GEOMETRY PROBLEM" in capsys.readouterr().out
+
+
+def test_the_build_command_exits_zero_when_everything_is_sound(monkeypatch):
+    from printing3d.registry import Project
+
+    sound = Project(
+        name="sound",
+        summary="a project that builds cleanly",
+        parts=lambda: iter([]),
+        build=lambda: True,
+        verify=lambda: True,
+        lock=PROJECTS[SOME_PROJECT].lock,
+        measured=PROJECTS[SOME_PROJECT].measured,
+        config=PROJECTS[SOME_PROJECT].config,
+    )
+    monkeypatch.setattr("printing3d.cli.discover", lambda: {"sound": sound})
+    assert build([]) == 0

@@ -1,0 +1,60 @@
+
+hue-strip-tv-straight-8in-45
+  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
+  [PASS] the bed is the full channel width  -- 15.000 mm
+  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
+  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
+  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
+  [PASS] the channel still lies at 45 degrees  -- faces at 135.0 deg: 15.00, 3.00, 3.00, 1.34 mm, wanted one of 15.00
+  [PASS] the pad lies in the mounting plane  -- 0.000 mm
+  [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
+  [PASS] the profile encloses no pockets  -- 0 found
+
+hue-strip-tv-straight-5in-45
+  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
+  [PASS] the bed is the full channel width  -- 15.000 mm
+  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
+  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
+  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
+  [PASS] the channel still lies at 45 degrees  -- faces at 135.0 deg: 15.00, 3.00, 3.00, 1.34 mm, wanted one of 15.00
+  [PASS] the pad lies in the mounting plane  -- 0.000 mm
+  [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
+  [PASS] the profile encloses no pockets  -- 0 found
+
+hue-strip-tv-straight-3in-45
+  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
+  [PASS] the bed is the full channel width  -- 15.000 mm
+  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
+  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
+  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
+  [PASS] the channel still lies at 45 degrees  -- faces at 135.0 deg: 15.00, 3.00, 3.00, 1.34 mm, wanted one of 15.00
+  [PASS] the pad lies in the mounting plane  -- 0.000 mm
+  [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
+  [PASS] the profile encloses no pockets  -- 0 found
+
+hue-strip-tv-straight-2in-45
+  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
+  [PASS] the bed is the full channel width  -- 15.000 mm
+  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
+  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
+  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
+  [PASS] the channel still lies at 45 degrees  -- faces at 135.0 deg: 15.00, 3.00, 3.00, 1.34 mm, wanted one of 15.00
+  [PASS] the pad lies in the mounting plane  -- 0.000 mm
+  [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
+  [PASS] the profile encloses no pockets  -- 0 found
+
+hue-strip-tv-corner-1.5in-90
+  [PASS] the channel necks down to a clip  -- bed 15.00 mm, mouth 12.00 mm
+  [PASS] the bed is the full channel width  -- 15.000 mm
+  [PASS] the lips close over the bed as drawn  -- 12.000 mm against 12.000 mm at the face
+  [PASS] the bed carries the strip  -- bed 15.00 mm for a 14.4 mm strip
+  [PASS] the mouth necks below the strip  -- mouth 12.00 mm against a 14.4 mm strip
+  [PASS] the channel still lies at 90 degrees  -- faces at 90.0 deg: 16.50, 15.00, 3.50, 3.00, 2.00 mm, wanted one of 15.00
+  [PASS] the pad lies in the mounting plane  -- 0.000 mm
+  [PASS] the pad is the full base depth  -- 22.00 mm against 22.00 mm
+  [PASS] the profile encloses no pockets  -- 0 found
+  [PASS] the corner carries the strip across the quarter
+  [PASS] the corner stops at the quarter
+  [PASS] the corner's section is the straight's section  -- area off by 0.00e+00 mm2, outline by 1.49e-09 mm
+
+ALL CHECKS PASSED

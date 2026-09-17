@@ -10,6 +10,8 @@ from printing3d.registry import Project
 NAME = "fishing-rod-mounts"
 SUMMARY = "Low-profile wall mounts for horizontal fishing rod storage"
 LOCKED = Path(__file__).parent / "LOCKED.txt"
+MEASURED = Path(__file__).parent / "MEASURED.txt"
+CONFIG = Path(__file__).parent / "parts.toml"
 
 
 def project() -> Project:
@@ -25,6 +27,8 @@ def project() -> Project:
         build=lambda: _catalog().build_all(),
         verify=lambda: _checks().verify_all(),
         lock=LOCKED,
+        measured=MEASURED,
+        config=CONFIG,
     )
 
 

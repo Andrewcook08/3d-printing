@@ -1,17 +1,17 @@
 """The parametric solid model of one wall mount.
 
-Shape follows stl/wall_hook_for_3mm_screw(2).stl: a thin backplate, a curved
-rib that wraps the load, and a triangular gusset -- open sides rather than a
-solid block. Rebuilt parametrically rather than scaled, because scaling the
-reference mesh to the 5.80 mm blank (0.22x) would shrink its 3 mm screw hole
-to 0.66 mm and the backplate to 11 x 3.3 mm.
+Shape follows reference/wall_hook_for_3mm_screw(2).stl: a thin backplate, a
+curved rib that wraps the load, and a triangular gusset -- open sides rather
+than a solid block. Rebuilt parametrically rather than scaled, because scaling
+the reference mesh to the 5.80 mm blank (0.22x) would shrink its 3 mm screw
+hole to 0.66 mm and the backplate to 11 x 3.3 mm.
 
 A mount is a 2D profile extruded sideways, with the screw bores drilled
-afterwards. Everything is measured from two shared anchors, AXIS_U and AXIS_V,
-which fix where the rod's centerline sits; every other dimension follows from
-the rod's diameter. That is what lets a butt mount and a tip mount built for
-very different diameters hang the same rod level and parallel to the wall.
-"""
+afterwards. Everything is measured from two shared anchors fixing where the
+rod's centerline sits, and it is those anchors agreeing across a pair that lets
+a butt mount and a tip mount hang one rod level despite gripping very different
+diameters. Every measured value arrives from the project's config file; what is
+here is what follows from them."""
 
 import math
 from dataclasses import dataclass
@@ -27,34 +27,50 @@ from printing3d.shapes import (
 )
 
 # ---------------------------------------------------------------------------
-# Shared anchors -- every mount agrees on these, so every mount interchanges
+# The design, as it arrives from parts.toml
 # ---------------------------------------------------------------------------
 
-# Where the rod's centerline sits. Every mount agrees on these two.
-AXIS_U = 18.0  # distance from the wall face
-AXIS_V = 17.5  # height above the part's bottom edge
 
-# Backplate thickness. Also the removal-channel limit: nothing above the cradle
-# may sit further from the wall than this, or the rod -- a long cylinder that
-# cannot dodge sideways -- is trapped.
-PLATE_THK = 4.0
+@dataclass(frozen=True, kw_only=True)
+class Screw:
+    """The fastener the backplate is drilled for."""
 
-# Backplate height. Screws must sit ABOVE the rod: the load always tries to
-# peel the TOP off the wall.
-PLATE_H = 35.0
+    heights: list[float]
+    clearance_diameter: float
+    countersink_diameter: float
+    countersink_included_angle: float
 
-RIB = 4.0  # thickness of the curved rib and the arm
-LIP_RISE = 5.0  # how far the rib rises past the rod centerline
-LIP_CHAMFER = 1.2  # 45-degree lead-in so the rod drops in easily
-ROD_CLEARANCE = 0.6  # added to rod diameter -> cradle diameter
-FILLET = 0.8  # softening on convex corners
 
-DEFAULT_SCREW_HEIGHTS = (27.5,)
-SCREW_CLEAR_D = 4.2  # through-hole: clears #6, #8 and M4
+@dataclass(frozen=True, kw_only=True)
+class Design:
+    """Every measured or chosen number the shape is built from.
 
-# Countersunk on the FRONT face, so the back stays a flat unbroken pad for tape.
-CSINK_D = 8.4
-CSINK_INCLUDED = 90.0
+    Read from the project's config file, so tuning a mount is an edit to that
+    file rather than to this one. Anything derived from these lives below as a
+    property or a function; nothing derived belongs here.
+    """
+
+    # Where the rod's centerline sits. Every mount agrees on these two, which
+    # is what lets a butt and a tip mount hang one rod level.
+    axis_from_wall: float
+    axis_height: float
+
+    # Backplate thickness. Also the removal-channel limit: nothing above the
+    # cradle may sit further from the wall than this, or the rod -- a long
+    # cylinder that cannot dodge sideways -- is trapped.
+    plate_thickness: float
+
+    # Backplate height. Screws must sit ABOVE the rod: the load always tries to
+    # peel the TOP off the wall.
+    plate_height: float
+
+    slab_width: float
+    rib: float
+    rod_clearance: float
+    fillet: float
+    lip_chamfer: float
+    screw: Screw
+
 
 # Tuning that only affects tessellation and the size of throwaway cutting
 # bodies -- named so the geometry above reads as design intent, not arithmetic.
@@ -76,39 +92,57 @@ BORE_SEGMENTS = 64  # facets around a screw bore
 
 @dataclass(frozen=True)
 class Cradle:
-    """Where the rod sits, and the geometry the rest of the mount hangs off."""
+    """Where the rod sits, and the geometry the rest of the mount hangs off.
+
+    Carries the design so that everything shaped around a cradle can reach the
+    numbers without being handed them separately.
+    """
 
     rod_dia: float
+    design: Design
 
     @property
     def radius(self):
         """Inner radius of the cradle: the rod plus its fit clearance."""
-        return (self.rod_dia + ROD_CLEARANCE) / 2.0
+        return (self.rod_dia + self.design.rod_clearance) / 2.0
 
     @property
     def outer_radius(self):
         """Outer radius of the curved rib wrapped around the cradle."""
-        return self.radius + RIB
+        return self.radius + self.design.rib
 
     @property
     def floor_v(self):
         """Height of the lowest point of the cradle -- where the arm meets it."""
-        return AXIS_V - self.radius
+        return self.design.axis_height - self.radius
 
     @property
     def wall_side_u(self):
         """Outer face of the cradle's wall-side wall."""
-        return AXIS_U - self.radius - RIB
+        return self.design.axis_from_wall - self.radius - self.design.rib
+
+    @property
+    def outer_circle(self):
+        """The circle the rib's outer face follows: its centre and its radius.
+
+        Both tangent calculations below work on this one circle. Before it had
+        a name it was dug out of the design separately in three places, and
+        nothing said they were the same circle.
+        """
+        return (
+            self.design.axis_from_wall,
+            self.design.axis_height,
+        ), self.outer_radius
 
     @property
     def standoff_behind_rod(self):
         """Material between the wall face and the rod's nearest surface."""
-        return AXIS_U - self.radius
+        return self.design.axis_from_wall - self.radius
 
     @property
     def projection_from_wall(self):
         """How far the finished mount stands out from the wall."""
-        return AXIS_U + self.radius + RIB
+        return self.design.axis_from_wall + self.radius + self.design.rib
 
 
 # ---------------------------------------------------------------------------
@@ -136,16 +170,21 @@ class ArmAndGusset:
     """
 
     def pieces(self, cradle):
-        arm_base_v = cradle.floor_v - RIB
-        arm = rect(0.0, arm_base_v, AXIS_U, cradle.floor_v)
+        design = cradle.design
+        arm_base_v = cradle.floor_v - design.rib
+        arm = rect(0.0, arm_base_v, design.axis_from_wall, cradle.floor_v)
         if arm_base_v <= MIN_GUSSET_HEIGHT:
             return [arm]
-        return [arm, self._gusset(arm_base_v)]
+        return [arm, self._gusset(arm_base_v, design)]
 
     @staticmethod
-    def _gusset(arm_base_v):
+    def _gusset(arm_base_v, design):
         return polygon(
-            [(PLATE_THK, 0.0), (AXIS_U, arm_base_v), (PLATE_THK, arm_base_v)]
+            [
+                (design.plate_thickness, 0.0),
+                (design.axis_from_wall, arm_base_v),
+                (design.plate_thickness, arm_base_v),
+            ]
         )
 
 
@@ -164,43 +203,80 @@ class Wedge:
     """
 
     def pieces(self, cradle):
-        slope = tangent_slope_from_corner(cradle.outer_radius, PLATE_THK)
-        tangent_u, tangent_v = self._tangent_point(cradle.outer_radius, slope)
-        top_face_rise = slope * (cradle.wall_side_u - PLATE_THK)
+        design = cradle.design
+        corner_u, axis_v = design.plate_thickness, design.axis_height
+        slope = tangent_slope(corner_u, *cradle.outer_circle)
+        tangent_u, tangent_v = tangency_point(slope, *cradle.outer_circle)
+        top_face_rise = slope * (cradle.wall_side_u - corner_u)
         return [
             polygon(
                 [
-                    (PLATE_THK, 0.0),
+                    (corner_u, 0.0),
                     (tangent_u, tangent_v),
-                    (tangent_u, AXIS_V),
-                    (cradle.wall_side_u, AXIS_V),
-                    (PLATE_THK, AXIS_V - top_face_rise),
+                    (tangent_u, axis_v),
+                    (cradle.wall_side_u, axis_v),
+                    (corner_u, axis_v - top_face_rise),
                 ]
             )
         ]
-
-    @staticmethod
-    def _tangent_point(outer_radius, slope):
-        normal = math.sqrt(slope * slope + 1.0)
-        return (AXIS_U + outer_radius * slope / normal, AXIS_V - outer_radius / normal)
 
 
 ARM_AND_GUSSET = ArmAndGusset()
 WEDGE = Wedge()
 
+# What a config file may ask for by name. Config selects a support and sizes it;
+# it cannot describe a new one, because a support is shape rather than a number.
+SUPPORTS = {"arm-and-gusset": ARM_AND_GUSSET, "wedge": WEDGE}
 
-def tangent_slope_from_corner(outer_radius, corner_u):
-    """Slope of the line from (corner_u, 0) tangent to the crescent's outer
-    circle from below.
+
+def support_named(name):
+    """The support a config file asked for, or a failure listing the choices."""
+    if name not in SUPPORTS:
+        raise ValueError(
+            f"unknown support {name!r}; choose from {', '.join(sorted(SUPPORTS))}"
+        )
+    return SUPPORTS[name]
+
+
+def tangent_slope(from_u, centre, radius):
+    """Slope of the line from (from_u, 0) tangent to a circle, from below.
+
+    Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
+    Waiting on four choices nobody outside this repo made. There are two
+    tangents from a point to a circle and this takes the lower. It returns a
+    slope, which no vertical tangent has. Its denominator is zero at exactly
+    the input that produces one, so that case has no answer here at all. And
+    "the lower" holds only while the point stands further from the circle's
+    centre horizontally than the radius: inside that band the denominator
+    changes sign and the same root becomes the UPPER tangent, silently. A
+    second caller is what settles all four.
+
+    The band is reachable by configuration rather than hypothetical -- a rod
+    around 20 mm on a wedge support enters it, and this project already
+    describes a rod fatter than that under a different support. The pre-print
+    checks do catch it, loudly, which is the only reason this is a caveat
+    rather than a defect.
 
     Lets the wedge's underside diagonal and the diagonal above it be parallel
     while each stays pinned to the feature it must meet.
     """
-    run = AXIS_U - corner_u
-    a = run * run - outer_radius * outer_radius
-    b = -2.0 * run * AXIS_V
-    c = AXIS_V * AXIS_V - outer_radius * outer_radius
+    run = centre[0] - from_u
+    axis_v = centre[1]
+    a = run * run - radius * radius
+    b = -2.0 * run * axis_v
+    c = axis_v * axis_v - radius * radius
     return (-b - math.sqrt(b * b - 4.0 * a * c)) / (2.0 * a)
+
+
+def tangency_point(slope, centre, radius):
+    """Where a tangent of that slope touches the circle.
+
+    Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
+    Waiting on one choice nobody outside this repo made: a slope meets the
+    circle at two points and this takes the lower, to match the tangent above.
+    """
+    normal = math.sqrt(slope * slope + 1.0)
+    return (centre[0] + radius * slope / normal, centre[1] - radius / normal)
 
 
 # ---------------------------------------------------------------------------
@@ -213,15 +289,13 @@ class MountSpec:
     """Everything that distinguishes one mount from another."""
 
     rod_dia: float
-    width: float
     support: Support
     lip_rise: float
-    screw_heights: tuple = DEFAULT_SCREW_HEIGHTS
-    plate_h: float = PLATE_H
+    design: Design
 
     @property
     def cradle(self):
-        return Cradle(self.rod_dia)
+        return Cradle(self.rod_dia, self.design)
 
 
 # ---------------------------------------------------------------------------
@@ -231,14 +305,14 @@ class MountSpec:
 
 def profile(spec):
     """The 2D cross-section that gets extruded into a mount."""
-    cradle = spec.cradle
-    part = rect(0.0, 0.0, PLATE_THK, spec.plate_h)
+    cradle, design = spec.cradle, spec.design
+    part = rect(0.0, 0.0, design.plate_thickness, spec.design.plate_height)
     part = part + _crescent(cradle, spec.lip_rise)
     for piece in spec.support.pieces(cradle):
         part = part + piece
-    part = part - _rod_space_and_lift_channel(cradle, spec.plate_h)
+    part = part - _rod_space_and_lift_channel(cradle, spec.design.plate_height)
     part = part - _lip_lead_in(cradle, spec.lip_rise)
-    return rounded_convex_corners(without_enclosed_voids(part), FILLET)
+    return rounded_convex_corners(without_enclosed_voids(part), design.fillet)
 
 
 def _crescent(cradle, lip_rise):
@@ -253,7 +327,9 @@ def _crescent(cradle, lip_rise):
     if lip_rise > 0:
         lip = rect(cradle.radius, 0.0, cradle.outer_radius, lip_rise)
         lower_half = lower_half + lip
-    return lower_half.translate((AXIS_U, AXIS_V))
+    return lower_half.translate(
+        (cradle.design.axis_from_wall, cradle.design.axis_height)
+    )
 
 
 def _rod_space_and_lift_channel(cradle, plate_h):
@@ -263,13 +339,14 @@ def _rod_space_and_lift_channel(cradle, plate_h):
     above to stay clear of it -- keeps the cradle and the removal channel
     correct by construction no matter what else is unioned in.
     """
+    axis_u, axis_v = cradle.design.axis_from_wall, cradle.design.axis_height
     seat = m.CrossSection.circle(cradle.radius, CIRCLE_SEGMENTS).translate(
-        (AXIS_U, AXIS_V)
+        (axis_u, axis_v)
     )
     channel = rect(
-        AXIS_U - cradle.radius,
-        AXIS_V,
-        AXIS_U + cradle.radius,
+        axis_u - cradle.radius,
+        axis_v,
+        axis_u + cradle.radius,
         plate_h + CHANNEL_OVERSHOOT,
     )
     return seat + channel
@@ -278,10 +355,11 @@ def _rod_space_and_lift_channel(cradle, plate_h):
 def _lip_lead_in(cradle, lip_rise):
     """A 45-degree chamfer off the top of the lip, so the rod drops in rather
     than catching on the edge."""
-    chamfer = LIP_CHAMFER if lip_rise > 0 else LIP_CHAMFER * FLUSH_LIP_CHAMFER
+    lip_chamfer = cradle.design.lip_chamfer
+    chamfer = lip_chamfer if lip_rise > 0 else lip_chamfer * FLUSH_LIP_CHAMFER
     leg = chamfer * 2
-    lip_top = AXIS_V + lip_rise
-    outer_u = AXIS_U + cradle.radius
+    lip_top = cradle.design.axis_height + lip_rise
+    outer_u = cradle.design.axis_from_wall + cradle.radius
     return polygon(
         [
             (outer_u, lip_top),
@@ -298,17 +376,22 @@ def _lip_lead_in(cradle, lip_rise):
 
 def build(spec):
     """The finished mount as a solid, ready to export."""
-    solid = profile(spec).extrude(spec.width)
-    for height in spec.screw_heights:
-        solid = solid - screw_cut(height, spec.width)
+    solid = profile(spec).extrude(spec.design.slab_width)
+    for height in spec.design.screw.heights:
+        solid = solid - screw_cut(height, spec.design)
     return solid
 
 
-def screw_cut(height, width):
+def screw_cut(height, design):
     """Through-hole plus front-face countersink, drilled horizontally."""
-    half_angle = math.radians(CSINK_INCLUDED) / 2.0
-    depth = (CSINK_D - SCREW_CLEAR_D) / 2.0 / math.tan(half_angle)
-    shank_r = SCREW_CLEAR_D / 2.0
+    width, screw = design.slab_width, design.screw
+    half_angle = math.radians(screw.countersink_included_angle) / 2.0
+    depth = (
+        (screw.countersink_diameter - screw.clearance_diameter)
+        / 2.0
+        / math.tan(half_angle)
+    )
+    shank_r = screw.clearance_diameter / 2.0
 
     shank = (
         m.Manifold.cylinder(BORE_LENGTH, shank_r, shank_r, BORE_SEGMENTS, False)
@@ -326,6 +409,6 @@ def screw_cut(height, width):
             False,
         )
         .rotate((0.0, 90.0, 0.0))
-        .translate((PLATE_THK - depth, height, width / 2.0))
+        .translate((design.plate_thickness - depth, height, width / 2.0))
     )
     return shank + cone

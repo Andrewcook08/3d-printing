@@ -5,26 +5,31 @@ import math
 import pytest
 from manifold3d import Manifold
 
+from printing3d.fishing_rod_mounts.catalog import catalogue
 from printing3d.fishing_rod_mounts.geometry import (
     ARM_AND_GUSSET,
-    AXIS_U,
-    AXIS_V,
-    CSINK_D,
-    CSINK_INCLUDED,
-    PLATE_THK,
-    RIB,
-    ROD_CLEARANCE,
-    SCREW_CLEAR_D,
     WEDGE,
     Cradle,
     MountSpec,
     build,
     profile,
     screw_cut,
-    tangent_slope_from_corner,
+    tangent_slope,
 )
 from printing3d.shapes import signed_area
 from tests.support import contour_digest
+
+# The shape these tests measure is the one the project ships, so its numbers
+# come from the same place the build gets them.
+DESIGN = catalogue().design
+AXIS_U = DESIGN.axis_from_wall
+AXIS_V = DESIGN.axis_height
+PLATE_THK = DESIGN.plate_thickness
+RIB = DESIGN.rib
+ROD_CLEARANCE = DESIGN.rod_clearance
+CSINK_D = DESIGN.screw.countersink_diameter
+CSINK_INCLUDED = DESIGN.screw.countersink_included_angle
+SCREW_CLEAR_D = DESIGN.screw.clearance_diameter
 
 BUTT_DIA = 26.15
 TIP_DIA = 5.80
@@ -32,11 +37,13 @@ ALL_DIAMETERS = (5.8, 12.0, 26.15)
 
 
 def butt_spec(rod_dia=BUTT_DIA):
-    return MountSpec(rod_dia=rod_dia, width=11.0, support=ARM_AND_GUSSET, lip_rise=5.0)
+    return MountSpec(
+        rod_dia=rod_dia, support=ARM_AND_GUSSET, lip_rise=5.0, design=DESIGN
+    )
 
 
 def tip_spec(rod_dia=TIP_DIA):
-    return MountSpec(rod_dia=rod_dia, width=11.0, support=WEDGE, lip_rise=0.0)
+    return MountSpec(rod_dia=rod_dia, support=WEDGE, lip_rise=0.0, design=DESIGN)
 
 
 SHIPPED_SPECS = pytest.mark.parametrize(
@@ -50,16 +57,21 @@ SHIPPED_SPECS = pytest.mark.parametrize(
 
 
 def test_the_seat_is_the_rod_plus_its_fit_clearance():
-    assert Cradle(rod_dia=10.0).radius == pytest.approx((10.0 + ROD_CLEARANCE) / 2)
+    assert Cradle(rod_dia=10.0, design=DESIGN).radius == pytest.approx(
+        (10.0 + ROD_CLEARANCE) / 2
+    )
 
 
 def test_the_rib_wraps_the_seat_at_uniform_thickness():
-    cradle = Cradle(rod_dia=10.0)
+    cradle = Cradle(rod_dia=10.0, design=DESIGN)
     assert cradle.outer_radius - cradle.radius == pytest.approx(RIB)
 
 
 def test_a_fatter_rod_leaves_less_room_behind_it_and_sticks_out_further():
-    thin, thick = Cradle(rod_dia=TIP_DIA), Cradle(rod_dia=BUTT_DIA)
+    thin, thick = (
+        Cradle(rod_dia=TIP_DIA, design=DESIGN),
+        Cradle(rod_dia=BUTT_DIA, design=DESIGN),
+    )
     assert thick.standoff_behind_rod < thin.standoff_behind_rod
     assert thick.projection_from_wall > thin.projection_from_wall
 
@@ -68,7 +80,7 @@ def test_a_fatter_rod_leaves_less_room_behind_it_and_sticks_out_further():
 def test_every_cradle_seats_the_rod_on_the_shared_axis(rod_dia):
     """This is what lets two mounts built for different diameters hang one rod
     level and parallel to the wall."""
-    cradle = Cradle(rod_dia)
+    cradle = Cradle(rod_dia, design=DESIGN)
     assert cradle.standoff_behind_rod + cradle.radius == pytest.approx(AXIS_U)
     assert cradle.floor_v + cradle.radius == pytest.approx(AXIS_V)
 
@@ -79,19 +91,19 @@ def test_every_cradle_seats_the_rod_on_the_shared_axis(rod_dia):
 
 
 def test_a_low_arm_needs_no_gusset():
-    assert len(ARM_AND_GUSSET.pieces(Cradle(rod_dia=BUTT_DIA))) == 1
+    assert len(ARM_AND_GUSSET.pieces(Cradle(rod_dia=BUTT_DIA, design=DESIGN))) == 1
 
 
 def test_a_high_arm_is_braced_by_a_gusset():
-    assert len(ARM_AND_GUSSET.pieces(Cradle(rod_dia=10.0))) == 2
+    assert len(ARM_AND_GUSSET.pieces(Cradle(rod_dia=10.0, design=DESIGN))) == 2
 
 
 def test_the_wedge_is_one_unbroken_strut():
-    assert len(WEDGE.pieces(Cradle(rod_dia=TIP_DIA))) == 1
+    assert len(WEDGE.pieces(Cradle(rod_dia=TIP_DIA, design=DESIGN))) == 1
 
 
 def test_the_wedge_reaches_from_the_plate_to_the_cradle():
-    (strut,) = WEDGE.pieces(Cradle(rod_dia=TIP_DIA))
+    (strut,) = WEDGE.pieces(Cradle(rod_dia=TIP_DIA, design=DESIGN))
     lo_u, lo_v, _hi_u, hi_v = strut.bounds()
     assert lo_u == pytest.approx(PLATE_THK)
     assert lo_v == pytest.approx(0.0)
@@ -114,7 +126,7 @@ def distance_from_rod_axis(slope, corner_u=PLATE_THK):
 
 
 def test_the_undersides_line_leaves_the_plates_bottom_corner():
-    slope = tangent_slope_from_corner(Cradle(TIP_DIA).outer_radius, PLATE_THK)
+    slope = tangent_slope(PLATE_THK, *Cradle(TIP_DIA, design=DESIGN).outer_circle)
     assert underside_height_at(slope, PLATE_THK) == pytest.approx(0.0)
 
 
@@ -122,13 +134,13 @@ def test_the_undersides_line_leaves_the_plates_bottom_corner():
 def test_the_underside_just_touches_the_crescents_outer_circle(rod_dia):
     """Tangent, not merely close: that is what removes the kink where the
     strut meets the curve."""
-    cradle = Cradle(rod_dia)
-    slope = tangent_slope_from_corner(cradle.outer_radius, PLATE_THK)
+    cradle = Cradle(rod_dia, design=DESIGN)
+    slope = tangent_slope(PLATE_THK, *cradle.outer_circle)
     assert distance_from_rod_axis(slope) == pytest.approx(cradle.outer_radius)
 
 
 def test_the_wedge_passes_below_the_rod():
-    slope = tangent_slope_from_corner(Cradle(TIP_DIA).outer_radius, PLATE_THK)
+    slope = tangent_slope(PLATE_THK, *Cradle(TIP_DIA, design=DESIGN).outer_circle)
     assert underside_height_at(slope, AXIS_U) < AXIS_V
 
 
@@ -180,8 +192,8 @@ class BoreProbe:
 
     def __init__(self, spec):
         self.solid = build(spec)
-        self.height = spec.screw_heights[0]
-        self.mid_width = spec.width / 2.0
+        self.height = spec.design.screw.heights[0]
+        self.mid_width = spec.design.slab_width / 2.0
 
     def material_at(self, u, off_axis=0.0, size=0.1):
         cube = Manifold.cube((size, size, size), True).translate(
@@ -230,7 +242,7 @@ def test_the_countersink_tapers_at_the_screw_heads_own_angle(bore):
 def test_the_cut_is_centered_on_the_screw_and_across_the_slab():
     spec = tip_spec()
     _lo_u, lo_v, lo_w, _hi_u, hi_v, hi_w = screw_cut(
-        spec.screw_heights[0], spec.width
+        spec.design.screw.heights[0], DESIGN
     ).bounding_box()
-    assert (lo_w + hi_w) / 2 == pytest.approx(spec.width / 2)
-    assert (lo_v + hi_v) / 2 == pytest.approx(spec.screw_heights[0])
+    assert (lo_w + hi_w) / 2 == pytest.approx(spec.design.slab_width / 2)
+    assert (lo_v + hi_v) / 2 == pytest.approx(spec.design.screw.heights[0])

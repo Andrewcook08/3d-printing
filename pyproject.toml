@@ -9,11 +9,13 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "manifold3d>=3.5.2",
+    "numpy>=2.5.3",
 ]
 
 [project.scripts]
 build = "printing3d.cli:build"
 verify = "printing3d.cli:verify"
+relock = "printing3d.cli:relock"
 
 [build-system]
 requires = ["uv_build>=0.8.10,<0.13.0"]
