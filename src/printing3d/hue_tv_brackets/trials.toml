@@ -12,36 +12,20 @@
 # Restoring any of them is a git operation -- this file is committed even
 # though what it builds is not.
 
-# ---------------------------------------------------------------------------
-# The first print with the strip's place fixed. A straight and two corners,
-# which is everything needed to check that a corner and a straight now hold the
-# strip at the same height and the same distance from their outer edge.
-#
-# Two inches of straight rather than the full run: the cross-section does not
-# vary along it, so a short piece answers the same question for a fifth of the
-# filament. The 125 mm length belongs in parts.toml when the set is settled.
-# ---------------------------------------------------------------------------
-
-[[straight]]
-name = "trial-straight-2in-v1"
-length = 50.8
-note = "2 in, at the shipped 45-degree lean"
+# The 2 in straight and the 1.5 in corner that were tried here are gone: both
+# now ship under their own names, and a trial building the same solid a second
+# time is only a second name for it. Promoting a trial moves its entry into
+# parts.toml rather than copying it.
 
 # Upright, where the turn puts none of itself into the strip's own plane. The
-# radius is a fitting choice rather than a structural one, so these two bracket
-# the range worth handling rather than laddering toward a limit.
-
-[[corner]]
-name = "trial-corner-1.5in-v1"
-radius = 38.1
-tilt = 90.0
-note = "1.5 in radius -- the tighter of the two, leaves the most straight run"
+# radius is a fitting choice rather than a structural one, so this brackets the
+# shipped 1.5 in from the other side rather than laddering toward a limit.
 
 [[corner]]
 name = "trial-corner-3in-v1"
 radius = 76.2
 tilt = 90.0
-note = "3 in radius -- the gentler sweep, and an easier twist into the straights"
+note = "3 in radius -- the gentler sweep, against the 1.5 in that ships"
 
 # One piece where there were three. The strip already twists from the 45-degree
 # straights into an upright corner when the parts are butted together -- it
