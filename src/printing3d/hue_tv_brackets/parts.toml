@@ -79,6 +79,29 @@ name = "hue-strip-tv-straight-2in-45"
 length = 50.8
 note = "2 in -- the shortest, for trimming a run to length"
 
+# A corner takes `radius` and `tilt`, and may also be given straight runs
+# either side of the turn. Three shapes, and the third is the only one that
+# needs more than one extra line:
+#
+#   lead = 25.4                       the bare turn with plain straight bits
+#                                     on it, 1 in each side. The runs hold
+#                                     the corner's own `tilt`, whatever it
+#                                     is, so this works at any angle.
+#
+#   lead = 101.6                      runs that leave their open ends at 45
+#   run_tilt = 45.0                   degrees to meet the straights, and turn
+#   twist = 76.2                      to the corner's lean over the last 3 in
+#                                     before it. The twist is measured back
+#                                     from the corner, so lengthening `lead`
+#                                     moves the straight part, not the turn.
+#
+#   (neither)                         the bare turn, butted to straights by
+#                                     hand.
+#
+# `run_tilt` and `twist` imply each other: a run given somewhere else to lean
+# needs a length to get there, and a run with nowhere else to lean must not
+# be given one. Either on its own is refused rather than quietly ignored.
+
 [[corner]]
 name = "hue-strip-tv-corner-1.5in-90"
 radius = 38.1

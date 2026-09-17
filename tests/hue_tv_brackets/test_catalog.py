@@ -165,27 +165,41 @@ def test_a_corner_naming_no_runs_is_the_bare_turn(design):
 
 def test_a_corner_naming_runs_is_bigger_than_the_bare_turn(design):
     """Otherwise the entry could be read and quietly ignored."""
-    led = CornerEntry(name="led", radius=38.1, tilt=90.0, lead=101.6, twist=76.2)
+    led = CornerEntry(
+        name="led", radius=38.1, tilt=90.0, lead=101.6, run_tilt=45.0, twist=76.2
+    )
     (built,) = only(design, corner=[led])
     bare = corner(replace(design, tilt=90.0), 38.1)
     assert built.solid.volume() > bare.volume()
 
 
-def test_a_corner_naming_only_one_of_lead_and_twist_is_refused(design):
-    """They are one decision in two numbers: how far the run goes, and how
-    much of that it spends turning. Either alone says nothing buildable."""
+def test_a_corner_extends_at_its_own_lean_when_told_nothing_else(design):
+    """A lead on its own is the thing that asks for straight bits, and they
+    hold the corner's own lean -- so it means something at every angle, not
+    only at the one the straights happen to use."""
+    for tilt in (90.0, 75.0, 45.0):
+        entry = CornerEntry(name="tails", radius=38.1, tilt=tilt, lead=25.4)
+        (built,) = only(design, corner=[entry])
+        assert len(built.solid.decompose()) == 1
+        assert built.solid.genus() == 0
+
+
+def test_runs_described_without_a_lead_to_put_them_on_are_refused(design):
+    """Otherwise the numbers would be read and quietly dropped."""
     for entry in (
-        CornerEntry(name="half", radius=38.1, tilt=90.0, lead=101.6),
-        CornerEntry(name="half", radius=38.1, tilt=90.0, twist=76.2),
+        CornerEntry(name="nowhere", radius=38.1, tilt=90.0, run_tilt=45.0),
+        CornerEntry(name="nowhere", radius=38.1, tilt=90.0, twist=76.2),
     ):
-        with pytest.raises(ValueError, match="only one of lead and twist"):
+        with pytest.raises(ValueError, match="no lead"):
             only(design, corner=[entry])
 
 
 def test_a_corner_with_runs_spends_the_strip_they_carry(design):
     """A led corner takes the strip through its runs as well as its turn, so
     what it spends has to count both -- that is the number a run is cut to."""
-    led = CornerEntry(name="led", radius=38.1, tilt=90.0, lead=101.6, twist=76.2)
+    led = CornerEntry(
+        name="led", radius=38.1, tilt=90.0, lead=101.6, run_tilt=45.0, twist=76.2
+    )
     (built,) = only(design, corner=[led])
     bare_turn = math.radians(QUARTER_TURN) * 38.1
     assert built.strip_spent == pytest.approx(bare_turn + 2 * 101.6)

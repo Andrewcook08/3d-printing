@@ -569,7 +569,81 @@ def test_a_twist_longer_than_the_lead_it_turns_within_is_refused():
         led_corner(UPRIGHT, 38.1, 50.8, 76.2, DESIGN.tilt)
 
 
-@pytest.mark.parametrize(("lead", "twist"), [(0.0, 10.0), (10.0, 0.0), (10.0, -1.0)])
-def test_a_lead_or_twist_that_is_not_a_length_is_refused(lead, twist):
-    with pytest.raises(ValueError, match="positive"):
+@pytest.mark.parametrize(
+    ("lead", "twist", "objection"),
+    [
+        (0.0, 10.0, "positive length"),
+        (-1.0, 10.0, "positive length"),
+        (10.0, -1.0, "cannot be negative"),
+    ],
+)
+def test_a_lead_or_twist_that_is_not_a_length_is_refused(lead, twist, objection):
+    """Which objection, not merely that there was one: a twist of nothing is
+    a legitimate thing to ask for and must not be swept up with these."""
+    with pytest.raises(ValueError, match=objection):
         led_corner(UPRIGHT, 38.1, lead, twist, DESIGN.tilt)
+
+
+# ---------------------------------------------------------------------------
+# A corner with plain straight bits on it, at any angle
+# ---------------------------------------------------------------------------
+
+EVERY_CORNER_LEAN = (90.0, 75.0, 60.0, 45.0)
+
+
+@pytest.mark.parametrize("tilt", EVERY_CORNER_LEAN)
+def test_a_corner_at_any_angle_can_be_extended_with_straight_bits(tilt):
+    """The runs hold the corner's own lean, so this is not a privilege of the
+    one angle the straights happen to use."""
+    leaning = replace(DESIGN, tilt=tilt)
+    part = led_corner(leaning, 38.1, LEAD, 0.0, tilt)
+    assert len(part.decompose()) == 1
+    assert part.genus() == 0
+    assert part.bounding_box()[2] == pytest.approx(0.0, abs=1e-9)
+
+
+@pytest.mark.parametrize("tilt", EVERY_CORNER_LEAN)
+def test_an_extended_corners_runs_are_the_profile_end_to_end(tilt):
+    """With no turn to make there is nothing to interpolate anywhere along a
+    run, so every section of it is the drawn profile exactly."""
+    leaning = replace(DESIGN, tilt=tilt)
+    run = entry_run(led_corner(leaning, 38.1, LEAD, 0.0, tilt))
+    wanted = profile(leaning)
+    for distance in (0.5, LEAD / 3.0, LEAD / 2.0, LEAD - 0.5):
+        section = run.slice(distance)
+        drift = (section - wanted).area() + (wanted - section).area()
+        assert drift == pytest.approx(0.0, abs=1e-6), f"at {distance:.2f} mm"
+
+
+@pytest.mark.parametrize("tilt", EVERY_CORNER_LEAN)
+def test_the_strip_still_sits_where_it_should_on_an_extended_corner(tilt):
+    """The placement fix has to survive this knob as it survives the twist."""
+    leaning = replace(DESIGN, tilt=tilt)
+    run = entry_run(led_corner(leaning, 38.1, LEAD, 0.0, tilt))
+    half_bed = DESIGN.channel_width / 2.0
+    for fraction in ALONG_THE_TWIST:
+        section = run.slice(fraction * LEAD)
+        under = material_at(section, off_the_seat(tilt, 0.0, -CLEAR_OF_THE_FACE))
+        over = material_at(section, off_the_seat(tilt, 0.0, CLEAR_OF_THE_FACE))
+        assert under == pytest.approx(SOLID), f"nothing under the bed at {tilt}"
+        assert over == pytest.approx(AIR), f"the bed is buried at {tilt}"
+        for side in (-1.0, 1.0):
+            inside = off_the_seat(tilt, side * (half_bed - 0.3), CLEAR_OF_THE_FACE)
+            outside = off_the_seat(tilt, side * (half_bed + 0.3), CLEAR_OF_THE_FACE)
+            assert material_at(section, inside) == pytest.approx(AIR)
+            assert material_at(section, outside) == pytest.approx(SOLID)
+
+
+def test_a_run_told_to_lean_elsewhere_with_no_twist_to_get_there_is_refused():
+    """A twist of nothing means the run does not turn, so it stays at the
+    corner's lean. Asking it to also leave at another is two answers."""
+    with pytest.raises(ValueError, match="cannot also leave its open end"):
+        led_corner(UPRIGHT, 38.1, LEAD, 0.0, DESIGN.tilt)
+
+
+def test_a_twist_with_no_turn_to_make_is_refused():
+    """The other half of the same rule. A run already at the corner's lean
+    that is handed a twist describes a turn that does not happen, and a
+    config that can say that can lie about what it built."""
+    with pytest.raises(ValueError, match="turn that does not happen"):
+        led_corner(UPRIGHT, 38.1, LEAD, 25.4, UPRIGHT.tilt)

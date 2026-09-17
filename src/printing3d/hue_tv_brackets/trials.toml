@@ -42,6 +42,7 @@ name = "trial-corner-1.5in-90-lead4in-v1"
 radius = 38.1
 tilt = 90.0
 lead = 101.6
+run_tilt = 45.0
 twist = 76.2
 note = "4 in leads, turning over the last 3 in, into the 1.5 in corner"
 
@@ -55,5 +56,6 @@ name = "trial-corner-1.5in-90-lead1in-v1"
 radius = 38.1
 tilt = 90.0
 lead = 25.4
+run_tilt = 45.0
 twist = 25.4
 note = "1 in lead, turning over the whole of it"

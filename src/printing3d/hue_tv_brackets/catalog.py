@@ -48,14 +48,18 @@ class StraightEntry:
 class CornerEntry:
     """One corner, as parts.toml describes it.
 
-    `lead` and `twist` are optional and go together: a corner naming neither
-    is the bare turn, to be joined to straight runs by hand.
+    `lead` is what asks for straight runs either side of the turn; a corner
+    without one is the bare turn, to be butted against straight sections by
+    hand. `run_tilt` is the lean those runs leave their open ends at, and
+    `twist` the length they change over to reach the corner's lean. Leave
+    both out and the runs simply hold the corner's own lean the whole way.
     """
 
     name: str
     radius: float
     tilt: float | None = None
     lead: float | None = None
+    run_tilt: float | None = None
     twist: float | None = None
     note: str = ""
 
@@ -209,19 +213,20 @@ def _brackets(design: Design, catalogue) -> Iterator[Bracket]:
 def _turn(design: Design, leaning: Design, entry: CornerEntry):
     """The solid an entry asks for: a bare turn, or one with runs led into it.
 
-    The runs start at the lean the project's straights are drawn at, which is
-    the shipped design's rather than the corner's own -- a corner naming a
-    lean is saying how the turn stands, not how the strip reaches it.
+    A run holds the corner's own lean unless the entry says otherwise, so
+    asking for a lead and nothing else extends the corner with plain straight
+    bits, whatever angle it is drawn at. Saying where a run's open end leans
+    is what makes it turn, and then it needs a length to turn in.
     """
-    if entry.lead is None and entry.twist is None:
+    if entry.lead is None:
+        if entry.run_tilt is not None or entry.twist is not None:
+            raise ValueError(
+                f"corner {entry.name!r} describes runs but gives them no "
+                f"lead, so there is no run for them to describe"
+            )
         return corner(leaning, entry.radius)
-    if entry.lead is None or entry.twist is None:
-        raise ValueError(
-            f"corner {entry.name!r} gives only one of lead and twist: a run "
-            f"leading into a corner needs both its length and how much of "
-            f"that length turns"
-        )
-    return led_corner(leaning, entry.radius, entry.lead, entry.twist, design.tilt)
+    run_tilt = leaning.tilt if entry.run_tilt is None else entry.run_tilt
+    return led_corner(leaning, entry.radius, entry.lead, entry.twist or 0.0, run_tilt)
 
 
 def _leaning(design: Design, entry) -> Design:

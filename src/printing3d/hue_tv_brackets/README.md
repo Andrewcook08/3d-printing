@@ -262,20 +262,34 @@ radius = 101.0
 tilt = 65.0        # this corner only; everything else takes the design's lean
 
 [[corner]]
+name = "corner-r38-tails-v1"
+radius = 38.1
+tilt = 90.0
+lead = 25.4        # plain straight bits, 1 in each side, at the corner's lean
+
+[[corner]]
 name = "corner-r38-lead4in-v1"
 radius = 38.1
 tilt = 90.0
 lead = 101.6       # straight run either side of the turn
-twist = 76.2       # of which this much turns, measured back from the corner
+run_tilt = 45.0    # its open end leans this way, to meet the straights
+twist = 76.2       # turning over this much of it, measured back from the corner
 ```
 
-`lead` and `twist` are optional and go together. A corner naming neither is the
-bare turn, to be butted against straight sections by hand. Naming both gives it
-a run at each end that meets the strip at the straights' lean, holds it for
-`lead - twist`, and turns to the corner's lean over the last `twist`. The turn
-is measured back from the corner, so the channel is upright before the turn
-starts whatever the two lengths are — lengthening the run moves the straight
-part of it, never the turn.
+**`lead` is what asks for straight runs** either side of the turn. A corner
+without one is the bare turn, to be butted against straight sections by hand.
+
+Those runs hold the corner's own lean unless told otherwise, so a `lead` on its
+own extends a corner with plain straight bits **at whatever angle the corner is
+drawn** — the second example above needs nothing else.
+
+**`run_tilt` and `twist` are what make a run turn**, and they imply each other
+in both directions. `run_tilt` is the lean the open end leaves at; `twist` is
+the length it changes over, measured back from the corner, so lengthening
+`lead` moves the straight part of a run and never the turn. A run sent
+somewhere else to lean with no length to get there is refused, and so is a
+twist with no turn to make — either on its own would be a number read and
+quietly dropped.
 
 Parts still being tested live in `trials.toml` instead. What they produce is
 written to `output/trials/hue-tv-brackets/`, which is not committed and is

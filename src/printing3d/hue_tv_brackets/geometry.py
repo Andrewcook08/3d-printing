@@ -372,22 +372,46 @@ def led_corner(
 ):
     """A quarter turn with a straight run leading into it and out of it.
 
-    Each run meets the strip at `from_tilt`, holds that lean for the first
-    `lead - twist` of its length, and turns to the corner's own lean over the
-    last `twist`. The turn is measured back from the corner rather than
-    forward from the open end, so the channel arrives upright however long
-    either is -- lengthening the run moves the straight part, never the turn.
+    Each run leaves its open end at `from_tilt` and reaches the corner at the
+    corner's own lean, changing over the last `twist` of its length and
+    holding `from_tilt` for the `lead - twist` before that. The turn is
+    measured back from the corner rather than forward from the open end, so
+    the channel arrives at the corner's lean however long either is --
+    lengthening the run moves the straight part, never the turn.
+
+    A run that has no turn to make is a `twist` of nothing, and then the whole
+    run holds the corner's lean: a corner with plain straight bits on it, at
+    whatever angle the corner is drawn. Those two go together in both
+    directions, which is the one thing refused below.
 
     Swept in one piece rather than assembled from three. A run, the turn and
     the run out are stations of one sweep, so there is no seam between them to
     take or to show, and the channel is one cut along the whole of it.
     """
-    if lead <= 0.0 or twist <= 0.0:
-        raise ValueError(f"lead {lead} and twist {twist} must both be positive")
+    if lead <= 0.0:
+        raise ValueError(f"lead {lead} must be a positive length")
+    if twist < 0.0:
+        raise ValueError(f"twist {twist} cannot be negative")
     if twist > lead:
         raise ValueError(
             f"twist {twist} is longer than the {lead} mm lead it has to turn "
             f"within: the turn has to finish before the corner starts"
+        )
+    # A turn and a length to make it in imply each other. Without the second
+    # of these a run asked to turn would quietly not turn, and the part would
+    # look right and meet nothing.
+    if twist == 0.0 and from_tilt != design.tilt:
+        raise ValueError(
+            f"a run with no twist does not turn, so it stays at the corner's "
+            f"{design.tilt} degrees -- it cannot also leave its open end at "
+            f"{from_tilt}. Give it a twist to turn in, or let it run at the "
+            f"corner's own lean"
+        )
+    if twist > 0.0 and from_tilt == design.tilt:
+        raise ValueError(
+            f"a run leaving at {from_tilt} degrees and reaching a corner at "
+            f"{design.tilt} has no turn to make, so a twist of {twist} mm is "
+            f"a turn that does not happen. Drop the twist"
         )
     body = _along(design, radius, lead, twist, from_tilt, 0.0)
     # The channel is cut from a sweep that runs past both ends, so it opens
@@ -409,15 +433,24 @@ def _along(design, radius, lead, twist, from_tilt, overshoot):
     turning = max(1, math.ceil(abs(design.tilt - from_tilt) / LEAN_PER_STATION))
     arc = max(1, round(CORNER_SEGMENTS * QUARTER_TURN / 360.0))
 
+    def leaning(into_the_turn):
+        """The lean that far into the stretch the run turns in.
+
+        Clamped at both ends: before the turn begins the run holds the lean
+        it left its open end at, and after it finishes it holds the corner's.
+        A run with no turn to make spends no length making one, and holds the
+        corner's lean from end to end.
+        """
+        if twist == 0.0:
+            return design.tilt
+        share = min(max(into_the_turn, 0.0), twist) / twist
+        return from_tilt + (design.tilt - from_tilt) * share
+
     def entering(along):
-        share = 0.0 if along <= held else (along - held) / twist
-        lean = from_tilt + (design.tilt - from_tilt) * share
-        return Station((radius, along - lead), (1.0, 0.0), lean)
+        return Station((radius, along - lead), (1.0, 0.0), leaning(along - held))
 
     def leaving(along):
-        share = min(along, twist) / twist
-        lean = design.tilt - (design.tilt - from_tilt) * share
-        return Station((-along, radius), (0.0, 1.0), lean)
+        return Station((-along, radius), (0.0, 1.0), leaning(twist - along))
 
     def turned(step):
         about = math.radians(QUARTER_TURN * step / arc)
