@@ -20,8 +20,10 @@ off that mesh.
 > — nothing the printing disproved reached the clip, its dimensions, or why the
 > straights lean.
 >
-> The corner with runs led into it is still a trial. It is not in `parts.toml`
-> and nothing here claims it has been printed.
+> **The shipped corner has no lips.** It was tried that way because threading
+> a strip through a turn already stuck to the TV is the worst part of fitting
+> these, and it is what got printed and installed. The straights keep theirs
+> and keep holding the strip.
 
 ## The problem these solve
 
@@ -40,8 +42,14 @@ so light goes out *and* back.
 ## Print these
 
 Five parts ship: straight runs at 8, 5, 3 and 2 inches, all leaning 45°, and
-one upright corner at a 1.5 inch radius. `uv run build` prints every file it
-writes and where, which stays accurate as the set changes.
+one upright corner at a 1.5 inch radius whose channel is **open** — the strip
+is set into the turn from above rather than threaded around it. Its name says
+so. `uv run build` prints every file it writes and where, which stays accurate
+as the set changes.
+
+The straights clip and the corner does not, which is the arrangement that
+works: the lipped runs either side hold the strip, and the turn is the one
+place where having to feed it in is worst.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
@@ -132,9 +140,11 @@ saves goes into a larger rectangle. And `x = 0` is the ceiling: a radius above
 `(P − L) / (8 − 2π)` would need a path outside the mounting surface, however
 much the corner itself would fit.
 
-Moving an entry from `trials.toml` into `parts.toml` is what commits to it:
-that is what makes it a part this project ships, built into the committed
-output and covered by both records.
+A part being tested lives in a `trials.toml` beside `parts.toml`, built and
+checked the same way but written outside the committed output and covered by
+neither record. Moving an entry across into `parts.toml` is what commits to
+it. There is no `trials.toml` at present: every question it held has been
+answered by a TV with these on the back of it.
 
 ## Mount them
 
@@ -313,12 +323,11 @@ somewhere else to lean with no length to get there is refused, and so is a
 twist with no turn to make — either on its own would be a number read and
 quietly dropped.
 
-Parts still being tested live in `trials.toml` instead. What they produce is
-written to `output/trials/hue-tv-brackets/`, which is not committed and is
-covered by neither lock -- a trial is printed to answer a question, not kept.
-Deleting that file
-retires every one of them: the next build moves their STLs to the archive and
-leaves `output/` holding only what ships.
+Parts still being tested go in a `trials.toml` beside this file. What they
+produce is written to `output/trials/hue-tv-brackets/`, which is not committed
+and is covered by neither lock -- a trial is printed to answer a question, not
+kept. Deleting that file retires every one of them at once: the next build
+moves their STLs to the archive and leaves `output/` holding only what ships.
 
 No code changes for any of this. The code changes when the *shape* does.
 
@@ -361,7 +370,6 @@ instead of stopping.
 |---|---|
 | `__init__.py` | Declares this project so the repo discovers it |
 | `parts.toml` | Every measured or chosen number, and the parts that ship |
-| `trials.toml` | Parts being tested; their STLs are never committed, and deleting this retires all of them |
 | `geometry.py` | The channel, the lean, and the three sweeps |
 | `catalog.py` | How a configured entry becomes a printable bracket |
 | `verify.py` | Geometric checks against the built solids |

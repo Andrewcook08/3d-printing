@@ -4,8 +4,10 @@
 # compute it from these values it does not belong in this file, and writing it
 # down anyway will be refused when the file is read.
 #
-# Parts still being tested live in trials.toml. Deleting that file retires
-# every one of them in a single step.
+# Parts still being tested go in a trials.toml beside this file, which is built
+# and checked the same way but written outside the committed output. Deleting
+# that file retires every one of them in a single step, which is what happened
+# to the ones this project no longer needs.
 
 [design]
 # The channel, measured off reference/Hue LED Strip with Angle straight
@@ -115,7 +117,8 @@ note = "2 in -- the shortest, for trimming a run to length"
 # setting it in from above.
 
 [[corner]]
-name = "hue-strip-tv-corner-1.5in-90"
+name = "hue-strip-tv-corner-1.5in-90-no-lip"
 radius = 38.1
 tilt = 90.0
-note = "1.5 in radius, upright"
+lip_reach = 0.0
+note = "1.5 in radius, upright, open channel -- set the strip in, do not thread it"
