@@ -4,15 +4,17 @@ What the tests guarantee, and how to read a failure.
 
 ## What it does
 
-Four layers, ordered by how precisely a failure points at its cause. When
+Seven layers, ordered by how precisely a failure points at its cause. When
 something changes, the narrowest layer that noticed tells you what moved.
 
 | Layer | Asserts | Catches |
 |---|---|---|
 | **Contract** | What every project must guarantee, for every project | A project that ships unverified, unlocked, or unsound parts |
+| **Architecture** | The boundary between the shared kit and the projects | Shared code that has taken on a project's assumptions, or a helper copied into a second project rather than promoted, or one rewritten beside the kit's own |
 | **Properties** | Relationships that must hold for *any* input | A design that is geometrically wrong, including for sizes never built before |
 | **Characterization** | The exact vertices of each shipped cross-section | A change to a part's outline, naming which part moved |
 | **Golden master** | The exact bytes of each shipped file | Any change at all to a printable artifact |
+| **Measurement lock** | The numbers the pre-print checks report | Shared code measuring differently while the bytes, and every verdict, stay put |
 | **Command** | The installed commands behave like the library | Broken entry-point wiring that library tests cannot see |
 
 ## Guarantees
@@ -21,6 +23,21 @@ something changes, the narrowest layer that noticed tells you what moved.
 a new project is covered by existing rather than by copying tests, and a
 failure names the project it belongs to. See
 [project contract](../build/project-contract.md).
+
+**One rule binds only at the merge.** A project being designed declares no
+parts, and the suite allows that on a working copy while refusing it on a pull
+request to the default branch — so the same source can pass here and fail
+there, by design. It is the only rule that moves, and the contract doc says
+which.
+
+**Shared code stays shared.** Three rules hold the boundary. The kit may not
+depend on any project — it is reusable only while it carries no project's
+assumptions. No helper may be defined by two projects at once: that is the
+signal a helper has outgrown the project it started in, so the suite names both
+and it gets moved rather than copied. And no project may rewrite a helper the
+kit already offers. Names every project is expected to define are exempt, being
+roles rather than duplication. Detection is by name, so a copy under a new name
+passes — the marker convention is what covers that, and these are its backstop.
 
 **Properties assert intent, not history.** Where a value is forced by geometry,
 the test asserts the *relationship* — that a line is genuinely tangent to a
@@ -49,6 +66,12 @@ Only the property layer asserts intent, and only for the relationships it
 covers. Nothing here knows whether a part survives its load or fits the real
 object.
 
+**A project that declares nothing is checked by almost none of this.** The
+contract, characterization, golden-master and measurement layers all iterate
+the parts a project declares, so with none they pass having examined nothing.
+That is allowed while a project is being designed, and it is the reason the
+rule above binds before anything merges.
+
 ## How to read a failure
 
 | Pattern | Meaning |
@@ -56,7 +79,10 @@ object.
 | Properties pass, characterization passes, bytes differ | Meshing changed beneath the geometry. Design untouched. |
 | Properties pass, characterization fails | A part's outline moved. Usually an intended design change. |
 | Properties fail | The design itself is wrong. Investigate before anything else. |
+| Bytes identical, a measured number moved | Shared code reads something different off an unchanged shape. The only layer that can see this. |
 | Command test alone fails | The library is fine; the installed entry point is broken. |
+| Architecture test fails, naming two projects | Both define the same helper. Promote it to the shared kit, or rename one if they were never the same thing. |
+| Architecture test fails, naming shared code | Shared code has taken a dependency on one project, and is no longer shared. |
 | Contract test fails, named for one project | That project's declaration or output is wrong; others are unaffected. |
 | A deprecation warning fails the run | A dependency is signalling a future removal. |
 
@@ -64,3 +90,10 @@ object.
 
 Before each commit (via hooks), on every pull request, and in the scheduled
 upgrade check described in [dependencies](../automation/dependencies.md).
+
+The three are the same suite, and one rule tells them apart: a pull request to
+the default branch is the only one of the three that guards what everyone
+clones, so it is the only one that refuses a project declaring no parts. The
+scheduled check deliberately does not, since a project mid-design is not a
+dependency problem and reporting it as one would spend that check's only
+signal.
