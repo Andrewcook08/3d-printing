@@ -5,9 +5,8 @@
 # down anyway will be refused when the file is read.
 #
 # Parts still being tested go in a trials.toml beside this file, which is built
-# and checked the same way but written outside the committed output. Deleting
-# that file retires every one of them in a single step, which is what happened
-# to the ones this project no longer needs.
+# and checked the same way but written outside the committed output. There is
+# no such file at present.
 
 [design]
 # The channel, measured off reference/Hue LED Strip with Angle straight
@@ -23,7 +22,8 @@ floor_thickness = 2.0
 
 # The clip. Each lip closes this far over the slot while climbing that far,
 # necking the 15.0 mm bed down to a 12.0 mm mouth. The strip flexes past it and
-# is then held without adhesive of its own, which is the whole point.
+# is then held without adhesive of its own, which is what the straights are
+# for. A part may set its own reach; the corner below sets it to zero.
 lip_reach = 1.5
 lip_height = 2.0
 

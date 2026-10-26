@@ -51,10 +51,12 @@ def upright_section(solid, degrees=0.0):
     """The cross-section of `solid` on the vertical plane `degrees` about Z.
 
     Promotable: domain-free measurement, currently only hue-tv-brackets.
-    Waiting on two choices nobody outside this repo made. The sense of
+    Waiting on three choices nobody outside this repo made. The sense of
     `degrees` is ours -- the solid turns by its negative, so the opposite
     convention returns a mirrored section and silently inverts every
-    comparison drawn from it. And the plane passes through the origin, with no
+    comparison drawn from it. Which way the section's own two axes run is ours
+    too: across the plane and up Z, where the other pairing gives a mirror.
+    And the plane passes through the origin, with no
     offset to say otherwise, so a caller wanting it elsewhere translates first
     and nothing here says which way.
     """
@@ -103,21 +105,34 @@ def slot_width_at(section, up, design):
     return right - left
 
 
+def faces_at(section, angle):
+    """Lengths of the flat faces lying at `angle`, in no particular order.
+
+    Promotable: domain-free measurement, currently only hue-tv-brackets.
+    Waiting on three choices nobody outside this repo made: MAX_ANGLE_ERROR as
+    the match tolerance and MAX_EDGE_ERROR as the length floor, both read from
+    module scope where no caller can reach them; and a comparison that does
+    not wrap, so a face measured at 179.99 never matches one asked for at 0.0
+    even though straight_runs folded them together.
+    """
+    return [
+        length
+        for length, found in straight_runs(section, MAX_EDGE_ERROR)
+        if abs(found - angle) < MAX_ANGLE_ERROR
+    ]
+
+
 def longest_face_at(section, angle):
     """Length of the longest flat face lying at `angle`, or zero if none does.
 
     Promotable: domain-free measurement, currently only hue-tv-brackets.
-    Waiting on four choices nobody outside this repo made: MAX_ANGLE_ERROR as
-    the match tolerance and MAX_EDGE_ERROR as the length floor, both read from
-    module scope where no caller can reach them; zero returned for "no such
-    face", where slot_width_at above raises for its own empty case; and a
-    comparison that does not wrap, so a face measured at 179.99 never matches
-    one asked for at 0.0 even though straight_runs folded them together.
+    Waiting on one choice of its own beyond those faces_at already waits on:
+    zero returned for "no such face", where slot_width_at above raises for its
+    own empty case. Taking the longest by asking rather than by trusting the
+    order faces_at returns, which used to be a fourth choice hiding in a sort
+    nobody here owns.
     """
-    for length, found in straight_runs(section, MAX_EDGE_ERROR):
-        if abs(found - angle) < MAX_ANGLE_ERROR:
-            return length
-    return 0.0
+    return max(faces_at(section, angle), default=0.0)
 
 
 def check_channel_clips(runner, section, design):
@@ -223,11 +238,7 @@ def check_channel_aims_out(runner, section, design):
     a 16 mm wall instead of the 15 mm bed.
     """
     angle = leaned_floor_angle(design)
-    at_angle = [
-        length
-        for length, found in straight_runs(section, MAX_EDGE_ERROR)
-        if abs(found - angle) < MAX_ANGLE_ERROR
-    ]
+    at_angle = faces_at(section, angle)
     bed = [
         length
         for length in at_angle

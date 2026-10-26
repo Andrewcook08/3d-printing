@@ -521,9 +521,9 @@ def test_a_run_that_spends_its_whole_length_turning_is_built():
 
 
 def test_a_corner_with_leads_is_one_solid_piece():
-    """Five sweeps unioned: the turn, and a twisting run and a straight either
-    side of it. Any seam that failed to take shows up as a second body or a
-    tunnel."""
+    """One sweep, not pieces joined: the pad and the lump are each lofted the
+    whole way round and the channel is one cut along all of it. A loft that
+    failed to close shows up as a second body or a tunnel."""
     part = led_corner_part()
     assert len(part.decompose()) == 1
     assert part.genus() == 0
@@ -647,3 +647,23 @@ def test_a_twist_with_no_turn_to_make_is_refused():
     config that can say that can lie about what it built."""
     with pytest.raises(ValueError, match="turn that does not happen"):
         led_corner(UPRIGHT, 38.1, LEAD, 25.4, UPRIGHT.tilt)
+
+
+def test_a_sweep_visits_each_station_once():
+    """Stations are gathered from several marks that can land on each other --
+    a run that holds its lean has one at each end of the same stretch, and a
+    run that spends all of itself turning starts where it stops. A sweep
+    through the same station twice carries a ring of zero-length edges."""
+    from printing3d.hue_tv_brackets.geometry import _along
+
+    places = _along(UPRIGHT, 38.1, LEAD, LEAD, DESIGN.tilt, 0.0)
+    assert len(places) == len(set(places)), "a station is visited twice"
+    for here, after in zip(places, places[1:], strict=False):
+        assert here != after, "two stations land on each other"
+
+
+def test_a_run_that_cannot_be_built_at_its_own_lean_says_so():
+    """The lean a run leaves at is refused where it was given, rather than
+    partway through the sweep where the complaint cannot name it."""
+    with pytest.raises(ValueError, match="leave its open end at 30"):
+        led_corner(UPRIGHT, 38.1, LEAD, LEAD_TWIST, 30.0)

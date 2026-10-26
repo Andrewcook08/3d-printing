@@ -416,15 +416,22 @@ def led_corner(
         raise ValueError(
             f"a run with no twist does not turn, so it stays at the corner's "
             f"{design.tilt} degrees -- it cannot also leave its open end at "
-            f"{from_tilt}. Give it a twist to turn in, or let it run at the "
-            f"corner's own lean"
+            f"{from_tilt}. Give it a twist to turn in, or drop the run_tilt "
+            f"and let it run at the corner's own lean"
         )
     if twist > 0.0 and from_tilt == design.tilt:
         raise ValueError(
             f"a run leaving at {from_tilt} degrees and reaching a corner at "
             f"{design.tilt} has no turn to make, so a twist of {twist} mm is "
-            f"a turn that does not happen. Drop the twist"
+            f"a turn that does not happen. Drop the twist, or give the run a "
+            f"run_tilt to turn from"
         )
+    try:
+        replace(design, tilt=from_tilt)
+    except ValueError as refused:
+        raise ValueError(
+            f"a run cannot leave its open end at {from_tilt} degrees: {refused}"
+        ) from refused
     body = _along(design, radius, lead, twist, from_tilt, 0.0)
     # The channel is cut from a sweep that runs past both ends, so it opens
     # out rather than meeting the end faces on a coincident plane.

@@ -242,7 +242,7 @@ def tangent_slope(from_u, centre, radius):
     """Slope of the line from (from_u, 0) tangent to a circle, from below.
 
     Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
-    Waiting on four choices nobody outside this repo made. There are two
+    Waiting on six choices nobody outside this repo made. There are two
     tangents from a point to a circle and this takes the lower. It returns a
     slope, which no vertical tangent has. Its denominator is zero at exactly
     the input that produces one, so that case has no answer here at all. And
@@ -256,6 +256,11 @@ def tangent_slope(from_u, centre, radius):
     describes a rod fatter than that under a different support. The pre-print
     checks do catch it, loudly, which is the only reason this is a caveat
     rather than a defect.
+
+    The last two: the from-point's ordinate is fixed at zero rather than being
+    given, so this answers for a point on one axis and not for a point; and a
+    point inside the circle has no tangent at all, which arrives as a
+    ValueError out of the square root rather than as an answer of its own.
 
     Lets the wedge's underside diagonal and the diagonal above it be parallel
     while each stays pinned to the feature it must meet.
@@ -272,8 +277,10 @@ def tangency_point(slope, centre, radius):
     """Where a tangent of that slope touches the circle.
 
     Promotable: domain-free plane geometry, currently only fishing-rod-mounts.
-    Waiting on one choice nobody outside this repo made: a slope meets the
-    circle at two points and this takes the lower, to match the tangent above.
+    Waiting on two choices nobody outside this repo made: a slope meets the
+    circle at two points and this takes the lower, to match the tangent above;
+    and taking a slope at all means a vertical tangent cannot be asked for
+    here, the same gap the tangent above leaves.
     """
     normal = math.sqrt(slope * slope + 1.0)
     return (centre[0] + radius * slope / normal, centre[1] - radius / normal)

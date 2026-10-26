@@ -48,8 +48,8 @@ so. `uv run build` prints every file it writes and where, which stays accurate
 as the set changes.
 
 The straights clip and the corner does not, which is the arrangement that
-works: the lipped runs either side hold the strip, and the turn is the one
-place where having to feed it in is worst.
+works: the straights butted either side of a turn hold the strip, and the turn
+is the one place where having to feed it in is worst.
 
 The brackets are universal — nothing here is sized to a particular TV or strip
 length, so how many straights a run takes, and whether you need corners at two
@@ -140,12 +140,6 @@ saves goes into a larger rectangle. And `x = 0` is the ceiling: a radius above
 `(P − L) / (8 − 2π)` would need a path outside the mounting surface, however
 much the corner itself would fit.
 
-A part being tested lives in a `trials.toml` beside `parts.toml`, built and
-checked the same way but written outside the committed output and covered by
-neither record. Moving an entry across into `parts.toml` is what commits to
-it. There is no `trials.toml` at present: every question it held has been
-answered by a TV with these on the back of it.
-
 ## Mount them
 
 1. Work out the strip's path on the TV back first, with the strip held in place
@@ -155,9 +149,11 @@ answered by a TV with these on the back of it.
 3. Stick the brackets down with VHB or similar double-sided tape on the flat
    pad. The pad is 22 mm deep and unbroken — there is no screw hole to work
    around.
-4. **Thread the strip in from the end rather than snapping it in along its
-   length.** A 125 mm channel takes real force to flex a strip past both lips
-   at once, and at a corner threading is the only option anyway.
+4. **Set the strip into each corner from above, and feed it into the
+   straights from an end.** The corner's channel is open, so nothing has to be
+   threaded around the turn — that is what it is for. The straights do clip,
+   and an eight-inch one takes real force to snap in along its whole length at
+   once, so start it at an end and work along.
 
 **Which way round.** The channel leans *away* from the centre of the TV, so
 light clears the panel edge instead of being caught by it. At a corner, the
@@ -176,15 +172,19 @@ a corner cannot disagree with a straight about the channel — there is only one
 this directly: it cuts a section through each corner's arc and checks it comes
 back as the straight's section.
 
-The turning run is the one that cannot be swept in a single operation. The
-profile's outline does not merely rotate as it leans — features merge into each
-other and its corner count changes — so there is nothing to interpolate
-between, and turning the whole profile instead would lift the mounting plate
-off the TV. It is built as a stack of thin slabs, and the channel is cut from
-that stack afterwards, in one piece, turning about the middle of its own bed.
-That last part is what keeps the promise below: the channel turns around the
-strip rather than carrying the strip around with it, so no approximation in the
-stack can move where the strip sits.
+A run whose lean changes cannot be made by turning the whole profile — that
+would lift the mounting plate off the TV. So the profile is drawn afresh at
+each of a run of stations, with the pad the same at every lean, the channel
+block turning about the strip, and the arm beneath it shrinking away as the
+block stands up; the surface is then lofted from each station to the next.
+Lofting rather than stacking is what makes it smooth: short pieces that each
+hold one lean leave a ledge wherever two of them meet, and shorter pieces only
+make the ledges smaller.
+
+The channel is one cut along the whole of it, turning about the middle of its
+own bed. That is what keeps the promise below: the channel turns around the
+strip rather than carrying the strip around with it, so nothing approximate in
+the body can move where the strip sits.
 
 That is also why the reference corner brackets are not used here. Measured,
 their curve turns only 37–48°, is not a true arc, and shares no feature with
@@ -202,6 +202,10 @@ two unrelated designs in step by hand forever.
 
 The strip flexes past the 15 → 12 mm neck and is then held mechanically. Every
 other number in the part follows from this block and the 45° lean.
+
+The shipped corner is the exception: its lips reach nowhere, so its mouth is
+the full 15.0 mm and the strip is set in rather than flexed past anything. The
+straights either side are what hold it.
 
 ### The strip's place is chosen, so the lean is free
 
@@ -345,21 +349,24 @@ point of leaning in the first place. It also buys less corner relief: relief
 scales with the cosine, so 30° would give 1.155× against 45°'s 1.414× — an R30
 corner bending the strip like an in-plane R34.6 rather than R42.4.
 
-**Below about 45° the design refuses itself.** The block's resting corner
-reaches further outboard as the lean shallows, and once it passes the plate's
-4.0 mm reach the block would meet the TV back beyond the edge of the pad. The
-error names the lean and the distance. Raising `pad_outboard` buys shallower
-leans, at the cost of a shorter tab within the same footprint.
+**Below 41.91° the design refuses itself.** The shallower the lean, the
+further the channel floats above where its own corner would rest, and once that
+float clears the plate's thickness the block meets the plate along a line
+instead of sitting into it — so the two come out as separate pieces rather than
+one bracket. The error names the lean, the float and the plate it cleared. A
+thicker plate buys shallower leans.
 
 A corner tighter than 18.0 mm is refused rather than built: below that the
 pad's inner edge reaches the revolve axis and the part would fold through
 itself. A turn cannot be made by a part that reaches past its own centre.
 
 `uv run verify` measures the built solids rather than reading the parameters
-back. It checks that the channel still necks down to a clip rather than an open
-trough, that it still lies at its lean, that the adhesive pad is flat and full
-depth, that nothing encloses a pocket, and that every corner is still the
-straight bent. A bare corner is checked to turn a full quarter and stop there;
+back. It checks that each channel still lies at its lean, that the adhesive pad
+is flat and full depth, that nothing encloses a pocket, and that every corner
+is still the straight bent. What it asks of the channel itself depends on which
+kind it is: a clipping one has to neck below the strip and close its lips as
+drawn, while an open one has to open the full width of its bed and let the
+strip drop in without flexing. A bare corner is checked to turn a full quarter and stop there;
 one with runs led into it is checked to carry the quarter and then reach its
 full lead past the turn on both sides, which is what a corner with runs does
 instead of stopping.
