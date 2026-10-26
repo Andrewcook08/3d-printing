@@ -12,6 +12,7 @@ generated, what the checks guarantee, and how the automation fits together.
 | Project | What it is |
 |---|---|
 | [`fishing-rod-mounts`](src/printing3d/fishing_rod_mounts/README.md) | Low-profile wall mounts for horizontal fishing rod storage |
+| [`hue-tv-brackets`](src/printing3d/hue_tv_brackets/README.md) | Adhesive-free clip brackets for a Hue gradient lightstrip around a TV |
 
 Adding one? See the [project contract](docs/build/project-contract.md) — a
 project is discovered by declaring itself, and inherits building, locking and
@@ -88,10 +89,18 @@ uvx pre-commit install
 
 They run ruff, a few file-hygiene checks, and the test suite before each
 commit. If a hook reformats a file the commit stops and the fix is left
-unstaged — `git add` and commit again. Use `git commit --no-verify` to skip
-them for a one-off, or `uvx pre-commit uninstall` to remove them.
+unstaged — `git add` and commit again. To stop running them entirely, `uvx
+pre-commit uninstall` to remove them.
 
-Every project hash-locks its shipped STLs in a `LOCKED.txt`, and the test suite
-rebuilds the parts and compares. A failure there means the exported shape
-changed — see [CLAUDE.md](CLAUDE.md) for what to do about it, and for how to
-add a new project.
+Every project keeps two records of what it ships: the hashes of its STLs, and
+what the pre-print checks measured of them. The test suite rebuilds the parts
+and compares against both. A failure in the first means the exported shape
+changed; a failure in the second means something reads differently off a shape
+that did not. Either way the answer is `uv run relock <project>`, once you know
+which change you made and meant it.
+
+Parts still being tested are not committed and neither record covers them, so
+retiring one costs a config file and nothing else.
+
+See [CLAUDE.md](CLAUDE.md) for what to do about a failure, and for how to add a
+new project.

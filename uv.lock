@@ -152,6 +152,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "manifold3d" },
+    { name = "numpy" },
 ]
 
 [package.dev-dependencies]
@@ -162,7 +163,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "manifold3d", specifier = ">=3.5.2" }]
+requires-dist = [
+    { name = "manifold3d", specifier = ">=3.5.2" },
+    { name = "numpy", specifier = ">=2.5.3" },
+]
 
 [package.metadata.requires-dev]
 dev = [

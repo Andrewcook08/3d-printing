@@ -11,11 +11,13 @@ class CheckRunner:
 
     def __init__(self):
         self.failures = []
+        self.checked = 0
 
     def section(self, title):
         print(f"\n{title}")
 
     def check(self, name, passed, detail=""):
+        self.checked += 1
         mark = "PASS" if passed else "FAIL"
         print(f"  [{mark}] {name}{'  -- ' + detail if detail else ''}")
         if not passed:
@@ -26,8 +28,16 @@ class CheckRunner:
         return not self.failures
 
     def report(self):
-        """Print the verdict and return whether everything passed."""
-        print(
-            "\nALL CHECKS PASSED" if self.all_passed else f"\nFAILURES: {self.failures}"
-        )
+        """Print the verdict and return whether everything passed.
+
+        A run that examined nothing says so rather than claiming success. It is
+        vacuously true that every check passed when none of them ran, and
+        printing that is how an empty record comes to read as a guarantee.
+        """
+        if not self.checked:
+            print("\nNOTHING CHECKED")
+        elif self.all_passed:
+            print("\nALL CHECKS PASSED")
+        else:
+            print(f"\nFAILURES: {self.failures}")
         return self.all_passed

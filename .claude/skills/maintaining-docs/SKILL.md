@@ -39,6 +39,31 @@ Docs change when *behavior* changes. Never as part of a refactor.
 Anything observable from outside is fair game — it is behavior. Anything you
 would only know by opening a source file is implementation.
 
+## Where Documentation Lives
+
+Three homes, and no fourth:
+
+| Home | Holds |
+|---|---|
+| `docs/` | How the system behaves — the guarantees that hold across every project |
+| A project's `README.md` | That project's design: what it is, why it is shaped that way, print settings, assembly |
+| A comment in the code | One line at the number, naming the physical constraint that forced it |
+
+**A project README is a design document, not a print sheet.** The reasoning
+behind the shape belongs there in full — what problem the part solves, what
+forced each dimension, what alternative was rejected.
+
+**A comment points at that reasoning; it never restates it.** One or two lines
+where the number lives, so nobody reads a constant and assumes it was chosen by
+eye. A comment growing into an argument means the argument belongs in the
+README.
+
+**There are no design or specification documents.** Not in `docs/`, not beside
+the code, not in a directory of their own. A design worth keeping goes in the
+project README; the alternatives that were rejected go in the commit message
+that settled them. Where a skill or workflow offers to write a spec file, that
+default does not apply here.
+
 ## The Map
 
 One index, components grouped by concern:
