@@ -526,6 +526,24 @@ def _lofted(rings):
     point of lofting rather than stacking: a stack of prisms leaves a ledge
     wherever two of them meet, and no number of prisms turns a ledge into a
     smooth surface -- it only makes it smaller.
+
+    Promotable: domain-free 3D construction, currently only hue-tv-brackets.
+    It would not go in shapes.py, which is 2D, nor probes.py, which measures;
+    it wants a module of its own. Waiting on seven choices nobody outside
+    this repo made, four of them failing silently rather than loudly:
+
+    - Winding. A ring must run counter-clockwise seen from the far end. The
+      other way gives a solid of NEGATIVE volume and no error at all.
+    - Rings of unequal length. The width is taken from the first and the rest
+      are not checked; a ring short of a point gives a confident wrong solid.
+    - A single ring, which gives an empty solid rather than a complaint.
+    - Coincident points, kept as degenerate triangles rather than merged.
+    - The caps, each a fan from vertex zero, which only suits an outline
+      star-shaped about it.
+    - A centre point per quad, which fixes both the tessellation and the
+      triangle count, and is what keeps a non-planar quad on the ruled patch.
+    - The order faces and vertices are emitted in, ring-major with the
+      centres appended, which is what decides the exported bytes.
     """
     width = len(rings[0])
     points = [list(point) for ring in rings for point in ring]
