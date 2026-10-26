@@ -60,10 +60,48 @@ def test_the_catalog_ships_both_shapes(built):
     assert corners(built)
 
 
-def test_an_entry_may_override_the_lean_and_nothing_else(built, design):
-    """Every bracket carries the design it was built from, and the only thing
-    an entry is allowed to change about it is how far the channel leans."""
-    assert all(replace(part.design, tilt=design.tilt) == design for part in built)
+# What an entry is allowed to say about the shape itself, as opposed to about
+# the part cut from it. Deliberately short: everything outside this list is
+# one design shared by every part, and that is what stops two brackets
+# disagreeing about a channel they are both supposed to fit.
+AN_ENTRY_MAY_CHANGE = ("tilt", "lip_reach")
+
+
+def test_an_entry_may_change_only_the_lean_and_the_lip_reach(built, design):
+    """Every bracket carries the design it was built from, and an entry may
+    change how far its channel leans and whether its lips catch the strip --
+    nothing else, or parts meant to join would stop sharing a channel."""
+    for part in built:
+        taken_back = replace(
+            part.design,
+            **{field: getattr(design, field) for field in AN_ENTRY_MAY_CHANGE},
+        )
+        assert taken_back == design, part.name
+
+
+# One case per field an entry may change, each asking for a value the shipped
+# design does not already have -- otherwise a field could stop being read and
+# the case would still pass.
+A_CHANGE_EACH = (
+    ("tilt", 60.0, CornerEntry(name="x", radius=38.1, tilt=60.0)),
+    ("lip_reach", 0.0, CornerEntry(name="x", radius=38.1, lip_reach=0.0)),
+)
+
+
+@pytest.mark.parametrize(("field", "wanted", "entry"), A_CHANGE_EACH)
+def test_every_field_an_entry_may_change_really_does_change_it(
+    design, field, wanted, entry
+):
+    """Otherwise the list above could name a field nothing reads, and the
+    test that leans on it would be guarding a rule it had stopped enforcing."""
+    (built,) = only(design, corner=[entry])
+    assert getattr(built.design, field) == wanted
+    assert getattr(built.design, field) != getattr(design, field)
+
+
+def test_each_field_an_entry_may_change_is_covered_above():
+    """Keeps the list and the cases that exercise it from drifting apart."""
+    assert {field for field, _, _ in A_CHANGE_EACH} == set(AN_ENTRY_MAY_CHANGE)
 
 
 # ---------------------------------------------------------------------------
@@ -203,3 +241,81 @@ def test_a_corner_with_runs_spends_the_strip_they_carry(design):
     (built,) = only(design, corner=[led])
     bare_turn = math.radians(QUARTER_TURN) * 38.1
     assert built.strip_spent == pytest.approx(bare_turn + 2 * 101.6)
+
+
+# ---------------------------------------------------------------------------
+# A corner whose channel is open
+# ---------------------------------------------------------------------------
+
+
+def test_a_corner_may_open_its_channel_without_the_straights_opening_theirs(design):
+    """The point of putting it on the entry: one part is filled from above
+    while every other part still catches the strip."""
+    entry = CornerEntry(name="open", radius=38.1, tilt=90.0, lip_reach=0.0)
+    (built,) = only(design, corner=[entry])
+    assert not built.design.clips
+    assert built.design.mouth_width == built.design.channel_width
+    assert design.clips, "the shipped design still catches the strip"
+
+
+def test_an_open_corner_is_a_sound_solid(design):
+    entry = CornerEntry(name="open", radius=38.1, tilt=90.0, lip_reach=0.0)
+    (built,) = only(design, corner=[entry])
+    assert len(built.solid.decompose()) == 1
+    assert built.solid.genus() == 0
+
+
+def test_an_open_corner_has_more_room_in_it_than_a_lipped_one(design):
+    """Otherwise the key could be read and quietly dropped."""
+    (lipped,) = only(design, corner=[CornerEntry(name="a", radius=38.1, tilt=90.0)])
+    (opened,) = only(
+        design,
+        corner=[CornerEntry(name="b", radius=38.1, tilt=90.0, lip_reach=0.0)],
+    )
+    assert opened.solid.volume() < lipped.solid.volume()
+
+
+# ---------------------------------------------------------------------------
+# A straight run may shorten its lips too
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("reach", [0.8, 0.4])
+def test_a_straight_may_shorten_its_lips_and_still_catch_the_strip(design, reach):
+    """A shallower lip is one the strip pops past rather than is fed along,
+    which is what a run already on the wall wants. It is still a clip."""
+    entry = StraightEntry(name="shallow", length=50.8, lip_reach=reach)
+    (built,) = only(design, straight=[entry])
+    assert built.design.lip_reach == reach
+    assert built.design.clips
+    assert built.design.mouth_width < design.strip_width, "would not retain the strip"
+
+
+def test_a_straight_may_open_its_channel_entirely(design):
+    entry = StraightEntry(name="open", length=50.8, lip_reach=0.0)
+    (built,) = only(design, straight=[entry])
+    assert not built.design.clips
+    assert len(built.solid.decompose()) == 1
+    assert built.solid.genus() == 0
+
+
+def test_shortening_a_straights_lips_widens_its_mouth(design):
+    """Otherwise the key could be read and quietly dropped."""
+    (shipped,) = only(design, straight=[StraightEntry(name="a", length=50.8)])
+    (shallow,) = only(
+        design, straight=[StraightEntry(name="b", length=50.8, lip_reach=0.4)]
+    )
+    assert shallow.design.mouth_width > shipped.design.mouth_width
+    assert shallow.solid.volume() < shipped.solid.volume()
+
+
+def test_one_straights_lips_do_not_reach_into_another(design):
+    """The override is per entry, so a run built shallow leaves the rest of
+    the catalogue catching the strip exactly as it did."""
+    entries = [
+        StraightEntry(name="shallow", length=50.8, lip_reach=0.4),
+        StraightEntry(name="shipped", length=50.8),
+    ]
+    shallow, shipped = only(design, straight=entries)
+    assert shallow.design.lip_reach == 0.4
+    assert shipped.design.lip_reach == design.lip_reach

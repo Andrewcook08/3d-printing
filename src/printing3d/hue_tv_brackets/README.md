@@ -283,6 +283,28 @@ Those runs hold the corner's own lean unless told otherwise, so a `lead` on its
 own extends a corner with plain straight bits **at whatever angle the corner is
 drawn** — the second example above needs nothing else.
 
+**`lip_reach` says how far the lips close over the bed**, and any entry —
+straight or corner — may give its own in place of the shipped 1.5 mm. It is
+per entry, so a shallow run and a shipped one sit in the same catalogue.
+
+Shortening it widens the mouth, so the strip **pops in** rather than being fed
+along the whole length. That is the difference between mounting the brackets
+first and threading the strip afterwards, and having to thread it through
+every run before anything goes on the wall. There is a floor: the lips must
+reach more than `(channel_width - strip_width) / 2` — 0.30 mm for a 14.4 mm
+strip in a 15.0 mm channel — or the mouth stops being narrower than the strip
+and nothing holds it down. `uv run verify` is what enforces it, so a reach
+below the floor is refused rather than printed.
+
+**A reach of zero opens the channel outright.** The mouth is as wide as the
+bed and the strip is set in from above — worth it on a corner that has to be
+filled once it is already stuck to the TV, where threading is worst. An open
+channel does not hold the strip down; whatever it joins does. So it is checked
+for what it does promise rather than for the clip it is not: the bed is the
+full width, the mouth opens all of it, and the strip drops in without flexing.
+The two claims only a clip can make — that it necks, and that the neck is
+narrower than the strip — are not asked of it.
+
 **`run_tilt` and `twist` are what make a run turn**, and they imply each other
 in both directions. `run_tilt` is the lean the open end leaves at; `twist` is
 the length it changes over, measured back from the corner, so lengthening

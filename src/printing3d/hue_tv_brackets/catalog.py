@@ -36,11 +36,17 @@ MM2_PER_CM2 = 100.0
 
 @dataclass(frozen=True, kw_only=True)
 class StraightEntry:
-    """One straight run, as parts.toml describes it."""
+    """One straight run, as parts.toml describes it.
+
+    `lip_reach` shortens the lips, or with a zero removes them: a strip pops
+    into a shallower lip rather than being fed along the whole run, which is
+    worth having on a length that goes up before the strip does.
+    """
 
     name: str
     length: float
     tilt: float | None = None
+    lip_reach: float | None = None
     note: str = ""
 
 
@@ -53,11 +59,16 @@ class CornerEntry:
     hand. `run_tilt` is the lean those runs leave their open ends at, and
     `twist` the length they change over to reach the corner's lean. Leave
     both out and the runs simply hold the corner's own lean the whole way.
+
+    `lip_reach` of zero opens the channel: the strip is set into it rather
+    than threaded along it, which is worth having on a corner that has to be
+    filled after it is on the wall.
     """
 
     name: str
     radius: float
     tilt: float | None = None
+    lip_reach: float | None = None
     lead: float | None = None
     run_tilt: float | None = None
     twist: float | None = None
@@ -230,8 +241,17 @@ def _turn(design: Design, leaning: Design, entry: CornerEntry):
 
 
 def _leaning(design: Design, entry) -> Design:
-    """The design as this entry wants it: its own lean, or the shipped one."""
-    return design if entry.tilt is None else replace(design, tilt=entry.tilt)
+    """The design as this entry wants it, where it differs from the shipped one.
+
+    An entry names what is particular to the part it asks for and takes the
+    rest, so a part and the design differ only where the entry says they do.
+    """
+    asked = {
+        field: getattr(entry, field)
+        for field in ("tilt", "lip_reach")
+        if getattr(entry, field) is not None
+    }
+    return replace(design, **asked) if asked else design
 
 
 def straights(brackets: list[Bracket]) -> list[StraightBracket]:

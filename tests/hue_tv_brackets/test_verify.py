@@ -36,11 +36,47 @@ def test_the_checks_pass_the_shape_that_ships():
     assert objections_to(check_base_is_flat, profile(DESIGN), DESIGN) == []
 
 
-def test_a_channel_with_no_lips_is_caught():
-    """Reach the lips nowhere and the mouth is as wide as the bed: a trough,
-    which the strip would lift straight out of."""
+def test_a_channel_that_should_clip_and_does_not_is_caught():
+    """A design meaning to catch the strip, built without the lips to do it.
+
+    Section and design are taken apart deliberately: a lipless outline is
+    measured against a design that says it has lips, which is the shape of
+    the fault -- geometry that stopped matching what it is supposed to be.
+    A design that says it has no lips is a different thing entirely and is
+    checked as one, below.
+    """
     troughed = replace(DESIGN, lip_reach=0.0)
-    assert objections_to(check_channel_clips, profile(troughed), troughed)
+    assert objections_to(check_channel_clips, profile(troughed), DESIGN)
+
+
+def test_an_open_channel_is_not_judged_as_a_failed_clip():
+    """A channel with no lips is a way to build a bracket, not only a way to
+    get one wrong: it is filled from above instead of threaded from an end.
+    Judged against a clip's promises it fails two it never made."""
+    open_ = replace(DESIGN, lip_reach=0.0)
+    assert objections_to(check_channel_clips, profile(open_), open_) == []
+
+
+def test_an_open_channel_too_narrow_for_its_strip_is_caught():
+    """What an open channel does still promise: the strip fits in it.
+
+    A strip wider than the channel fails two of these at once -- the floor is
+    too narrow and so is the opening -- so both are named. Asserting only that
+    something objected would let either check be deleted unnoticed.
+    """
+    pinched = replace(DESIGN, lip_reach=0.0, strip_width=DESIGN.channel_width + 1.0)
+    objections = objections_to(check_channel_clips, profile(pinched), pinched)
+    assert "the bed carries the strip" in objections
+    assert "the strip drops in without flexing" in objections
+
+
+def test_an_open_channel_that_still_necks_is_caught():
+    """The positive claim an open channel makes is that there is nothing to
+    thread past. A section with lips measured as though it had none must not
+    pass, or the key could say open while the part stayed closed."""
+    open_ = replace(DESIGN, lip_reach=0.0)
+    objections = objections_to(check_channel_clips, profile(DESIGN), open_)
+    assert "the mouth opens the full width of the bed" in objections
 
 
 def test_a_channel_necked_shut_is_NOT_caught():

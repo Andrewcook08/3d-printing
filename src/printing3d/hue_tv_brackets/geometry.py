@@ -127,6 +127,18 @@ class Design:
         return self.channel_width - 2 * self.lip_reach
 
     @property
+    def clips(self) -> bool:
+        """Whether the channel catches the strip, or merely holds it.
+
+        Lips that reach nowhere leave the mouth as wide as the bed: an open
+        trough the strip is set into rather than threaded along. That is a
+        way to build a bracket on purpose, not only a way to get one wrong,
+        so which of the two a design is gets asked here rather than by
+        comparing a reach against zero wherever it matters.
+        """
+        return self.lip_reach > 0.0
+
+    @property
     def block_width(self) -> float:
         """Across the channel block, its walls included."""
         return self.channel_width + 2 * self.wall

@@ -57,6 +57,14 @@ base_depth = 22.0
 # Both hold the strip at the same height and the same distance from the edge
 # butted to the marked line -- that is what the lean no longer moving the strip
 # bought, and it is why these mix freely.
+#
+# Any entry, straight or corner, may give its own `lip_reach` in place of the
+# shipped one. Shortening it widens the mouth, so the strip pops in instead of
+# being fed along the whole run -- worth having on lengths that go up before
+# the strip does. The lips must still reach more than
+# (channel_width - strip_width) / 2 or the mouth stops being narrower than the
+# strip and nothing holds it down; `uv run verify` is what says so. A reach of
+# zero opens the channel outright and is checked as an open channel instead.
 # ---------------------------------------------------------------------------
 
 [[straight]]
@@ -101,6 +109,10 @@ note = "2 in -- the shortest, for trimming a run to length"
 # `run_tilt` and `twist` imply each other: a run given somewhere else to lean
 # needs a length to get there, and a run with nowhere else to lean must not
 # be given one. Either on its own is refused rather than quietly ignored.
+#
+# `lip_reach` is described with the straights above; on a corner it is what
+# turns threading the strip through a turn already stuck to the TV into
+# setting it in from above.
 
 [[corner]]
 name = "hue-strip-tv-corner-1.5in-90"

@@ -143,32 +143,73 @@ def check_channel_clips(runner, section, design):
         # A channel that cannot be found is a failed check, not a crashed run.
         # Raising here took down every part queued behind this one, which is
         # the moment the rest of the report is worth most.
-        runner.check("the channel necks down to a clip", False, str(unmeasurable))
+        runner.check("the channel can be measured", False, str(unmeasurable))
         return
+    if design.clips:
+        _check_the_lips_catch_it(runner, bed, mouth, design)
+    else:
+        _check_it_is_open_to_the_face(runner, bed, mouth, design)
+
+
+def _check_the_lips_catch_it(runner, bed, mouth, design):
+    """A channel whose lips close over the bed, which the strip flexes past."""
     runner.check(
         "the channel necks down to a clip",
         mouth < bed,
         f"bed {bed:.2f} mm, mouth {mouth:.2f} mm",
     )
-    runner.check(
-        "the bed is the full channel width",
-        abs(bed - design.channel_width) < MAX_EDGE_ERROR,
-        f"{bed:.3f} mm",
-    )
+    _check_the_bed_is_full_width(runner, bed, design)
     runner.check(
         "the lips close over the bed as drawn",
         abs(mouth - design.mouth_width) < lip_taper_slack(design),
         f"{mouth:.3f} mm against {design.mouth_width:.3f} mm at the face",
     )
-    runner.check(
-        "the bed carries the strip",
-        bed >= design.strip_width,
-        f"bed {bed:.2f} mm for a {design.strip_width:.1f} mm strip",
-    )
+    _check_the_bed_carries_the_strip(runner, bed, design)
     runner.check(
         "the mouth necks below the strip",
         mouth < design.strip_width,
         f"mouth {mouth:.2f} mm against a {design.strip_width:.1f} mm strip",
+    )
+
+
+def _check_it_is_open_to_the_face(runner, bed, mouth, design):
+    """A channel with no lips, which the strip is set into from above.
+
+    The two claims a clip makes are exactly the two this cannot: it does not
+    neck, and it does not hold the strip against being lifted out. What it
+    promises instead is that there is nothing to thread past, which is the
+    point of building one -- a corner already on the wall can be filled from
+    above rather than fed from one end.
+    """
+    _check_the_bed_is_full_width(runner, bed, design)
+    runner.check(
+        "the mouth opens the full width of the bed",
+        abs(mouth - bed) < MAX_EDGE_ERROR,
+        f"mouth {mouth:.3f} mm against a {bed:.3f} mm bed",
+    )
+    _check_the_bed_carries_the_strip(runner, bed, design)
+    runner.check(
+        "the strip drops in without flexing",
+        mouth >= design.strip_width,
+        f"mouth {mouth:.2f} mm for a {design.strip_width:.1f} mm strip",
+    )
+
+
+def _check_the_bed_is_full_width(runner, bed, design):
+    """True of any channel: the strip lies on all of the floor drawn for it."""
+    runner.check(
+        "the bed is the full channel width",
+        abs(bed - design.channel_width) < MAX_EDGE_ERROR,
+        f"{bed:.3f} mm",
+    )
+
+
+def _check_the_bed_carries_the_strip(runner, bed, design):
+    """True of any channel: the floor is wide enough for what lies on it."""
+    runner.check(
+        "the bed carries the strip",
+        bed >= design.strip_width,
+        f"bed {bed:.2f} mm for a {design.strip_width:.1f} mm strip",
     )
 
 

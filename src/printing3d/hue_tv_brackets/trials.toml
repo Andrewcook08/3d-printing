@@ -59,3 +59,20 @@ lead = 25.4
 run_tilt = 45.0
 twist = 25.4
 note = "1 in lead, turning over the whole of it"
+
+# An open channel: the lips reach nowhere, so the strip is set into the corner
+# from above instead of threaded along it. Sliding a strip through a corner
+# already stuck to the TV is what this answers. The straights keep their lips
+# and keep holding the strip; this asks whether the turn needs its own.
+
+[[corner]]
+name = "trial-corner-1.5in-90-open-v1"
+radius = 38.1
+tilt = 90.0
+lip_reach = 0.0
+note = "1.5 in radius, open channel -- set the strip in rather than thread it"
+
+[[straight]]
+name = "trial-straight-5in-v4-short-lip"
+length = 127.0
+lip_reach = 0.5
