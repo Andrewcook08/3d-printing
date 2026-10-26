@@ -1,15 +1,56 @@
 """Where parts come from and where their STLs land."""
 
+import subprocess
+from pathlib import Path
+
+import pytest
 from manifold3d import Manifold
 
 from printing3d.parts import (
     DEFAULT_OUTPUT_DIR,
     OUTPUT_DIR_ENV,
+    TRIALS_DIR,
     Part,
+    archive_dir,
     build_project,
     output_dir,
     repo_root,
+    trials_dir,
 )
+
+
+def git(*arguments):
+    """Ask git something about this working copy."""
+    return subprocess.run(
+        ["git", *arguments], cwd=repo_root(), capture_output=True, text=True
+    )
+
+
+def test_the_trials_directory_never_reaches_the_repository():
+    """A trial is built and checked and never committed. That is the whole
+    distinction between it and a part, so it is asserted against git rather
+    than by reading .gitignore -- the effect is what matters, not the line
+    that happens to produce it.
+    """
+    trials = Path(DEFAULT_OUTPUT_DIR) / TRIALS_DIR
+    # Asks about a file that would live there rather than the directory itself.
+    # The ignore rule names a directory, and git cannot tell a path is one
+    # unless it exists -- so asking about the bare directory passes on a machine
+    # that has run a build and fails on a fresh clone, which is the worst way
+    # for a test to be wrong.
+    would_be_written = trials / "any-project" / "any-part.stl"
+    assert git("check-ignore", "-q", str(would_be_written)).returncode == 0, (
+        f"{trials} is not ignored by git; parts under test would be committed"
+    )
+    tracked = git("ls-files", str(trials)).stdout.strip()
+    assert not tracked, f"already committed under {trials}:\n{tracked}"
+
+
+def test_a_projects_trials_land_outside_what_it_ships():
+    """Two directories that cannot be the same one, however the output root is
+    set: a shipped part and a part under test must never share a pile."""
+    assert trials_dir("widgets") != output_dir("widgets")
+    assert output_dir("widgets") not in trials_dir("widgets").parents
 
 
 def a_part(name="demo-part"):
@@ -61,3 +102,161 @@ def test_a_project_can_announce_its_own_line_per_part(monkeypatch, tmp_path, cap
     monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
     build_project("widgets", [a_part()], announce=lambda part: f"-> {part.name}")
     assert "-> demo-part" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# Retiring a part it no longer declares
+# ---------------------------------------------------------------------------
+
+
+def test_the_archive_sits_beside_the_projects_under_the_same_root():
+    assert (
+        archive_dir("widgets")
+        == repo_root() / DEFAULT_OUTPUT_DIR / "archive" / "widgets"
+    )
+
+
+def test_redirecting_the_output_redirects_the_archive_with_it(monkeypatch, tmp_path):
+    """Or a test writing somewhere temporary would litter the real archive."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert archive_dir("widgets") == tmp_path / "archive" / "widgets"
+
+
+def test_a_part_no_longer_declared_is_moved_to_the_archive(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("kept"), a_part("retired")])
+
+    build_project("widgets", [a_part("kept")])
+
+    assert [path.name for path in output_dir("widgets").glob("*.stl")] == ["kept.stl"]
+    assert (archive_dir("widgets") / "retired.stl").is_file()
+
+
+def test_the_archived_bytes_are_the_ones_that_were_built(monkeypatch, tmp_path):
+    """Archiving moves the file rather than regenerating it, so what lands
+    there is what was last printed from."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("retired")])
+    was = (output_dir("widgets") / "retired.stl").read_bytes()
+
+    build_project("widgets", [a_part("kept")])
+
+    assert (archive_dir("widgets") / "retired.stl").read_bytes() == was
+
+
+def test_nothing_is_archived_when_every_part_is_still_declared(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("kept")])
+    build_project("widgets", [a_part("kept")])
+    assert not archive_dir("widgets").exists()
+
+
+def test_the_archive_is_announced_so_a_move_is_never_silent(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("retired")])
+    capsys.readouterr()
+
+    build_project("widgets", [a_part("kept")])
+
+    assert "archived retired.stl" in capsys.readouterr().out
+
+
+def test_two_parts_with_one_name_is_refused_rather_than_written_twice(
+    monkeypatch, tmp_path
+):
+    """The second would overwrite the first, leaving one file where the project
+    declared two and no sign that anything was lost."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    with pytest.raises(ValueError, match="more than once"):
+        build_project("widgets", [a_part("twin"), a_part("twin")])
+
+
+# ---------------------------------------------------------------------------
+# A solid that is not printable
+# ---------------------------------------------------------------------------
+
+
+def a_broken_part(name="broken-part"):
+    """Two cubes with a gap between them: watertight, but not one body.
+
+    A mount whose arm has come adrift from its plate looks exactly like this,
+    and a slicer will happily print the pieces separately.
+    """
+    near = Manifold.cube((10.0, 10.0, 10.0), False)
+    far = Manifold.cube((10.0, 10.0, 10.0), False).translate((100.0, 0.0, 0.0))
+    return Part(name=name, solid=near + far)
+
+
+def test_two_disjoint_bodies_are_not_a_printable_part():
+    assert not a_broken_part().is_sound
+
+
+def test_the_summary_says_so_rather_than_calling_it_watertight():
+    assert "CHECK GEOMETRY" in a_broken_part().summary()
+
+
+def test_building_an_unsound_part_reports_failure(monkeypatch, tmp_path):
+    """The file is still written -- you may want to look at it -- but the build
+    says it is not printable, which is what the command turns into an exit code."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [a_broken_part()]) is False
+    assert (output_dir("widgets") / "broken-part.stl").is_file()
+
+
+def test_one_unsound_part_condemns_the_whole_build(monkeypatch, tmp_path):
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [a_part("fine"), a_broken_part()]) is False
+
+
+def a_bigger_part(name="demo-part"):
+    """The same name, a different shape -- a part brought back resized."""
+    return Part(name=name, solid=Manifold.cube((40.0, 40.0, 40.0), False))
+
+
+def test_retiring_a_part_twice_does_not_destroy_its_earlier_shape(
+    monkeypatch, tmp_path
+):
+    """Retire a part, bring it back at a different size, retire it again. The
+    first shape is the one someone would go to the archive for."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    build_project("widgets", [a_part("twice")])
+    build_project("widgets", [])
+    was = (archive_dir("widgets") / "twice.stl").read_bytes()
+
+    build_project("widgets", [a_bigger_part("twice")])
+    build_project("widgets", [])
+
+    archived = {path.read_bytes() for path in archive_dir("widgets").glob("*.stl")}
+    assert was in archived, "the earlier shape was overwritten"
+    assert len(archived) == 2
+
+
+def test_retiring_the_same_shape_twice_keeps_one_copy(monkeypatch, tmp_path):
+    """Nothing is lost by not keeping a second identical file."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    for _ in range(2):
+        build_project("widgets", [a_part("same")])
+        build_project("widgets", [])
+    assert len(list(archive_dir("widgets").glob("*.stl"))) == 1
+
+
+def test_a_duplicate_name_is_refused_before_anything_is_written(monkeypatch, tmp_path):
+    """The build promises all-or-nothing. Catching the duplicate partway through
+    the write loop would leave the parts before it on disk, which is the
+    half-populated directory the promise rules out."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    with pytest.raises(ValueError, match="more than once"):
+        build_project("widgets", [a_part("first"), a_part("twin"), a_part("twin")])
+    assert not list(output_dir("widgets").glob("*.stl")), (
+        "the build wrote before failing"
+    )
+
+
+def test_a_catalogue_that_asks_for_nothing_says_so(tmp_path, monkeypatch, capsys):
+    """Legitimate while a project is being worked out, and indistinguishable
+    from a configuration that has lost its entries. Saying which is the point."""
+    monkeypatch.setenv(OUTPUT_DIR_ENV, str(tmp_path))
+    assert build_project("widgets", [])
+    assert "declares no parts" in capsys.readouterr().out

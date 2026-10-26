@@ -66,9 +66,11 @@ same cradle-center height. So:
    the front face so the heads finish flush.
 
 With one screw you have to hold each mount level while you tighten it. Once
-tight it stays put: the hanging rod applies roughly 96 N·mm of twist about the
-screw, and friction between the plate and the wall under a tightened screw
-resists that by more than an order of magnitude.
+tight it stays put. An estimated 96 N·mm of twist acts about the screw — a 1 kg
+rod through the ~10 mm from screw to cradle — and friction between the plate and
+the wall under a tightened screw resists that by more than an order of
+magnitude. Both figures are estimates rather than measurements; the margin is
+wide enough that the estimate does not have to be good.
 
 The back face is a flat unbroken pad, so double-sided tape works for a trial
 hang before you commit to drilling. Clean the wall with alcohol first.
@@ -77,15 +79,18 @@ Optional: a scrap of adhesive felt in the cradle protects the grip finish.
 
 ## Changing the numbers
 
-Everything derives from two measurements per rod. Edit `RODS` at the top of
-`catalog.py`:
+Everything derives from two measurements per rod. Add one to `parts.toml`:
 
-```python
-RODS = [
-    Rod(name="spinning-85in", butt_dia=26.15, tip_dia=5.80),
-    Rod(name="baitcaster", butt_dia=00.00, tip_dia=0.00),
-]
+```toml
+[[rod]]
+name = "baitcaster"
+butt_diameter = 0.00
+tip_diameter = 0.00
 ```
+
+Every other number the shape is built from is in that file too — where the
+rod's centerline sits, the plate, the rib, the screw. No code changes to
+re-dimension a mount; the code changes only when the *shape* does.
 
 Then, from the repo root:
 
@@ -105,23 +110,33 @@ rather than read back from the parameters).
 The test suite covers the code rather than the physics. Its centerpiece is a
 golden master: `LOCKED.txt` holds the sha256 of both shipped STLs, the
 generator is deterministic, and the suite rebuilds the pair and compares.
-Anything that moves a single vertex fails immediately — so if you are changing
-the *shape* on purpose, expect that test to fail, and re-lock with:
+Anything that moves a single vertex fails immediately.
+
+`MEASURED.txt` pins the other half — what the pre-print checks read off those
+STLs. It catches the case the hashes cannot: shared code measuring an unchanged
+shape differently.
+
+So if you are changing the *shape* on purpose, expect both to fail, and re-lock
+with:
 
 ```sh
-shasum -a 256 output/fishing-rod-mounts/*.stl \
-    > src/printing3d/fishing_rod_mounts/LOCKED.txt
+uv run relock fishing-rod-mounts
 ```
+
+It rebuilds first and rewrites both together, and refuses to pin anything the
+build or the checks reject.
 
 ### The files
 
 | File | What lives there |
 |---|---|
 | `__init__.py` | Declares this project so the repo discovers it |
-| `catalog.py` | The rods, the two mount styles, and what gets printed |
+| `parts.toml` | Every measured or chosen number, and the rods |
+| `catalog.py` | How a configured rod becomes a printable pair |
 | `geometry.py` | The parametric shape: the cradle, the supports, the profile |
 | `verify.py` | Geometric checks against the built solids |
 | `LOCKED.txt` | Hashes of the STLs this project has shipped |
+| `MEASURED.txt` | What the pre-print checks read off those STLs |
 | `reference/` | The original wall hook the shape follows, and a photo of the pair |
 
 Everything else is shared and lives one level up: 2D construction, solid
@@ -132,8 +147,8 @@ test boilerplate of its own — see
 
 ## How it works
 
-Parameterized on the **rod's centerline**, not on the standoff. `AXIS_U = 18.0`
-puts the centerline 18 mm from the wall in *both* mounts; each cradle's depth
+Parameterized on the **rod's centerline**, not on the standoff. `parts.toml`
+puts that centerline 18 mm from the wall in *both* mounts; each cradle's depth
 is whatever it takes to get there.
 
 | | butt | tip |
@@ -150,8 +165,8 @@ Three constraints shape the rest:
 **The plate can't be thicker than 4 mm.** The rod is a long cylinder, so it
 can't dodge an obstruction — anything above the cradle sitting further from the
 wall than the rod's near surface blocks it from lifting out, anywhere along its
-length. `AXIS_U` is set so a uniform 4 mm plate clears the rod by ~0.9 mm,
-which is also just enough to countersink a flat head properly.
+length. The centerline distance is set so a uniform 4 mm plate clears the rod
+by ~0.9 mm, which is also just enough to countersink a flat head properly.
 
 **The screws have to be above the rod.** A weight hanging out from the wall
 always tries to peel the *top* of the plate off, pivoting about the bottom
@@ -160,5 +175,6 @@ edge. Screws below the load would be in compression and do nothing.
 **Projection is set by the rod, not the mount.** 35.4 mm at the butt is a
 26.15 mm grip plus wall clearance plus a 4 mm retaining rib — there is very
 little fat left to remove. What the rib-and-gusset structure buys is visual
-lightness and material: 32 % less than a solid cradle on the butt mount, 50 %
-less on the tip.
+lightness and material — roughly a third less than a solid cradle on the butt
+mount and about half on the tip, comparing the built volumes against the
+bounding crescent.

@@ -17,10 +17,13 @@ a project declares named parts
         └─ tests ──▶ pass / fail                   did anything change?
 ```
 
-Three properties hold the whole thing together:
+The properties that hold the whole thing together:
 
 - **Generation is deterministic.** The same source always produces the same
   bytes, which is what makes the parts hash-lockable.
+- **Parameters are data, not code.** What a project measures or chooses lives
+  in its config file; the code derives everything else from it and changes only
+  when the shape does.
 - **Dimensions are derived, never restated.** A measurement is entered once;
   everything geometric follows from it.
 - **Nothing reaches the default branch unchecked.**
@@ -34,9 +37,10 @@ Three properties hold the whole thing together:
 | Doc | Covers |
 |---|---|
 | [Project contract](build/project-contract.md) | What a project must declare, and what it inherits for free |
+| [Configuration](build/configuration.md) | Where a project's numbers live, and what reading them guarantees |
 | [Build pipeline](build/pipeline.md) | A declared part becoming an STL file, and what building reports |
 | [Geometry model](build/geometry.md) | How a part's shape is expressed, and why it prints without supports |
-| [Output and locking](build/output.md) | Where files land, determinism, and the hash lock |
+| [Output](build/output.md) | Where files land, what is committed, and what is not |
 
 ### Checking them
 
@@ -44,6 +48,7 @@ Three properties hold the whole thing together:
 |---|---|
 | [Testing strategy](quality/testing.md) | The test layers, and what a given failure pattern means |
 | [Pre-print verification](quality/verification.md) | What the physical checks guarantee about a part |
+| [Locking](quality/locking.md) | The two records of what a project last shipped, and what each catches |
 
 ### Automation
 
@@ -55,7 +60,7 @@ Three properties hold the whole thing together:
 ## Where to start
 
 Reading in order — [build pipeline](build/pipeline.md),
-[output and locking](build/output.md), [testing](quality/testing.md) — explains
+[output](build/output.md), [locking](quality/locking.md) — explains
 how a part is produced and why you can trust the file in `output/`. The rest can
 wait until you need it.
 

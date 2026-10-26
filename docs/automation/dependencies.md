@@ -55,7 +55,7 @@ Then choose, in a pull request:
   comment giving the reason.
 
 Never re-lock a part purely to get to green. See
-[output and locking](../build/output.md).
+[locking](../quality/locking.md).
 
 ## How it fails
 

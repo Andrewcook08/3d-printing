@@ -17,32 +17,59 @@ mistake anywhere between a dimension and the exported shape still shows up.
 
 ## Guarantees
 
-For each part, that the object it holds:
+**Every check measures the built solid**, not the numbers it was built from. A
+mistake anywhere between a dimension and the exported shape still shows up,
+because nothing is read back from the parameters that produced it.
 
-- **Seats without interference** — it fits where it is supposed to sit.
-- **Comes straight out** — nothing above the cradle blocks removal along the
-  whole length of a long object that cannot dodge sideways.
-- **Is trapped in both directions** — it can neither roll back toward the
-  mounting surface nor forward out of the cradle.
-- **Clears the mounting surface** — there is air between it and the wall.
+**Every check is measured against what the project asked for.** The numbers a
+check compares against come from the project's [config file](../build/configuration.md),
+so what is confirmed is that the machine produced the part that was specified.
+Whether the specification is *right* for the object it has to hold is a
+different question, and one a project can only answer by checking the built
+shape against a measurement of that object.
 
-For each fastener, that its hole is **open through the part** and
-**countersunk on the front face only**, leaving the back a flat unbroken pad;
-and that it sits clear of the cradle with enough material above it.
+**Every check reports its measurement, not just its verdict.** A near miss is
+visible before it becomes a failure.
 
-For a matched pair, that both parts **place what they hold at the same
-height**, within a tolerance tight enough that a long object spans them without
-a visible tilt.
+**A run that examined nothing says so**, rather than reporting that everything
+passed. It is vacuously true that no check failed when none of them ran, and a
+project mid-design — whose parts are all still under test — produces exactly
+that run. Printing success there is how an empty record comes to read as a
+guarantee, which matters most because the record is what gets
+[locked](locking.md).
 
-Each project defines its own checks. These are the ones that are easy to break
-and hard to spot by eye.
+**Every check function can fail.** Each is exercised against something
+deliberately wrong, so one that has quietly stopped measuring anything is
+itself caught. This is guaranteed per *function*, not per reported line: a
+function reporting several lines is mutated as a unit, so some individual lines
+carry no mutation aimed at them alone.
+
+**A check's known limits are pinned too.** Where a check cannot catch something
+it looks like it should, that gap is written down as a test asserting the gap
+still exists — so closing it later breaks a test rather than passing silently.
+
+**What the checks measure is pinned, not only whether they pass.** Every
+project records the numbers its checks reported about the parts it ships, and a
+change that moves one fails and names it. Parts still being tested are checked
+the same way and recorded in neither place — see [locking](locking.md). This is what notices shared code quietly measuring
+differently — a case where the parts are byte-identical, every check still
+passes, and nothing else in the repo can tell. Re-pinning is deliberate and has
+its own command.
+
+It pins what is *reported*, so drift below the precision a check prints does not
+register. It catches meaningful drift, not every conceivable drift.
+
+**What is checked is a project's own business.** One project asks whether a rod
+seats, lifts out and is trapped sideways; another asks whether a channel necks
+down to a clip, aims where it should, and turns a full corner. What they share
+is the shape of the guarantee above, not a list of questions.
 
 ## Contract
 
 | | |
 |---|---|
 | Input | The built solids, generated fresh |
-| Output | One `PASS`/`FAIL` line per check, with the measured value |
+| Output | One `PASS`/`FAIL` line per check, with the measured value, and a closing verdict |
 | Exit code | `0` if every check passes, `1` otherwise |
 | Side effects | None. It reads; it never writes a file. |
 
